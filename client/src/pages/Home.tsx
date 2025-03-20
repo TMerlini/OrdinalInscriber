@@ -299,6 +299,9 @@ export default function Home() {
                 onTryAgain={tryAgain}
               />
             )}
+            
+            {/* Cache Manager Section */}
+            <CacheManager />
           </CardContent>
         </Card>
 

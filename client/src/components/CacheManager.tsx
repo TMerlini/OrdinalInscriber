@@ -25,7 +25,7 @@ export default function CacheManager() {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Fetch cache info
-  const { data: cacheInfo, isLoading, refetch } = useQuery({
+  const { data: cacheInfo, isLoading, refetch } = useQuery<CacheInfo>({
     queryKey: ['/api/cache/info'],
     refetchOnWindowFocus: false
   });
@@ -98,7 +98,7 @@ export default function CacheManager() {
             size="sm" 
             variant="destructive" 
             onClick={handleClearCache}
-            disabled={clearCache.isPending || cacheInfo.fileCount === 0}
+            disabled={clearCache.isPending || cacheInfo?.fileCount === 0}
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Clear Cache
@@ -109,24 +109,24 @@ export default function CacheManager() {
       <div className="bg-gray-50 p-4 rounded-md mb-4">
         <div className="flex flex-col sm:flex-row justify-between mb-2">
           <div className="text-sm text-gray-700">
-            <span className="font-medium">Storage Used:</span> {cacheInfo.formattedSize} of {cacheInfo.formattedLimit}
+            <span className="font-medium">Storage Used:</span> {cacheInfo?.formattedSize} of {cacheInfo?.formattedLimit}
           </div>
           <div className="text-sm text-gray-700">
-            <span className="font-medium">Files:</span> {cacheInfo.fileCount}
+            <span className="font-medium">Files:</span> {cacheInfo?.fileCount || 0}
           </div>
         </div>
         
         <Progress 
-          value={cacheInfo.percentUsed} 
-          className={`h-2 ${getProgressColor(cacheInfo.percentUsed)}`}
+          value={cacheInfo?.percentUsed || 0} 
+          className={`h-2 ${getProgressColor(cacheInfo?.percentUsed || 0)}`}
         />
         
         <div className="text-xs text-gray-500 mt-1">
-          {cacheInfo.percentUsed}% of 5GB limit used
+          {cacheInfo?.percentUsed || 0}% of 5GB limit used
         </div>
       </div>
 
-      {cacheInfo.fileCount > 0 && (
+      {cacheInfo?.fileCount && cacheInfo.fileCount > 0 && (
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-gray-700">Cached Files</h3>
@@ -149,7 +149,12 @@ export default function CacheManager() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {cacheInfo.files.map((file, index) => (
+                  {cacheInfo.files && cacheInfo.files.map((file: {
+                    name: string;
+                    size: number;
+                    formattedSize: string;
+                    created: string;
+                  }, index: number) => (
                     <tr key={index}>
                       <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-700">{file.name}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-700">{file.formattedSize}</td>
@@ -165,7 +170,7 @@ export default function CacheManager() {
         </div>
       )}
 
-      {cacheInfo.fileCount === 0 && (
+      {(!cacheInfo?.fileCount || cacheInfo.fileCount === 0) && (
         <div className="text-sm text-gray-500 italic">
           No cached images found.
         </div>
