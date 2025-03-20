@@ -255,17 +255,17 @@ export default function Home() {
   };
   
   return (
-    <div className="bg-gray-100 min-h-screen font-sans text-gray-800">
+    <div className="bg-gradient-to-br from-orange-50 to-gray-100 min-h-screen font-sans text-gray-800">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <header className="mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900">Ordinals Inscription Tool</h1>
+        <header className="mb-8 text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">Ordinals Inscription Tool</h1>
           <p className="text-gray-600 mt-2">Upload, configure, and inscribe images to your Ordinals node</p>
         </header>
 
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden border border-orange-200 shadow-lg rounded-xl">
           <CardContent className="p-0">
-            <section className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-medium mb-4">1. Upload Image</h2>
+            <section className="p-6 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-transparent">
+              <h2 className="text-xl font-semibold mb-4 text-orange-800">1. Upload Image</h2>
               <FileUploader onFileUpload={handleFileUpload} />
             </section>
 
@@ -305,8 +305,10 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <footer className="mt-8 text-center text-gray-500 text-sm">
-          <p>Ordinals Inscription Tool - For use with a local Ordinals node running in Docker</p>
+        <footer className="mt-8 text-center">
+          <div className="inline-block px-6 py-2 bg-gradient-to-r from-orange-600 to-amber-500 rounded-full">
+            <p className="text-white font-medium text-sm">Ordinals Inscription Tool - For use with a local Ordinals node running in Docker</p>
+          </div>
         </footer>
       </div>
     </div>
