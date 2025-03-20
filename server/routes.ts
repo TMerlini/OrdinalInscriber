@@ -5,6 +5,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { execCommand, startWebServer, stopWebServer } from "./cmd-executor";
+import { getCacheInfo, clearAllCachedImages, cleanCacheIfNeeded } from "./cache-manager";
 import os from "os";
 import { networkInterfaces } from "os";
 
@@ -33,6 +34,14 @@ const upload = multer({
   }
 });
 
+// Helper function to format byte size to human-readable format
+function formatByteSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' bytes';
+  else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  else if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+  else return (bytes / 1073741824).toFixed(1) + ' GB';
+}
+
 // Function to get local IP address
 function getLocalIpAddress(): string {
   const nets = networkInterfaces();
@@ -54,6 +63,55 @@ function getLocalIpAddress(): string {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
+  
+  // Get cache information
+  app.get('/api/cache/info', async (req, res) => {
+    try {
+      const cacheInfo = await getCacheInfo();
+      
+      // Format the data for the frontend
+      const formattedSize = formatByteSize(cacheInfo.totalSize);
+      const formattedLimit = formatByteSize(5 * 1024 * 1024 * 1024); // 5GB
+      
+      // Calculate percentage of cache used (0-100)
+      const percentUsed = Math.min(
+        Math.round((cacheInfo.totalSize / (5 * 1024 * 1024 * 1024)) * 100),
+        100
+      );
+      
+      res.json({
+        totalSize: cacheInfo.totalSize,
+        formattedSize,
+        formattedLimit,
+        fileCount: cacheInfo.fileCount,
+        percentUsed,
+        files: cacheInfo.files.map(file => ({
+          name: file.name,
+          size: file.size,
+          formattedSize: formatByteSize(file.size),
+          created: file.created
+        }))
+      });
+    } catch (error) {
+      console.error('Error getting cache info:', error);
+      res.status(500).json({ error: 'Failed to get cache information' });
+    }
+  });
+  
+  // Clear all cached images
+  app.post('/api/cache/clear', async (req, res) => {
+    try {
+      const deletedCount = await clearAllCachedImages();
+      res.json({
+        success: true,
+        deletedCount,
+        message: `Successfully cleared ${deletedCount} cached image${deletedCount !== 1 ? 's' : ''}`
+      });
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+      res.status(500).json({ error: 'Failed to clear cache' });
+    }
+  });
   
   // Generate commands based on uploaded file and config
   app.post('/api/commands/generate', upload.single('file'), async (req, res) => {

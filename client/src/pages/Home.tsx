@@ -5,6 +5,7 @@ import ImagePreview from "@/components/ImagePreview";
 import ConfigForm from "@/components/ConfigForm";
 import CommandSection from "@/components/CommandSection";
 import ResultSection from "@/components/ResultSection";
+import CacheManager from "@/components/CacheManager";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
 
