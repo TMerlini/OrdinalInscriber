@@ -124,16 +124,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const file = req.file;
       const fileName = path.basename(file.path);
       const localIp = getLocalIpAddress();
-      const containerPath = config.containerPath || '/data/';
+      const containerPath = config.containerPath || '/ord/data/';
       const containerFilePath = `${containerPath}${fileName}`;
       const port = config.port || 8000;
       
-      // Generate the 3 commands needed
+      // Generate web server and download commands
       const commands = [
         `python3 -m http.server ${port}`,
-        `docker exec -it ${config.containerName} sh -c "curl -o ${containerFilePath} http://${localIp}:${port}/${fileName}"`,
-        `docker exec -it ${config.containerName} ord wallet inscribe --fee-rate ${config.feeRate} --file ${containerFilePath}`
+        `docker exec -it ${config.containerName} sh -c "curl -o ${containerFilePath} http://${localIp}:${port}/${fileName}"`
       ];
+      
+      // Build the inscription command with all possible options
+      let inscribeCommand = `docker exec -it ${config.containerName} ord wallet inscribe --fee-rate ${config.feeRate} --file ${containerFilePath}`;
+      
+      // Add optional parameters based on config
+      if (config.satPoint) {
+        inscribeCommand += ` --sat-point ${config.satPoint}`;
+      }
+      
+      if (config.contentType) {
+        inscribeCommand += ` --content-type "${config.contentType}"`;
+      }
+      
+      if (config.destination) {
+        inscribeCommand += ` --destination ${config.destination}`;
+      }
+      
+      if (config.dryRun) {
+        inscribeCommand += ` --dry-run`;
+      }
+      
+      if (config.noLimitCheck) {
+        inscribeCommand += ` --no-limit-check`;
+      }
+      
+      // Add the inscription command to the array
+      commands.push(inscribeCommand);
       
       res.json({
         commands,
@@ -155,8 +181,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const file = req.file;
       const dirPath = path.dirname(file.path);
       
+      // Get port from request body if available
+      const port = req.body.port ? parseInt(req.body.port) : 8000;
+      
       // Start local web server in the directory with the file
-      const result = await startWebServer(dirPath);
+      const result = await startWebServer(dirPath, port);
       
       if (result.error) {
         return res.status(500).json({
@@ -167,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         error: false,
-        output: `Serving HTTP on 0.0.0.0 port 8000...\nFile available at: http://${getLocalIpAddress()}:8000/${path.basename(file.path)}`
+        output: `Serving HTTP on 0.0.0.0 port ${port}...\nFile available at: http://${getLocalIpAddress()}:${port}/${path.basename(file.path)}`
       });
     } catch (error) {
       console.error('Error serving file:', error);

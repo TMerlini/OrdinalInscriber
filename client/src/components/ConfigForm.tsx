@@ -6,6 +6,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ConfigOptions } from "@/lib/types";
 
 const formSchema = z.object({
@@ -16,9 +17,16 @@ const formSchema = z.object({
     message: "Fee rate must be at least 1",
   }),
   advancedMode: z.boolean().default(false),
-  containerPath: z.string().optional(),
   port: z.coerce.number().min(1025).max(65535).optional(),
+  satPoint: z.string().optional(),
+  dryRun: z.boolean().default(false),
+  noLimitCheck: z.boolean().default(false),
+  contentType: z.string().optional(),
+  destination: z.string().optional(),
 });
+
+// Fixed container path that will be used across the application
+export const DEFAULT_CONTAINER_PATH = "/ord/data/";
 
 interface ConfigFormProps {
   onGenerateCommands: (config: ConfigOptions) => void;
@@ -33,13 +41,22 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
       containerName: "ord-container",
       feeRate: 4,
       advancedMode: false,
-      containerPath: "/data/",
       port: 8000,
+      satPoint: "",
+      dryRun: false,
+      noLimitCheck: false,
+      contentType: "",
+      destination: "",
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    onGenerateCommands(values);
+    // Add the fixed container path to the values
+    const configWithPath: ConfigOptions = {
+      ...values,
+      containerPath: DEFAULT_CONTAINER_PATH,
+    };
+    onGenerateCommands(configWithPath);
   };
 
   const handleAdvancedToggle = (checked: boolean) => {
@@ -48,8 +65,8 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
   };
 
   return (
-    <section className="p-6 border-b border-gray-200">
-      <h2 className="text-xl font-medium mb-4">3. Configure Inscription</h2>
+    <section className="p-6 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-transparent">
+      <h2 className="text-xl font-semibold mb-4 text-orange-800">3. Configure Inscription</h2>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -99,52 +116,142 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
               htmlFor="advanced-mode"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              Enable advanced mode
+              Enable advanced options
             </label>
           </div>
           
           {showAdvanced && (
-            <div className="space-y-4 p-4 bg-gray-50 rounded-md">
-              <h4 className="font-medium text-sm text-gray-700">Advanced Options</h4>
+            <div className="space-y-6 p-4 bg-white rounded-xl border border-orange-200 shadow-sm">
+              <h4 className="font-medium text-sm text-orange-800">Advanced Inscription Options</h4>
               
-              <FormField
-                control={form.control}
-                name="containerPath"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Container Path</FormLabel>
-                    <FormControl>
-                      <Input placeholder="/data/" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Directory path inside container to save the file
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="port"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Web Server Port</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="8000" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Local port to use for serving the file
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="contentType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Content Type</FormLabel>
+                      <FormControl>
+                        <Input placeholder="image/png" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Manually specify the content type (optional)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               
-              <FormField
-                control={form.control}
-                name="port"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Web Server Port</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="8000" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Local port to use for serving the file
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="satPoint"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sat Point</FormLabel>
+                      <FormControl>
+                        <Input placeholder="txid:vout:offset" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Specific satpoint to inscribe (optional)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="destination"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Destination Address</FormLabel>
+                      <FormControl>
+                        <Input placeholder="bitcoin address" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Address to send the inscription to (optional)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="flex flex-wrap gap-6">
+                <FormField
+                  control={form.control}
+                  name="dryRun"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Dry Run
+                        </FormLabel>
+                        <FormDescription>
+                          Perform a dry run without making changes
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="noLimitCheck"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          No Limit Check
+                        </FormLabel>
+                        <FormDescription>
+                          Skip inscription size limit check
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="p-3 bg-orange-50 rounded-lg text-xs text-orange-800">
+                <strong>Note:</strong> All files will be saved to {DEFAULT_CONTAINER_PATH} within the container
+              </div>
             </div>
           )}
           
           <div className="pt-2">
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600">
               Generate Commands
             </Button>
           </div>
