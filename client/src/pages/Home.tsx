@@ -65,8 +65,13 @@ export default function Home() {
       // Start server (Step 1)
       updateStepStatus(0, StepStatus.PROGRESS);
       
+      // Get the port from the commands
+      const portMatch = commandsData.commands[0].match(/http\.server\s+(\d+)/);
+      const port = portMatch ? portMatch[1] : '8000';
+      
       const formData = new FormData();
       formData.append('file', uploadedFile.file);
+      formData.append('port', port);
       
       const serverRes = await apiRequest('POST', '/api/execute/serve', formData, true);
       const serverData = await serverRes.json();
@@ -154,8 +159,13 @@ export default function Home() {
       
       if (stepIndex === 0) {
         // Execute server step
+        // Get the port from the commands
+        const portMatch = commandsData.commands[0].match(/http\.server\s+(\d+)/);
+        const port = portMatch ? portMatch[1] : '8000';
+        
         const formData = new FormData();
         formData.append('file', uploadedFile.file);
+        formData.append('port', port);
         
         response = await apiRequest('POST', '/api/execute/serve', formData, true);
         data = await response.json();
