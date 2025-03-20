@@ -134,24 +134,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `docker exec -it ${config.containerName} sh -c "curl -o ${containerFilePath} http://${localIp}:${port}/${fileName}"`
       ];
       
-      // Build the inscription command with all possible options
+      // Build the inscription command with options
       let inscribeCommand = `docker exec -it ${config.containerName} ord wallet inscribe --fee-rate ${config.feeRate} --file ${containerFilePath}`;
       
-      // Add optional parameters based on config
-      if (config.satPoint) {
-        inscribeCommand += ` --sat-point ${config.satPoint}`;
-      }
-      
-      if (config.contentType) {
-        inscribeCommand += ` --content-type "${config.contentType}"`;
-      }
-      
+      // Add optional parameters based on config      
       if (config.destination) {
         inscribeCommand += ` --destination ${config.destination}`;
-      }
-      
-      if (config.dryRun) {
-        inscribeCommand += ` --dry-run`;
       }
       
       if (config.noLimitCheck) {

@@ -13,10 +13,7 @@ export interface ConfigOptions {
   containerPath?: string;
   port?: number;
   advancedMode: boolean;
-  satPoint?: string;
-  dryRun?: boolean;
   noLimitCheck?: boolean;
-  contentType?: string;
   destination?: string;
 }
 

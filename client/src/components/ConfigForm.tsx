@@ -18,10 +18,7 @@ const formSchema = z.object({
   }),
   advancedMode: z.boolean().default(false),
   port: z.coerce.number().min(1025).max(65535).optional(),
-  satPoint: z.string().optional(),
-  dryRun: z.boolean().default(false),
   noLimitCheck: z.boolean().default(false),
-  contentType: z.string().optional(),
   destination: z.string().optional(),
 });
 
@@ -42,10 +39,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
       feeRate: 4,
       advancedMode: false,
       port: 8000,
-      satPoint: "",
-      dryRun: false,
       noLimitCheck: false,
-      contentType: "",
       destination: "",
     },
   });
@@ -144,42 +138,6 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                 
                 <FormField
                   control={form.control}
-                  name="contentType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Content Type</FormLabel>
-                      <FormControl>
-                        <Input placeholder="image/png" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Manually specify the content type (optional)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="satPoint"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sat Point</FormLabel>
-                      <FormControl>
-                        <Input placeholder="txid:vout:offset" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Specific satpoint to inscribe (optional)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
                   name="destination"
                   render={({ field }) => (
                     <FormItem>
@@ -197,29 +155,6 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
               </div>
               
               <div className="flex flex-wrap gap-6">
-                <FormField
-                  control={form.control}
-                  name="dryRun"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>
-                          Dry Run
-                        </FormLabel>
-                        <FormDescription>
-                          Perform a dry run without making changes
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                
                 <FormField
                   control={form.control}
                   name="noLimitCheck"
@@ -247,6 +182,12 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
               <div className="p-3 bg-orange-50 rounded-lg text-xs text-orange-800">
                 <strong>Note:</strong> All files will be saved to {DEFAULT_CONTAINER_PATH} within the container
               </div>
+              
+              {form.watch("noLimitCheck") && (
+                <div className="p-3 bg-red-50 rounded-lg text-xs text-red-600 border border-red-200">
+                  <strong>Warning:</strong> Disabling size limit checks may cause transactions to fail if the inscription is too large for the Bitcoin network. Use with caution.
+                </div>
+              )}
             </div>
           )}
           

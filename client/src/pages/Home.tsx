@@ -315,10 +315,18 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <footer className="mt-8 text-center">
+        <footer className="mt-8 text-center flex flex-col items-center space-y-2">
           <div className="inline-block px-6 py-2 bg-gradient-to-r from-orange-600 to-amber-500 rounded-full">
             <p className="text-white font-medium text-sm">Ordinals Inscription Tool - For use with a local Ordinals node running in Docker</p>
           </div>
+          <a 
+            href="https://ordinarinos.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-gray-500 hover:text-orange-600 transition-colors"
+          >
+            Powered by Ordinarinos
+          </a>
         </footer>
       </div>
     </div>
