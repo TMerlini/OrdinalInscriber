@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import FileUploader from "@/components/FileUploader";
 import ImagePreview from "@/components/ImagePreview";
