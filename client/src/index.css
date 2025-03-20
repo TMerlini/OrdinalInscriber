@@ -10,4 +10,35 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+
+  /* Custom dark mode styling */
+  .dark {
+    --background: 215 50% 12%;
+    --foreground: 210 40% 98%;
+    
+    --card: 215 50% 15%;
+    --card-foreground: 210 40% 98%;
+    
+    --popover: 215 50% 15%;
+    --popover-foreground: 210 40% 98%;
+    
+    --primary: 24 95% 50%;
+    --primary-foreground: 210 40% 98%;
+    
+    --secondary: 215 50% 20%;
+    --secondary-foreground: 210 40% 98%;
+    
+    --muted: 215 50% 20%;
+    --muted-foreground: 215 20% 70%;
+    
+    --accent: 215 50% 25%;
+    --accent-foreground: 210 40% 98%;
+    
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 215 50% 25%;
+    --input: 215 50% 25%;
+    --ring: 215 50% 45%;
+  }
 }
