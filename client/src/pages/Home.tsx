@@ -408,7 +408,7 @@ export default function Home() {
 
             {result && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Results</h2>
+                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">6. Results</h2>
                 <ResultSection 
                   result={result} 
                   onReset={resetApplication}
