@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, FileCode } from 'lucide-react';
+import { FileCode } from 'lucide-react';
 
 interface ModelViewerProps {
   url: string;
@@ -52,8 +52,6 @@ export default function ModelViewer({ url, width = 400, height = 300 }: ModelVie
       } else {
         size = Math.round(url.length / 1024);
       }
-    } else {
-      size = Math.round(url.length / 1024);
     }
     
     return `${size} KB`;
@@ -61,49 +59,36 @@ export default function ModelViewer({ url, width = 400, height = 300 }: ModelVie
   
   return (
     <div 
+      className="rounded-lg border border-orange-100 dark:border-navy-700 overflow-hidden"
       style={{ 
         width, 
         height, 
         margin: '0 auto', 
         position: 'relative',
-        border: '1px solid',
-        borderColor: 'rgba(201, 159, 116, 0.3)',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        backgroundColor: 'rgba(30, 41, 59, 0.05)'
       }}
     >
       <div 
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem',
-          textAlign: 'center'
-        }}
+        className="flex flex-col items-center justify-center h-full p-4 text-center bg-white dark:bg-navy-800"
       >
-        <FileCode className="w-16 h-16 mb-4 text-orange-600 dark:text-orange-400" />
+        <FileCode className="w-12 h-12 mb-3 text-orange-600 dark:text-orange-400" />
         
-        <div className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">
-          {getFileType()} Model Preview
+        <div className="text-base font-medium mb-1 text-gray-800 dark:text-gray-200">
+          {getFileType()} Model
         </div>
         
-        <div className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="text-xs text-gray-600 dark:text-gray-400 mb-3 overflow-hidden text-ellipsis w-full">
           {getFileName(url)}
         </div>
         
-        <div className="mt-6 rounded-md bg-white dark:bg-navy-900 p-3 border border-orange-100 dark:border-navy-700 max-w-xs">
+        <div className="mb-2 w-full max-w-[180px] rounded-md bg-white dark:bg-navy-900 p-2 border border-orange-100 dark:border-navy-700">
           <div className="text-xs text-gray-500 dark:text-gray-400">
             <p className="mb-1"><span className="font-semibold">Size:</span> {getFileSize()}</p>
             <p><span className="font-semibold">Format:</span> {getFileType()}</p>
           </div>
         </div>
         
-        <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-          File validated successfully. Interactive 3D preview will be available after inscription.
+        <div className="text-xs text-gray-500 dark:text-gray-400 max-w-[200px]">
+          File validated. 3D preview after inscription.
         </div>
       </div>
     </div>

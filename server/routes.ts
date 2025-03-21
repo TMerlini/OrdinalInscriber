@@ -115,6 +115,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Delete a single cached file
+  app.delete('/api/cache/file/:filename', async (req, res) => {
+    try {
+      const filename = req.params.filename;
+      if (!filename) {
+        return res.status(400).json({ error: 'No filename provided' });
+      }
+      
+      const tmpDir = os.tmpdir();
+      const filePath = path.join(tmpDir, filename);
+      
+      // Check if file exists
+      try {
+        await fs.access(filePath);
+      } catch (err) {
+        return res.status(404).json({ error: 'File not found' });
+      }
+      
+      // Delete the file
+      await fs.unlink(filePath);
+      
+      res.json({
+        success: true,
+        message: `Successfully deleted ${filename}`
+      });
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      res.status(500).json({ error: 'Failed to delete file' });
+    }
+  });
+  
+  // Serve a cached file for preview
+  app.get('/api/cache/file/:filename', async (req, res) => {
+    try {
+      const filename = req.params.filename;
+      if (!filename) {
+        return res.status(400).json({ error: 'No filename provided' });
+      }
+      
+      const tmpDir = os.tmpdir();
+      const filePath = path.join(tmpDir, filename);
+      
+      // Check if file exists
+      try {
+        await fs.access(filePath);
+      } catch (err) {
+        return res.status(404).json({ error: 'File not found' });
+      }
+      
+      res.sendFile(filePath);
+    } catch (error) {
+      console.error('Error serving file:', error);
+      res.status(500).json({ error: 'Failed to serve file' });
+    }
+  });
+  
   // Generate commands based on uploaded file and config
   app.post('/api/commands/generate', upload.single('file'), async (req, res) => {
     try {
