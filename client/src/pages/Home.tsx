@@ -27,11 +27,12 @@ export default function Home() {
   const [cacheOpen, setCacheOpen] = useState(false);
   const [optimizeImage, setOptimizeImage] = useState(false);
   
-  // Form for metadata
+  // Form for metadata and destination
   const metadataForm = useForm({
     defaultValues: {
       includeMetadata: false,
       metadataStorage: "on-chain" as const,
+      destination: "",
       metadataJson: `{
   "name": "My Ordinals Inscription",
   "description": "A unique digital artifact on Bitcoin",
@@ -340,7 +341,35 @@ export default function Home() {
             
             {uploadedFile && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-white dark:bg-navy-900">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">2. Metadata</h2>
+                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">2. Destination Address</h2>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Specify a Bitcoin address to receive the inscription (optional).
+                  </p>
+                </div>
+                <div className="bg-orange-50 dark:bg-navy-800 p-4 rounded-lg mb-4">
+                  <div className="mb-2 text-gray-700 dark:text-gray-300">
+                    <label htmlFor="destination-address" className="block text-sm font-medium mb-1">Bitcoin Address</label>
+                    <input 
+                      id="destination-address" 
+                      type="text" 
+                      placeholder="Enter Bitcoin address to receive the inscription"
+                      className="w-full p-2 border border-orange-200 dark:border-navy-600 rounded-md 
+                                bg-white dark:bg-navy-900 text-gray-800 dark:text-gray-200"
+                      value={metadataForm.watch('destination') || ''} 
+                      onChange={(e) => metadataForm.setValue('destination', e.target.value)}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    If left empty, the inscription will be sent to the wallet's default address.
+                  </p>
+                </div>
+              </section>
+            )}
+            
+            {uploadedFile && (
+              <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-white dark:bg-navy-900">
+                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">3. Metadata</h2>
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Add optional metadata to be stored with your inscription on-chain.
@@ -356,7 +385,7 @@ export default function Home() {
 
             {uploadedFile && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">3. Configure Inscription</h2>
+                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Configure Inscription</h2>
                 <ConfigForm 
                   onGenerateCommands={handleGenerateCommands} 
                 />
