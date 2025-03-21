@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfigOptions } from "@/lib/types";
-import MetadataInput from "./MetadataInput";
+import { CheckCircle, XCircle } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 
 const formSchema = z.object({
   containerName: z.string().min(1, {
@@ -27,7 +28,7 @@ const formSchema = z.object({
   mimeType: z.string().optional(),
   optimizeImage: z.boolean().default(false),
   includeMetadata: z.boolean().default(false),
-  metadataStorage: z.enum(['on-chain', 'off-chain']).default('on-chain'),
+  metadataStorage: z.enum(['on-chain']).default('on-chain'),
   metadataJson: z.string().optional(),
 });
 
@@ -40,6 +41,8 @@ interface ConfigFormProps {
 
 export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [containerStatus, setContainerStatus] = useState<'unknown' | 'valid' | 'invalid'>('unknown');
+  const [portStatus, setPortStatus] = useState<'unknown' | 'valid' | 'invalid'>('unknown');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -87,6 +90,71 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
     setShowAdvanced(checked);
     form.setValue("advancedMode", checked);
   };
+  
+  const checkContainerStatus = async (containerName: string) => {
+    try {
+      const response = await apiRequest('GET', `/api/container/check?name=${containerName}`);
+      const data = await response.json();
+      
+      if (data.exists) {
+        setContainerStatus('valid');
+      } else {
+        setContainerStatus('invalid');
+      }
+    } catch (error) {
+      console.error('Error checking container status:', error);
+      setContainerStatus('invalid');
+    }
+  };
+  
+  const checkPortStatus = async (port: number) => {
+    try {
+      const response = await apiRequest('GET', `/api/port/check?port=${port}`);
+      const data = await response.json();
+      
+      if (data.available) {
+        setPortStatus('valid');
+      } else {
+        setPortStatus('invalid');
+      }
+    } catch (error) {
+      console.error('Error checking port status:', error);
+      setPortStatus('invalid');
+    }
+  };
+  
+  // Watch for container name changes
+  useEffect(() => {
+    const containerName = form.watch('containerName');
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'containerName' && value.containerName) {
+        setContainerStatus('unknown');
+        const timer = setTimeout(() => {
+          if (value.containerName) {
+            checkContainerStatus(value.containerName);
+          }
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+      
+      if (name === 'port' && value.port) {
+        setPortStatus('unknown');
+        const timer = setTimeout(() => {
+          if (value.port) {
+            checkPortStatus(Number(value.port));
+          }
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    });
+    
+    // Check initial values
+    if (containerName) {
+      checkContainerStatus(containerName);
+    }
+    
+    return () => subscription.unsubscribe();
+  }, [form.watch]);
 
   return (
     <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
@@ -100,7 +168,21 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
               name="containerName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Docker Container Name</FormLabel>
+                  <FormLabel className="flex items-center justify-between">
+                    <span>Docker Container Name</span>
+                    {containerStatus === 'valid' && (
+                      <span className="inline-flex items-center text-green-600 dark:text-green-500 text-xs">
+                        <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                        Container exists
+                      </span>
+                    )}
+                    {containerStatus === 'invalid' && (
+                      <span className="inline-flex items-center text-red-600 dark:text-red-500 text-xs">
+                        <XCircle className="h-3.5 w-3.5 mr-1" />
+                        Container not found
+                      </span>
+                    )}
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="ord-container" {...field} />
                   </FormControl>
@@ -154,7 +236,21 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                   name="port"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Web Server Port</FormLabel>
+                      <FormLabel className="flex items-center justify-between">
+                        <span>Web Server Port</span>
+                        {portStatus === 'valid' && (
+                          <span className="inline-flex items-center text-green-600 dark:text-green-500 text-xs">
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                            Port available
+                          </span>
+                        )}
+                        {portStatus === 'invalid' && (
+                          <span className="inline-flex items-center text-red-600 dark:text-red-500 text-xs">
+                            <XCircle className="h-3.5 w-3.5 mr-1" />
+                            Port in use
+                          </span>
+                        )}
+                      </FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="8000" {...field} />
                       </FormControl>
@@ -296,9 +392,6 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
               )}
             </div>
           )}
-          
-          {/* Metadata Section */}
-          <MetadataInput form={form} />
           
           <div className="pt-2">
             <Button type="submit" className="w-full bg-orange-600 dark:bg-orange-700 hover:bg-orange-700 dark:hover:bg-orange-600">
