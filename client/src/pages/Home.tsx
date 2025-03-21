@@ -27,6 +27,24 @@ export default function Home() {
   const [cacheOpen, setCacheOpen] = useState(false);
   const [optimizeImage, setOptimizeImage] = useState(false);
   
+  // Form for metadata
+  const metadataForm = useForm({
+    defaultValues: {
+      includeMetadata: false,
+      metadataStorage: "on-chain" as const,
+      metadataJson: `{
+  "name": "My Ordinals Inscription",
+  "description": "A unique digital artifact on Bitcoin",
+  "attributes": [
+    {
+      "trait_type": "Type",
+      "value": "Image"
+    }
+  ]
+}`
+    }
+  });
+  
   const handleFileUpload = (newFile: UploadedFile) => {
     setUploadedFile(newFile);
     setCommandsData(null);
@@ -59,15 +77,21 @@ export default function Home() {
     if (!uploadedFile) return;
     
     try {
+      const metadataValues = metadataForm.getValues();
+      
       // Include the optimize image setting from the file preview component
-      const configWithOptimize: ConfigOptions = {
+      // and metadata from the metadata form
+      const mergedConfig: ConfigOptions = {
         ...config,
         optimizeImage: optimizeImage,
+        includeMetadata: metadataValues.includeMetadata,
+        metadataStorage: "on-chain" as const,
+        metadataJson: metadataValues.metadataJson
       };
       
       const formData = new FormData();
       formData.append('file', uploadedFile.file);
-      formData.append('config', JSON.stringify(configWithOptimize));
+      formData.append('config', JSON.stringify(mergedConfig));
       
       const response = await apiRequest('POST', '/api/commands/generate', formData, true);
       const data = await response.json();
@@ -322,6 +346,11 @@ export default function Home() {
                     Add optional metadata to be stored with your inscription on-chain.
                   </p>
                 </div>
+                <Form {...metadataForm}>
+                  <form className="space-y-4">
+                    <MetadataInput form={metadataForm} />
+                  </form>
+                </Form>
               </section>
             )}
 

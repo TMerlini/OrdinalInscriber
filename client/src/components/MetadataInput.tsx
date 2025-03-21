@@ -1,145 +1,60 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { InfoIcon } from "lucide-react";
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import React from "react";
 import { UseFormReturn } from "react-hook-form";
+import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 interface MetadataInputProps {
   form: UseFormReturn<any>;
 }
 
 export default function MetadataInput({ form }: MetadataInputProps) {
-  const [isValidJson, setIsValidJson] = useState(true);
-  const metadataValue = form.watch("metadataJson");
-  const includeMetadata = form.watch("includeMetadata");
-
-  // Set metadata storage to on-chain by default
-  useEffect(() => {
-    if (form.getValues("includeMetadata")) {
-      form.setValue("metadataStorage", "on-chain");
-    }
-  }, [form, form.getValues("includeMetadata")]);
-
-  // Validate JSON whenever it changes
-  useEffect(() => {
-    if (!metadataValue) {
-      setIsValidJson(true);
-      return;
-    }
-
-    try {
-      JSON.parse(metadataValue);
-      setIsValidJson(true);
-    } catch (error) {
-      setIsValidJson(false);
-    }
-  }, [metadataValue]);
+  const { watch, setValue } = form;
+  const includeMetadata = watch("includeMetadata");
 
   return (
-    <div className="space-y-6 p-4 bg-white dark:bg-navy-700 rounded-xl border border-orange-200 dark:border-navy-600 shadow-sm">
-      <h4 className="font-medium text-sm text-orange-800 dark:text-orange-400">Metadata Options</h4>
-      
+    <div className="space-y-4">
       <FormField
         control={form.control}
         name="includeMetadata"
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center justify-between rounded-lg border border-orange-100 dark:border-navy-600 p-3">
+          <FormItem className="flex flex-row items-center justify-between rounded-lg border border-orange-100 dark:border-navy-700 p-4">
             <div className="space-y-0.5">
-              <FormLabel>Include Metadata JSON</FormLabel>
+              <FormLabel className="text-base">Include Metadata</FormLabel>
               <FormDescription>
-                Add JSON metadata to your inscription
+                Store additional information with your inscription
               </FormDescription>
             </div>
             <FormControl>
               <Switch
                 checked={field.value}
-                onCheckedChange={(val) => {
-                  field.onChange(val);
-                  if (val) {
-                    form.setValue("metadataStorage", "on-chain");
-                  }
-                }}
+                onCheckedChange={field.onChange}
               />
             </FormControl>
           </FormItem>
         )}
       />
-      
-      {includeMetadata && (
-        <div className="space-y-4">
-          <Card className="border-orange-100 dark:border-navy-600">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  On-Chain Metadata
-                </h5>
-                <InfoIcon className="h-4 w-4 text-gray-400" />
-              </div>
-              
-              <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                <p>• Stored directly in the Bitcoin Blockchain</p>
-                <p>• Visible on any Bitcoin marketplace or explorer</p>
-                <p>• Becomes immutable once inscribed</p>
-                <p>• No additional infrastructure required</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <FormField
-            control={form.control}
-            name="metadataJson"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Metadata JSON</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Enter JSON metadata"
-                    className={`font-mono min-h-[200px] resize-y bg-gray-50 dark:bg-navy-900 ${!isValidJson ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Enter valid JSON metadata to include with your inscription
-                </FormDescription>
-                {!isValidJson && (
-                  <p className="text-sm font-medium text-red-500 mt-1">
-                    Invalid JSON format. Please check your syntax.
-                  </p>
-                )}
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
-          <div className="text-xs text-gray-500 dark:text-gray-400 p-3 bg-orange-50 dark:bg-navy-600 rounded border border-orange-100 dark:border-navy-500">
-            <p className="font-medium mb-1">Recommended Metadata Format:</p>
-            <pre className="whitespace-pre-wrap overflow-x-auto">
-{`{
-  "name": "My NFT", 
-  "description": "A unique Ordinals inscription",
-  "attributes": [
-    {
-      "trait_type": "Type",
-      "value": "Image"
-    },
-    {
-      "trait_type": "Collection",
-      "value": "Ordinals"
-    }
-  ]
-}`}
-            </pre>
-          </div>
-        </div>
+      {includeMetadata && (
+        <FormField
+          control={form.control}
+          name="metadataJson"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Metadata JSON</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Enter JSON metadata"
+                  className="font-mono text-sm h-48 dark:bg-navy-950"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                This JSON will be stored on-chain with your inscription
+              </FormDescription>
+            </FormItem>
+          )}
+        />
       )}
     </div>
   );

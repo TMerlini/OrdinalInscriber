@@ -27,7 +27,7 @@ export interface ConfigOptions {
   mimeType?: string;
   optimizeImage?: boolean;
   includeMetadata?: boolean;
-  metadataStorage?: 'on-chain' | 'off-chain';
+  metadataStorage?: 'on-chain';
   metadataJson?: string;
 }
 
