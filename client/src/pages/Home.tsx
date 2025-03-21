@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import FileUploader from "@/components/FileUploader";
 import ImagePreview from "@/components/ImagePreview";
 import ConfigForm from "@/components/ConfigForm";
@@ -7,6 +8,7 @@ import CommandSection from "@/components/CommandSection";
 import ResultSection from "@/components/ResultSection";
 import CacheManager from "@/components/CacheManager";
 import ThemeToggle from "@/components/ThemeToggle";
+import { ChevronDown } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -19,6 +21,7 @@ export default function Home() {
     { status: StepStatus.DEFAULT, output: "" }
   ]);
   const [result, setResult] = useState<InscriptionResult | null>(null);
+  const [cacheOpen, setCacheOpen] = useState(false);
   
   const handleFileUpload = (newFile: UploadedFile) => {
     setUploadedFile(newFile);
@@ -266,19 +269,19 @@ export default function Home() {
   };
   
   return (
-    <div className="bg-gradient-to-br from-orange-50 to-gray-100 dark:from-navy-950 dark:to-navy-900 min-h-screen font-sans text-gray-800 dark:text-gray-100">
+    <div className="bg-orange-50 dark:bg-navy-950 min-h-screen font-sans text-gray-800 dark:text-gray-100">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <header className="mb-8 text-center relative">
           <div className="absolute right-2 top-2">
             <ThemeToggle />
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">Ordinals Inscription Tool</h1>
+          <h1 className="text-4xl font-bold text-orange-600 dark:text-orange-500">Ordinals Inscription Tool</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">Upload, configure, and inscribe images to your Ordinals node</p>
         </header>
 
         <Card className="overflow-hidden border border-orange-200 dark:border-navy-700 shadow-lg rounded-xl dark:bg-navy-800">
           <CardContent className="p-0">
-            <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-gradient-to-r from-orange-50 to-transparent dark:from-navy-800 dark:to-navy-900">
+            <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
               <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">1. Upload Image</h2>
               <FileUploader onFileUpload={handleFileUpload} />
             </section>
@@ -291,7 +294,7 @@ export default function Home() {
             )}
 
             {uploadedFile && (
-              <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-gradient-to-r from-orange-50 to-transparent dark:from-navy-800 dark:to-navy-900">
+              <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
                 <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">2. Configure Inscription</h2>
                 <ConfigForm 
                   onGenerateCommands={handleGenerateCommands} 
@@ -300,7 +303,7 @@ export default function Home() {
             )}
 
             {commandsData && (
-              <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-gradient-to-r from-orange-50 to-transparent dark:from-navy-800 dark:to-navy-900">
+              <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
                 <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">3. Execute Commands</h2>
                 <CommandSection 
                   commands={commandsData.commands.join('\n')} 
@@ -313,7 +316,7 @@ export default function Home() {
             )}
 
             {result && (
-              <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-gradient-to-r from-orange-50 to-transparent dark:from-navy-800 dark:to-navy-900">
+              <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
                 <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Results</h2>
                 <ResultSection 
                   result={result} 
@@ -322,17 +325,31 @@ export default function Home() {
                 />
               </section>
             )}
-            
-            {/* Cache Manager Section */}
-            <section className="p-6 bg-gradient-to-r from-orange-50 to-transparent dark:from-navy-800 dark:to-navy-900">
-              <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">Cache Management</h2>
-              <CacheManager />
+            {/* Collapsible Cache Management Section */}
+            <section className="p-6 bg-orange-50 dark:bg-navy-800">
+              <Collapsible
+                open={cacheOpen}
+                onOpenChange={setCacheOpen}
+                className="w-full"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-orange-800 dark:text-orange-400">Cache Management</h2>
+                  <CollapsibleTrigger asChild>
+                    <button className="p-2 rounded-full hover:bg-orange-100 dark:hover:bg-navy-700 focus:outline-none transition-colors">
+                      <ChevronDown className={`h-5 w-5 text-orange-600 dark:text-orange-400 transition-transform duration-200 ${cacheOpen ? 'transform rotate-180' : ''}`} />
+                    </button>
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent className="mt-4">
+                  <CacheManager />
+                </CollapsibleContent>
+              </Collapsible>
             </section>
           </CardContent>
         </Card>
 
         <footer className="mt-8 text-center flex flex-col items-center space-y-2">
-          <div className="inline-block px-6 py-2 bg-gradient-to-r from-orange-600 to-amber-500 dark:from-orange-700 dark:to-amber-600 rounded-full">
+          <div className="inline-block px-6 py-2 bg-orange-600 dark:bg-orange-700 rounded-full">
             <p className="text-white font-medium text-sm">Ordinals Inscription Tool - For use with a local Ordinals node running in Docker</p>
           </div>
           <a 

@@ -80,17 +80,17 @@ export default function FileUploader({ onFileUpload }: FileUploaderProps) {
 
   return (
     <div 
-      className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors duration-200 hover:bg-gray-50 ${isDragging ? 'border-blue-500 bg-blue-50/50' : 'border-gray-300'}`}
+      className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors duration-200 hover:bg-orange-50 dark:hover:bg-navy-700 ${isDragging ? 'border-orange-500 bg-orange-50/50 dark:border-orange-400 dark:bg-navy-700/70' : 'border-orange-200 dark:border-navy-600'}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onClick={handleClick}
     >
       <div className="flex flex-col items-center justify-center">
-        <Upload className="h-12 w-12 text-gray-400 mb-3" />
-        <p className="text-gray-700 font-medium">Drag and drop your image here</p>
-        <p className="text-gray-500 text-sm mt-1">or click to browse files</p>
-        <p className="text-gray-500 text-xs mt-3">Supports JPG, PNG, WEBP formats</p>
+        <Upload className="h-12 w-12 text-orange-400 dark:text-orange-500 mb-3" />
+        <p className="text-gray-700 dark:text-gray-200 font-medium">Drag and drop your image here</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">or click to browse files</p>
+        <p className="text-gray-500 dark:text-gray-400 text-xs mt-3">Supports JPG, PNG, WEBP formats</p>
       </div>
       <input 
         type="file" 

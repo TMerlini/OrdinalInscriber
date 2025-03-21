@@ -15,7 +15,7 @@ export default function ImagePreview({ file, onRemove }: ImagePreviewProps) {
   };
   
   return (
-    <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-gradient-to-r from-orange-50 to-transparent dark:from-navy-800 dark:to-navy-900">
+    <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
       <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">2. Preview Image</h2>
       
       <div className="flex flex-col md:flex-row gap-6">
