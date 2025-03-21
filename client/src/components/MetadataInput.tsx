@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { InfoIcon } from "lucide-react";
 import {
@@ -22,7 +21,13 @@ export default function MetadataInput({ form }: MetadataInputProps) {
   const [isValidJson, setIsValidJson] = useState(true);
   const metadataValue = form.watch("metadataJson");
   const includeMetadata = form.watch("includeMetadata");
-  const metadataStorage = form.watch("metadataStorage");
+
+  // Set metadata storage to on-chain by default
+  useEffect(() => {
+    if (form.getValues("includeMetadata")) {
+      form.setValue("metadataStorage", "on-chain");
+    }
+  }, [form, form.getValues("includeMetadata")]);
 
   // Validate JSON whenever it changes
   useEffect(() => {
@@ -57,7 +62,12 @@ export default function MetadataInput({ form }: MetadataInputProps) {
             <FormControl>
               <Switch
                 checked={field.value}
-                onCheckedChange={field.onChange}
+                onCheckedChange={(val) => {
+                  field.onChange(val);
+                  if (val) {
+                    form.setValue("metadataStorage", "on-chain");
+                  }
+                }}
               />
             </FormControl>
           </FormItem>
@@ -66,66 +76,20 @@ export default function MetadataInput({ form }: MetadataInputProps) {
       
       {includeMetadata && (
         <div className="space-y-4">
-          <FormField
-            control={form.control}
-            name="metadataStorage"
-            render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel>Storage Type</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="flex flex-col space-y-1"
-                  >
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="on-chain" />
-                      </FormControl>
-                      <FormLabel className="font-normal">
-                        On-Chain
-                      </FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="off-chain" />
-                      </FormControl>
-                      <FormLabel className="font-normal">
-                        Off-Chain
-                      </FormLabel>
-                    </FormItem>
-                  </RadioGroup>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
           <Card className="border-orange-100 dark:border-navy-600">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
                 <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {metadataStorage === 'on-chain' ? 'On-Chain Storage' : 'Off-Chain Storage'}
+                  On-Chain Metadata
                 </h5>
                 <InfoIcon className="h-4 w-4 text-gray-400" />
               </div>
               
               <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                {metadataStorage === 'on-chain' ? (
-                  <>
-                    <p>• Stored in the Bitcoin Blockchain: visible on any Bitcoin marketplace</p>
-                    <p>• Becomes immutable once inscribed</p>
-                    <p>• Can be uploaded immediately upon submitting your collection mint</p>
-                    <p>• Does not support old collections that are already minted</p>
-                  </>
-                ) : (
-                  <>
-                    <p>• Stored in the in-house database: only visible on Gamma</p>
-                    <p>• Can be updated anytime upon request</p>
-                    <p>• Uploaded after the collection mint is sold out</p>
-                    <p>• Can be applied to old collections without metadata</p>
-                  </>
-                )}
+                <p>• Stored directly in the Bitcoin Blockchain</p>
+                <p>• Visible on any Bitcoin marketplace or explorer</p>
+                <p>• Becomes immutable once inscribed</p>
+                <p>• No additional infrastructure required</p>
               </div>
             </CardContent>
           </Card>

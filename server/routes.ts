@@ -147,15 +147,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Write the metadata JSON to a temporary file
           await fs.writeFile(metadataFilePath, config.metadataJson, 'utf8');
           
-          // Add metadata file download command if it's on-chain
-          if (config.metadataStorage === 'on-chain') {
-            // Command to transfer metadata file to container
-            const metadataContainerPath = `${containerPath}${metadataFileName}`;
-            commands.push(`docker exec -it ${config.containerName} sh -c "curl -o ${metadataContainerPath} http://${localIp}:${port}/${metadataFileName}"`);
-          } else {
-            // For off-chain, we just log that it would be stored in a database
-            console.log(`Metadata would be stored off-chain: ${metadataFilePath}`);
-          }
+          // Command to transfer metadata file to container
+          const metadataContainerPath = `${containerPath}${metadataFileName}`;
+          commands.push(`docker exec -it ${config.containerName} sh -c "curl -o ${metadataContainerPath} http://${localIp}:${port}/${metadataFileName}"`);
         } catch (error) {
           console.error('Error creating metadata file:', error);
         }
@@ -190,8 +184,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inscribeCommand += ` --content-type "${config.mimeType}"`;
       }
       
-      // Add metadata if it's on-chain
-      if (config.includeMetadata && config.metadataStorage === 'on-chain' && metadataFilePath) {
+      // Add metadata if provided
+      if (config.includeMetadata && metadataFilePath) {
         const metadataFileName = path.basename(metadataFilePath);
         const metadataContainerPath = `${containerPath}${metadataFileName}`;
         inscribeCommand += ` --metadata ${metadataContainerPath}`;
