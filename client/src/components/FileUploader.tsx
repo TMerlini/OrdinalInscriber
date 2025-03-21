@@ -89,10 +89,12 @@ export default function FileUploader({ onFileUpload }: FileUploaderProps) {
       reader.readAsDataURL(file);
     } 
     // Check if it's a 3D model file (glb or gltf)
-    else if (file.name.endsWith('.glb') || file.name.endsWith('.gltf')) {
+    else if (file.name.toLowerCase().endsWith('.glb') || file.name.toLowerCase().endsWith('.gltf')) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
+        console.log("Loaded 3D model file:", file.name);
+        
         const uploadedFile: UploadedFile = {
           file,
           preview: result,
