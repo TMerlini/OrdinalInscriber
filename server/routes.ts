@@ -146,6 +146,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inscribeCommand += ` --no-limit-check`;
       }
       
+      // Add new options for Ordinals inscription
+      if (config.satPoint) {
+        inscribeCommand += ` --sat-point ${config.satPoint}`;
+      }
+      
+      if (config.parentId) {
+        inscribeCommand += ` --parent ${config.parentId}`;
+      }
+      
+      if (config.dryRun) {
+        inscribeCommand += ` --dry-run`;
+      }
+      
+      if (config.mimeType) {
+        inscribeCommand += ` --content-type "${config.mimeType}"`;
+      }
+      
       // Add the inscription command to the array
       commands.push(inscribeCommand);
       

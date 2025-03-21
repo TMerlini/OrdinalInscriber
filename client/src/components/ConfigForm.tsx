@@ -20,6 +20,10 @@ const formSchema = z.object({
   port: z.coerce.number().min(1025).max(65535).optional(),
   noLimitCheck: z.boolean().default(false),
   destination: z.string().optional(),
+  satPoint: z.string().optional(),
+  parentId: z.string().optional(),
+  dryRun: z.boolean().default(false),
+  mimeType: z.string().optional(),
 });
 
 // Fixed container path that will be used across the application
@@ -41,6 +45,10 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
       port: 8000,
       noLimitCheck: false,
       destination: "",
+      satPoint: "",
+      parentId: "",
+      dryRun: false,
+      mimeType: "",
     },
   });
 
@@ -59,8 +67,8 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
   };
 
   return (
-    <section className="p-6 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-transparent">
-      <h2 className="text-xl font-semibold mb-4 text-orange-800">3. Configure Inscription</h2>
+    <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
+      <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">2. Configure Inscription</h2>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -115,8 +123,8 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
           </div>
           
           {showAdvanced && (
-            <div className="space-y-6 p-4 bg-white rounded-xl border border-orange-200 shadow-sm">
-              <h4 className="font-medium text-sm text-orange-800">Advanced Inscription Options</h4>
+            <div className="space-y-6 p-4 bg-white dark:bg-navy-700 rounded-xl border border-orange-200 dark:border-navy-600 shadow-sm">
+              <h4 className="font-medium text-sm text-orange-800 dark:text-orange-400">Advanced Inscription Options</h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -154,7 +162,60 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                 />
               </div>
               
-              <div className="flex flex-wrap gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <FormField
+                  control={form.control}
+                  name="satPoint"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sat Point</FormLabel>
+                      <FormControl>
+                        <Input placeholder="outpoint:vout:offset" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Specific satpoint to inscribe (format: outpoint:vout:offset)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="parentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Parent Inscription ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="inscription ID" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Create a child inscription under this parent
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="mimeType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>MIME Type</FormLabel>
+                      <FormControl>
+                        <Input placeholder="image/png, text/plain, etc." {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Override automatic MIME type detection
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="flex flex-wrap gap-6 mt-4">
                 <FormField
                   control={form.control}
                   name="noLimitCheck"
@@ -177,14 +238,37 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                     </FormItem>
                   )}
                 />
+                
+                <FormField
+                  control={form.control}
+                  name="dryRun"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Dry Run
+                        </FormLabel>
+                        <FormDescription>
+                          Perform all checks without creating transaction
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
               </div>
               
-              <div className="p-3 bg-orange-50 rounded-lg text-xs text-orange-800">
+              <div className="p-3 bg-orange-50 dark:bg-navy-600 rounded-lg text-xs text-orange-800 dark:text-orange-300">
                 <strong>Note:</strong> All files will be saved to {DEFAULT_CONTAINER_PATH} within the container
               </div>
               
               {form.watch("noLimitCheck") && (
-                <div className="p-3 bg-red-50 rounded-lg text-xs text-red-600 border border-red-200">
+                <div className="p-3 bg-red-50 dark:bg-red-950 rounded-lg text-xs text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800">
                   <strong>Warning:</strong> Disabling size limit checks may cause transactions to fail if the inscription is too large for the Bitcoin network. Use with caution.
                 </div>
               )}
@@ -192,7 +276,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
           )}
           
           <div className="pt-2">
-            <Button type="submit" className="w-full bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600">
+            <Button type="submit" className="w-full bg-orange-600 dark:bg-orange-700 hover:bg-orange-700 dark:hover:bg-orange-600">
               Generate Commands
             </Button>
           </div>

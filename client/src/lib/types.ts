@@ -15,6 +15,10 @@ export interface ConfigOptions {
   advancedMode: boolean;
   noLimitCheck?: boolean;
   destination?: string;
+  satPoint?: string;
+  parentId?: string;
+  dryRun?: boolean;
+  mimeType?: string;
 }
 
 export interface CommandsData {
