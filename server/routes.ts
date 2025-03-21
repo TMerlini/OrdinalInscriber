@@ -136,6 +136,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `docker exec -it ${config.containerName} sh -c "curl -o ${containerFilePath} http://${localIp}:${port}/${fileName}"`
       ];
       
+      // Handle metadata JSON if requested
+      let metadataFilePath = '';
+      if (config.includeMetadata && config.metadataJson) {
+        try {
+          // Generate a unique file name based on timestamp
+          const metadataFileName = `metadata_${Date.now()}.json`;
+          metadataFilePath = path.join(os.tmpdir(), metadataFileName);
+          
+          // Write the metadata JSON to a temporary file
+          await fs.writeFile(metadataFilePath, config.metadataJson, 'utf8');
+          
+          // Add metadata file download command if it's on-chain
+          if (config.metadataStorage === 'on-chain') {
+            // Command to transfer metadata file to container
+            const metadataContainerPath = `${containerPath}${metadataFileName}`;
+            commands.push(`docker exec -it ${config.containerName} sh -c "curl -o ${metadataContainerPath} http://${localIp}:${port}/${metadataFileName}"`);
+          } else {
+            // For off-chain, we just log that it would be stored in a database
+            console.log(`Metadata would be stored off-chain: ${metadataFilePath}`);
+          }
+        } catch (error) {
+          console.error('Error creating metadata file:', error);
+        }
+      }
+      
       // Build the inscription command with options
       let inscribeCommand = `docker exec -it ${config.containerName} ord wallet inscribe --fee-rate ${config.feeRate} --file ${containerFilePath}`;
       
@@ -163,6 +188,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (config.mimeType) {
         inscribeCommand += ` --content-type "${config.mimeType}"`;
+      }
+      
+      // Add metadata if it's on-chain
+      if (config.includeMetadata && config.metadataStorage === 'on-chain' && metadataFilePath) {
+        const metadataFileName = path.basename(metadataFilePath);
+        const metadataContainerPath = `${containerPath}${metadataFileName}`;
+        inscribeCommand += ` --metadata ${metadataContainerPath}`;
       }
       
       // Add the inscription command to the array

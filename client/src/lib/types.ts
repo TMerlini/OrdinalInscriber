@@ -26,6 +26,9 @@ export interface ConfigOptions {
   dryRun?: boolean;
   mimeType?: string;
   optimizeImage?: boolean;
+  includeMetadata?: boolean;
+  metadataStorage?: 'on-chain' | 'off-chain';
+  metadataJson?: string;
 }
 
 export interface CommandsData {
