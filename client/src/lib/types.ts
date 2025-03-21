@@ -5,6 +5,12 @@ export interface UploadedFile {
     width: number;
     height: number;
   } | null;
+  fileType: 'image' | 'model';
+  sizeWarning?: {
+    type: 'warning' | 'danger';
+    message: string;
+  };
+  optimizationAvailable?: boolean;
 }
 
 export interface ConfigOptions {
@@ -19,6 +25,7 @@ export interface ConfigOptions {
   parentId?: string;
   dryRun?: boolean;
   mimeType?: string;
+  optimizeImage?: boolean;
 }
 
 export interface CommandsData {
