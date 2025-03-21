@@ -36,13 +36,15 @@ export default function ImagePreview({ file, onRemove, onToggleOptimization }: I
       
       <div className="flex flex-col md:flex-row gap-6">
         {/* File preview */}
-        <div className="flex-shrink-0 w-full md:w-1/3 bg-gray-100 dark:bg-navy-800 rounded-lg overflow-hidden border border-orange-200 dark:border-navy-600">
+        <div className="flex-shrink-0 w-full md:w-1/3 bg-gray-100 dark:bg-navy-800 rounded-lg border border-orange-200 dark:border-navy-600 flex items-center justify-center" style={{ height: '256px' }}>
           {file.fileType === 'image' ? (
-            <img 
-              src={file.preview} 
-              alt="Preview" 
-              className="w-full h-auto object-contain max-h-64" 
-            />
+            <div className="w-full h-full overflow-hidden flex items-center justify-center">
+              <img 
+                src={file.preview} 
+                alt="Preview" 
+                className="max-w-full max-h-full object-contain" 
+              />
+            </div>
           ) : (
             <ModelViewer url={file.preview} height={256} />
           )}

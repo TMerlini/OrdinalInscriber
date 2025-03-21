@@ -321,7 +321,7 @@ export default function Home() {
   return (
     <div className="bg-orange-50 dark:bg-navy-950 min-h-screen font-sans text-gray-800 dark:text-gray-100">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <header className="mb-8 text-center relative">
+        <header className="mb-8 relative">
           <div className="absolute right-2 top-2">
             <ThemeToggle />
           </div>
@@ -424,7 +424,7 @@ export default function Home() {
 
             {uploadedFile && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Configure Inscription</h2>
+                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Transaction Fee</h2>
                 <ConfigForm 
                   onGenerateCommands={handleGenerateCommands} 
                 />

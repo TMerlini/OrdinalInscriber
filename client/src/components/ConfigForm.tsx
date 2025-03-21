@@ -181,7 +181,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
 
   return (
     <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-      <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Configure Inscription</h2>
+      <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Transaction Fee</h2>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -192,17 +192,55 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Fee Rate (sats/vB)</FormLabel>
-                  <div className="space-y-2">
-                    <FormControl>
-                      <Input type="number" min={1} placeholder="4" {...field} />
-                    </FormControl>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">Low: 1-2</span>
-                      <span className="text-gray-500 dark:text-gray-400">Medium: 3-5</span>
-                      <span className="text-gray-500 dark:text-gray-400">High: 6+</span>
-                    </div>
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <button
+                      type="button"
+                      className={`py-2 px-3 rounded-md text-center transition-colors ${
+                        Number(field.value) <= 2 
+                          ? 'bg-orange-200 dark:bg-orange-900 text-orange-800 dark:text-orange-100 font-medium' 
+                          : 'bg-gray-100 dark:bg-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-navy-600'
+                      }`}
+                      onClick={() => field.onChange(1)}
+                    >
+                      Low (1)
+                    </button>
+                    <button
+                      type="button"
+                      className={`py-2 px-3 rounded-md text-center transition-colors ${
+                        Number(field.value) >= 3 && Number(field.value) <= 5
+                          ? 'bg-orange-200 dark:bg-orange-900 text-orange-800 dark:text-orange-100 font-medium' 
+                          : 'bg-gray-100 dark:bg-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-navy-600'
+                      }`}
+                      onClick={() => field.onChange(4)}
+                    >
+                      Medium (4)
+                    </button>
+                    <button
+                      type="button"
+                      className={`py-2 px-3 rounded-md text-center transition-colors ${
+                        Number(field.value) >= 6 
+                          ? 'bg-orange-200 dark:bg-orange-900 text-orange-800 dark:text-orange-100 font-medium' 
+                          : 'bg-gray-100 dark:bg-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-navy-600'
+                      }`}
+                      onClick={() => field.onChange(8)}
+                    >
+                      High (8)
+                    </button>
                   </div>
-                  <div className="mt-2 p-3 bg-orange-50 dark:bg-navy-600 rounded-lg">
+                  <div className="flex items-center">
+                    <span className="text-sm text-gray-500 dark:text-gray-400 mr-2">Custom:</span>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min={1} 
+                        value={field.value} 
+                        onChange={field.onChange}
+                        className="max-w-[100px] text-center" 
+                      />
+                    </FormControl>
+                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">sats/vB</span>
+                  </div>
+                  <div className="mt-4 p-3 bg-orange-50 dark:bg-navy-600 rounded-lg">
                     <p className="text-xs text-orange-800 dark:text-orange-300">
                       <strong>Estimated cost:</strong> {Number(field.value) * 350} sats (≈${((Number(field.value) * 350) * 0.00006).toFixed(2)} at 60K USD/BTC)
                     </p>
@@ -372,52 +410,66 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
 
               </div>
               
-              <div className="flex flex-wrap gap-6 mt-4">
-                <FormField
-                  control={form.control}
-                  name="noLimitCheck"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>
-                          No Limit Check
-                        </FormLabel>
-                        <FormDescription>
-                          Skip inscription size limit check
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="dryRun"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>
-                          Dry Run
-                        </FormLabel>
-                        <FormDescription>
-                          Perform all checks without creating transaction
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
+              <div className="space-y-4 mt-4">
+                <div className="flex flex-col space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label
+                        htmlFor="no-limit-check"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        No Limit Check
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Skip inscription size limit check
+                      </p>
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="noLimitCheck"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Switch 
+                              id="no-limit-check"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label
+                        htmlFor="dry-run"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Dry Run
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Perform all checks without creating transaction
+                      </p>
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="dryRun"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Switch 
+                              id="dry-run"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
               </div>
               
               <div className="p-3 bg-orange-50 dark:bg-navy-600 rounded-lg text-xs text-orange-800 dark:text-orange-300">
