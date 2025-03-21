@@ -68,27 +68,27 @@ export default function ModelViewer({ url, width = 400, height = 300 }: ModelVie
       }}
     >
       <div 
-        className="flex flex-col items-center justify-center h-full p-4 text-center bg-white dark:bg-navy-800"
+        className="flex flex-col items-center justify-center h-full p-3 text-center bg-white dark:bg-navy-800"
       >
-        <FileCode className="w-12 h-12 mb-3 text-orange-600 dark:text-orange-400" />
+        <FileCode className="w-10 h-10 mb-2 text-orange-600 dark:text-orange-400" />
         
-        <div className="text-base font-medium mb-1 text-gray-800 dark:text-gray-200">
+        <div className="text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">
           {getFileType()} Model
         </div>
         
-        <div className="text-xs text-gray-600 dark:text-gray-400 mb-3 overflow-hidden text-ellipsis w-full">
+        <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 overflow-hidden text-ellipsis w-full">
           {getFileName(url)}
         </div>
         
-        <div className="mb-2 w-full max-w-[180px] rounded-md bg-white dark:bg-navy-900 p-2 border border-orange-100 dark:border-navy-700">
+        <div className="mb-2 w-full max-w-[160px] rounded-md bg-white dark:bg-navy-900 p-2 border border-orange-100 dark:border-navy-700">
           <div className="text-xs text-gray-500 dark:text-gray-400">
             <p className="mb-1"><span className="font-semibold">Size:</span> {getFileSize()}</p>
             <p><span className="font-semibold">Format:</span> {getFileType()}</p>
           </div>
         </div>
         
-        <div className="text-xs text-gray-500 dark:text-gray-400 max-w-[200px]">
-          File validated. 3D preview after inscription.
+        <div className="text-xs text-gray-500 dark:text-gray-400 max-w-[160px]">
+          3D preview after inscription
         </div>
       </div>
     </div>

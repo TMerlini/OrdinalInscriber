@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Form } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
 import FileUploader from "@/components/FileUploader";
 import ImagePreview from "@/components/ImagePreview";
 import ConfigForm from "@/components/ConfigForm";
 import CommandSection from "@/components/CommandSection";
 import ResultSection from "@/components/ResultSection";
 import CacheManager from "@/components/CacheManager";
+import MetadataInput from "@/components/MetadataInput";
 import ThemeToggle from "@/components/ThemeToggle";
 import { ChevronDown } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult } from "@/lib/types";
@@ -310,10 +313,21 @@ export default function Home() {
                 onToggleOptimization={handleToggleOptimization} 
               />
             )}
+            
+            {uploadedFile && (
+              <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-white dark:bg-navy-900">
+                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">2. Metadata</h2>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Add optional metadata to be stored with your inscription on-chain.
+                  </p>
+                </div>
+              </section>
+            )}
 
             {uploadedFile && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">2. Configure Inscription</h2>
+                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">3. Configure Inscription</h2>
                 <ConfigForm 
                   onGenerateCommands={handleGenerateCommands} 
                 />
@@ -322,7 +336,7 @@ export default function Home() {
 
             {commandsData && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">3. Execute Commands</h2>
+                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Execute Commands</h2>
                 <CommandSection 
                   commands={commandsData.commands.join('\n')} 
                   steps={steps}
