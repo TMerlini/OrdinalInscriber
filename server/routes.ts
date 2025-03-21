@@ -8,6 +8,7 @@ import { execCommand, startWebServer, stopWebServer } from "./cmd-executor";
 import { getCacheInfo, clearAllCachedImages, cleanCacheIfNeeded } from "./cache-manager";
 import os from "os";
 import { networkInterfaces } from "os";
+import sharp from "sharp";
 
 // Setup multer for file uploads
 const upload = multer({
@@ -26,11 +27,12 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // Limit file size to 10MB
   },
   fileFilter: function (req, file, cb) {
-    // Only accept image files
-    if (!file.mimetype.match(/^image\/(jpeg|png|webp)$/)) {
-      return cb(new Error('Only JPG, PNG, and WEBP images are allowed'));
+    // Accept image files and 3D model files
+    if (file.mimetype.match(/^image\/(jpeg|png|webp)$/) || 
+        file.originalname.match(/\.(glb|gltf)$/i)) {
+      return cb(null, true);
     }
-    cb(null, true);
+    return cb(new Error('Only JPG, PNG, WEBP images and GLB/GLTF models are allowed'));
   }
 });
 
@@ -184,10 +186,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const file = req.file;
-      const dirPath = path.dirname(file.path);
-      
-      // Get port from request body if available
+      let filePath = file.path;
+      const originalFileName = path.basename(file.path);
       const port = req.body.port ? parseInt(req.body.port) : 8000;
+      const config = req.body.config ? JSON.parse(req.body.config) : {};
+      
+      // Check if we need to optimize the image
+      if (config.optimizeImage && 
+          file.mimetype.match(/^image\/(jpeg|jpg|png)$/) && 
+          file.size > (46 * 1024)) {
+        // Create a new filename with webp extension
+        const newFileName = path.basename(file.path, path.extname(file.path)) + '.webp';
+        const newFilePath = path.join(path.dirname(file.path), newFileName);
+        
+        try {
+          // Optimize the image using sharp
+          await sharp(file.path)
+            .resize(1000) // Resize to max width of 1000px if larger
+            .webp({ 
+              quality: 80,
+              lossless: false,
+              nearLossless: false,
+              effort: 6 // 0-6, 6 is highest compression effort
+            })
+            .toFile(newFilePath);
+          
+          // Check if the optimized file exists and is smaller
+          const optimizedStats = await fs.stat(newFilePath);
+          
+          if (optimizedStats.size < file.size) {
+            // Use the optimized file instead
+            filePath = newFilePath;
+            console.log(`Optimized ${originalFileName} from ${formatByteSize(file.size)} to ${formatByteSize(optimizedStats.size)}`);
+          } else {
+            // The optimized file is not smaller, stick with the original
+            await fs.unlink(newFilePath).catch(() => {}); // Remove the optimized file
+            console.log(`Optimization did not reduce file size for ${originalFileName}, using original`);
+          }
+        } catch (err) {
+          console.error('Error optimizing image:', err);
+          // Continue with the original file if optimization fails
+        }
+      }
+      
+      const dirPath = path.dirname(filePath);
       
       // Start local web server in the directory with the file
       const result = await startWebServer(dirPath, port);
@@ -201,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         error: false,
-        output: `Serving HTTP on 0.0.0.0 port ${port}...\nFile available at: http://${getLocalIpAddress()}:${port}/${path.basename(file.path)}`
+        output: `Serving HTTP on 0.0.0.0 port ${port}...\nFile available at: http://${getLocalIpAddress()}:${port}/${path.basename(filePath)}`
       });
     } catch (error) {
       console.error('Error serving file:', error);

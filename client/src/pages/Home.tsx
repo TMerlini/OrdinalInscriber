@@ -89,6 +89,8 @@ export default function Home() {
       const formData = new FormData();
       formData.append('file', uploadedFile.file);
       formData.append('port', port);
+      // Pass the optimizeImage config for image processing
+      formData.append('config', JSON.stringify({ optimizeImage }));
       
       const serverRes = await apiRequest('POST', '/api/execute/serve', formData, true);
       const serverData = await serverRes.json();
@@ -183,6 +185,8 @@ export default function Home() {
         const formData = new FormData();
         formData.append('file', uploadedFile.file);
         formData.append('port', port);
+        // Pass the optimizeImage config for image processing
+        formData.append('config', JSON.stringify({ optimizeImage }));
         
         response = await apiRequest('POST', '/api/execute/serve', formData, true);
         data = await response.json();
@@ -302,7 +306,8 @@ export default function Home() {
             {uploadedFile && (
               <ImagePreview 
                 file={uploadedFile} 
-                onRemove={handleFileRemove} 
+                onRemove={handleFileRemove}
+                onToggleOptimization={handleToggleOptimization} 
               />
             )}
 
