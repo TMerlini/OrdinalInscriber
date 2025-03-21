@@ -87,7 +87,8 @@ export default function Home() {
         optimizeImage: optimizeImage,
         includeMetadata: metadataValues.includeMetadata,
         metadataStorage: "on-chain" as const,
-        metadataJson: metadataValues.metadataJson
+        metadataJson: metadataValues.metadataJson,
+        destination: metadataValues.destination
       };
       
       const formData = new FormData();
@@ -356,7 +357,7 @@ export default function Home() {
                       placeholder="Enter Bitcoin address to receive the inscription"
                       className="w-full p-2 border border-orange-200 dark:border-navy-600 rounded-md 
                                 bg-white dark:bg-navy-900 text-gray-800 dark:text-gray-200"
-                      value={metadataForm.watch('destination') || ''} 
+                      value={metadataForm.getValues().destination || ''} 
                       onChange={(e) => metadataForm.setValue('destination', e.target.value)}
                     />
                   </div>
@@ -394,7 +395,7 @@ export default function Home() {
 
             {commandsData && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Execute Commands</h2>
+                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">5. Execute Commands</h2>
                 <CommandSection 
                   commands={commandsData.commands.join('\n')} 
                   steps={steps}

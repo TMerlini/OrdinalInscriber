@@ -41,6 +41,8 @@ interface ConfigFormProps {
 
 export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showSatPoint, setShowSatPoint] = useState(false);
+  const [showMimeType, setShowMimeType] = useState(false);
   const [containerStatus, setContainerStatus] = useState<'unknown' | 'valid' | 'invalid'>('unknown');
   const [portStatus, setPortStatus] = useState<'unknown' | 'valid' | 'invalid'>('unknown');
 
@@ -89,6 +91,20 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
   const handleAdvancedToggle = (checked: boolean) => {
     setShowAdvanced(checked);
     form.setValue("advancedMode", checked);
+  };
+  
+  const handleSatPointToggle = (checked: boolean) => {
+    setShowSatPoint(checked);
+    if (!checked) {
+      form.setValue("satPoint", "");
+    }
+  };
+  
+  const handleMimeTypeToggle = (checked: boolean) => {
+    setShowMimeType(checked);
+    if (!checked) {
+      form.setValue("mimeType", "");
+    }
   };
   
   const checkContainerStatus = async (containerName: string) => {
@@ -165,7 +181,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
 
   return (
     <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-      <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">2. Configure Inscription</h2>
+      <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Configure Inscription</h2>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -269,41 +285,79 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                   )}
                 />
                 
-                <FormField
-                  control={form.control}
-                  name="destination"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Destination Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="bitcoin address" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Address to send the inscription to (optional)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <FormField
-                  control={form.control}
-                  name="satPoint"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sat Point</FormLabel>
-                      <FormControl>
-                        <Input placeholder="outpoint:vout:offset" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Specific satpoint to inscribe (format: outpoint:vout:offset)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
+              <div className="space-y-4 mt-4">
+                <div className="flex flex-col space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="sat-point-toggle"
+                      checked={showSatPoint}
+                      onCheckedChange={handleSatPointToggle}
+                    />
+                    <label
+                      htmlFor="sat-point-toggle"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Specify Sat Point
+                    </label>
+                  </div>
+                  
+                  {showSatPoint && (
+                    <FormField
+                      control={form.control}
+                      name="satPoint"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Sat Point</FormLabel>
+                          <FormControl>
+                            <Input placeholder="outpoint:vout:offset" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Specific satpoint to inscribe (format: outpoint:vout:offset)
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </div>
+                
+                <div className="flex flex-col space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="mime-type-toggle"
+                      checked={showMimeType}
+                      onCheckedChange={handleMimeTypeToggle}
+                    />
+                    <label
+                      htmlFor="mime-type-toggle"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Specify MIME Type
+                    </label>
+                  </div>
+                  
+                  {showMimeType && (
+                    <FormField
+                      control={form.control}
+                      name="mimeType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>MIME Type</FormLabel>
+                          <FormControl>
+                            <Input placeholder="image/png, text/plain, etc." {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Override automatic MIME type detection
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
                 
                 <FormField
                   control={form.control}
@@ -316,23 +370,6 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                       </FormControl>
                       <FormDescription>
                         Create a child inscription under this parent
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="mimeType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>MIME Type</FormLabel>
-                      <FormControl>
-                        <Input placeholder="image/png, text/plain, etc." {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Override automatic MIME type detection
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -402,7 +439,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
           
           <div className="pt-2">
             <Button type="submit" className="w-full bg-orange-600 dark:bg-orange-700 hover:bg-orange-700 dark:hover:bg-orange-600">
-              Generate Commands
+              Confirm Ordinal Inscription
             </Button>
           </div>
         </form>
