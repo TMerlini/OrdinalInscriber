@@ -185,50 +185,31 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
-              control={form.control}
-              name="containerName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center justify-between">
-                    <span>Docker Container Name</span>
-                    {containerStatus === 'valid' && (
-                      <span className="inline-flex items-center text-green-600 dark:text-green-500 text-xs">
-                        <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                        Container exists
-                      </span>
-                    )}
-                    {containerStatus === 'invalid' && (
-                      <span className="inline-flex items-center text-red-600 dark:text-red-500 text-xs">
-                        <XCircle className="h-3.5 w-3.5 mr-1" />
-                        Container not found
-                      </span>
-                    )}
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="ord-container" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    The name of your docker container running the ordinals node
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
+          <div className="space-y-6">
             <FormField
               control={form.control}
               name="feeRate"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Fee Rate (sats/vB)</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={1} placeholder="4" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Transaction fee rate in satoshis per virtual byte
-                  </FormDescription>
+                  <div className="space-y-2">
+                    <FormControl>
+                      <Input type="number" min={1} placeholder="4" {...field} />
+                    </FormControl>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Low: 1-2</span>
+                      <span className="text-gray-500 dark:text-gray-400">Medium: 3-5</span>
+                      <span className="text-gray-500 dark:text-gray-400">High: 6+</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 p-3 bg-orange-50 dark:bg-navy-600 rounded-lg">
+                    <p className="text-xs text-orange-800 dark:text-orange-300">
+                      <strong>Estimated cost:</strong> {Number(field.value) * 350} sats (≈${((Number(field.value) * 350) * 0.00006).toFixed(2)} at 60K USD/BTC)
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Higher fee rates increase the chance of quicker inscription confirmation.
+                    </p>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -254,6 +235,37 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
               <h4 className="font-medium text-sm text-orange-800 dark:text-orange-400">Advanced Inscription Options</h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="containerName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center justify-between">
+                        <span>Docker Container Name</span>
+                        {containerStatus === 'valid' && (
+                          <span className="inline-flex items-center text-green-600 dark:text-green-500 text-xs">
+                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                            Container exists
+                          </span>
+                        )}
+                        {containerStatus === 'invalid' && (
+                          <span className="inline-flex items-center text-red-600 dark:text-red-500 text-xs">
+                            <XCircle className="h-3.5 w-3.5 mr-1" />
+                            Container not found
+                          </span>
+                        )}
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="ord-container" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        The name of your docker container running the ordinals node
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
                 <FormField
                   control={form.control}
                   name="port"
@@ -284,8 +296,6 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                     </FormItem>
                   )}
                 />
-                
-
               </div>
               
               <div className="space-y-4 mt-4">
@@ -359,22 +369,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                   )}
                 </div>
                 
-                <FormField
-                  control={form.control}
-                  name="parentId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Parent Inscription ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="inscription ID" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Create a child inscription under this parent
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+
               </div>
               
               <div className="flex flex-wrap gap-6 mt-4">

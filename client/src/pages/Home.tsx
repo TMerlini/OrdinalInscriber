@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Form } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import FileUploader from "@/components/FileUploader";
 import ImagePreview from "@/components/ImagePreview";
@@ -26,6 +27,8 @@ export default function Home() {
   const [result, setResult] = useState<InscriptionResult | null>(null);
   const [cacheOpen, setCacheOpen] = useState(false);
   const [optimizeImage, setOptimizeImage] = useState(false);
+  const [showParentInscription, setShowParentInscription] = useState(false);
+  const [parentInscriptionId, setParentInscriptionId] = useState('');
   
   // Form for metadata and destination
   const metadataForm = useForm({
@@ -88,7 +91,8 @@ export default function Home() {
         includeMetadata: metadataValues.includeMetadata,
         metadataStorage: "on-chain" as const,
         metadataJson: metadataValues.metadataJson,
-        destination: metadataValues.destination
+        destination: metadataValues.destination,
+        parentId: showParentInscription ? parentInscriptionId : undefined
       };
       
       const formData = new FormData();
@@ -349,7 +353,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="bg-orange-50 dark:bg-navy-800 p-4 rounded-lg mb-4">
-                  <div className="mb-2 text-gray-700 dark:text-gray-300">
+                  <div className="mb-4 text-gray-700 dark:text-gray-300">
                     <label htmlFor="destination-address" className="block text-sm font-medium mb-1">Bitcoin Address</label>
                     <input 
                       id="destination-address" 
@@ -360,10 +364,44 @@ export default function Home() {
                       value={metadataForm.getValues().destination || ''} 
                       onChange={(e) => metadataForm.setValue('destination', e.target.value)}
                     />
+                    <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
+                      If left empty, the inscription will be sent to the wallet's default address.
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    If left empty, the inscription will be sent to the wallet's default address.
-                  </p>
+
+                  <div className="mt-4">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Switch 
+                        id="parent-inscription-toggle"
+                        checked={showParentInscription}
+                        onCheckedChange={setShowParentInscription}
+                      />
+                      <label
+                        htmlFor="parent-inscription-toggle"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Add Parent Inscription ID
+                      </label>
+                    </div>
+                    
+                    {showParentInscription && (
+                      <div className="ml-7 mt-2">
+                        <label htmlFor="parent-inscription-id" className="block text-sm font-medium mb-1">Parent Inscription ID</label>
+                        <input 
+                          id="parent-inscription-id" 
+                          type="text" 
+                          placeholder="Enter parent inscription ID"
+                          className="w-full p-2 border border-orange-200 dark:border-navy-600 rounded-md 
+                                    bg-white dark:bg-navy-900 text-gray-800 dark:text-gray-200"
+                          value={parentInscriptionId} 
+                          onChange={(e) => setParentInscriptionId(e.target.value)}
+                        />
+                        <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
+                          Create a child inscription under this parent inscription
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </section>
             )}
