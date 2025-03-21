@@ -22,10 +22,12 @@ export default function Home() {
   ]);
   const [result, setResult] = useState<InscriptionResult | null>(null);
   const [cacheOpen, setCacheOpen] = useState(false);
+  const [optimizeImage, setOptimizeImage] = useState(false);
   
   const handleFileUpload = (newFile: UploadedFile) => {
     setUploadedFile(newFile);
     setCommandsData(null);
+    setOptimizeImage(false);
     setSteps([
       { status: StepStatus.DEFAULT, output: "" },
       { status: StepStatus.DEFAULT, output: "" },
@@ -37,6 +39,7 @@ export default function Home() {
   const handleFileRemove = () => {
     setUploadedFile(null);
     setCommandsData(null);
+    setOptimizeImage(false);
     setSteps([
       { status: StepStatus.DEFAULT, output: "" },
       { status: StepStatus.DEFAULT, output: "" },
@@ -45,13 +48,23 @@ export default function Home() {
     setResult(null);
   };
   
+  const handleToggleOptimization = (optimize: boolean) => {
+    setOptimizeImage(optimize);
+  };
+  
   const handleGenerateCommands = async (config: ConfigOptions) => {
     if (!uploadedFile) return;
     
     try {
+      // Include the optimize image setting from the file preview component
+      const configWithOptimize: ConfigOptions = {
+        ...config,
+        optimizeImage: optimizeImage,
+      };
+      
       const formData = new FormData();
       formData.append('file', uploadedFile.file);
-      formData.append('config', JSON.stringify(config));
+      formData.append('config', JSON.stringify(configWithOptimize));
       
       const response = await apiRequest('POST', '/api/commands/generate', formData, true);
       const data = await response.json();

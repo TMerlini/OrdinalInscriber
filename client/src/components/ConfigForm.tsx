@@ -24,6 +24,7 @@ const formSchema = z.object({
   parentId: z.string().optional(),
   dryRun: z.boolean().default(false),
   mimeType: z.string().optional(),
+  optimizeImage: z.boolean().default(false),
 });
 
 // Fixed container path that will be used across the application
@@ -49,6 +50,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
       parentId: "",
       dryRun: false,
       mimeType: "",
+      optimizeImage: false,
     },
   });
 
