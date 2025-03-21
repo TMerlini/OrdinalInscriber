@@ -364,6 +364,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Check if container exists
+  app.get('/api/container/check', async (req, res) => {
+    try {
+      console.log('Container check request received:', req.query);
+      const { name } = req.query;
+      
+      if (!name || typeof name !== 'string') {
+        console.log('Invalid container name:', name);
+        return res.status(400).json({ error: 'Container name is required' });
+      }
+      
+      // In a real application, this would check if the docker container exists
+      // For demo purposes, we'll simulate the check
+      const containerExists = true; // Simulate that all containers exist
+      console.log('Container exists:', containerExists);
+      
+      return res.json({ exists: containerExists });
+    } catch (error) {
+      console.error('Error checking container:', error);
+      return res.status(500).json({ error: 'Failed to check container' });
+    }
+  });
+  
+  // Check if a port is available/in use
+  app.get('/api/port/check', async (req, res) => {
+    try {
+      console.log('Port check request received:', req.query);
+      const { port } = req.query;
+      
+      if (!port || typeof port !== 'string') {
+        console.log('Invalid port:', port);
+        return res.status(400).json({ error: 'Port is required' });
+      }
+      
+      const portNumber = parseInt(port, 10);
+      
+      if (isNaN(portNumber) || portNumber < 1024 || portNumber > 65535) {
+        console.log('Invalid port number:', portNumber);
+        return res.status(400).json({ error: 'Invalid port number' });
+      }
+      
+      // In a real application, this would check if the port is in use
+      // For demo purposes, we'll simulate the check
+      const portAvailable = true; // Simulate that all ports are available
+      console.log('Port available:', portAvailable);
+      
+      return res.json({ available: portAvailable });
+    } catch (error) {
+      console.error('Error checking port:', error);
+      return res.status(500).json({ error: 'Failed to check port' });
+    }
+  });
+  
   // Inscribe the file
   app.post('/api/execute/inscribe', async (req, res) => {
     try {

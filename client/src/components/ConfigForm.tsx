@@ -126,6 +126,8 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
   // Watch for container name changes
   useEffect(() => {
     const containerName = form.watch('containerName');
+    const port = form.watch('port');
+    
     const subscription = form.watch((value, { name }) => {
       if (name === 'containerName' && value.containerName) {
         setContainerStatus('unknown');
@@ -151,6 +153,11 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
     // Check initial values
     if (containerName) {
       checkContainerStatus(containerName);
+    }
+    
+    // Check initial port value
+    if (port) {
+      checkPortStatus(Number(port));
     }
     
     return () => subscription.unsubscribe();
