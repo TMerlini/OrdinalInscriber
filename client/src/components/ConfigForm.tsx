@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ConfigOptions } from "@/lib/types";
-import { CheckCircle, XCircle } from "lucide-react";
+import { ConfigOptions, UploadedFile } from "@/lib/types";
+import { CheckCircle, XCircle, Info } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import SectionTitle from "./SectionTitle";
 
@@ -38,9 +38,47 @@ export const DEFAULT_CONTAINER_PATH = "/ord/data/";
 
 interface ConfigFormProps {
   onGenerateCommands: (config: ConfigOptions) => void;
+  uploadedFile?: UploadedFile | null;
 }
 
-export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
+// Fee calculation constants based on Ordinals inscription requirements
+const BASE_TX_SIZE = 150; // Base transaction size in bytes (approximate)
+const WITNESS_OVERHEAD = 110; // Witness overhead in bytes (approximate)
+const INSCRIPTION_OVERHEAD = 100; // Additional bytes required for inscription metadata
+const BTC_PRICE_USD = 60000; // Current BTC price in USD (approximate)
+
+// Calculate the fee based on file size and fee rate
+const calculateFee = (fileSizeBytes: number, feeRate: number, isOptimized: boolean = false) => {
+  let effectiveFileSize = fileSizeBytes;
+  
+  // If optimized, estimate the size at about 46KB
+  if (isOptimized && fileSizeBytes > 46 * 1024) {
+    effectiveFileSize = 46 * 1024;
+  }
+  
+  // Calculate total transaction size in bytes
+  const totalBytes = BASE_TX_SIZE + WITNESS_OVERHEAD + INSCRIPTION_OVERHEAD + effectiveFileSize;
+  
+  // Calculate fee in satoshis
+  const feeSats = Math.ceil(totalBytes * feeRate);
+  
+  // Calculate USD equivalent
+  const feeUsd = (feeSats * BTC_PRICE_USD) / 100000000;
+  
+  return {
+    bytes: totalBytes,
+    sats: feeSats,
+    usd: feeUsd.toFixed(2),
+    breakdown: {
+      baseTx: BASE_TX_SIZE,
+      witness: WITNESS_OVERHEAD,
+      inscriptionOverhead: INSCRIPTION_OVERHEAD,
+      content: effectiveFileSize
+    }
+  };
+};
+
+export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: ConfigFormProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showSatPoint, setShowSatPoint] = useState(false);
   const [showMimeType, setShowMimeType] = useState(false);
@@ -241,13 +279,74 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                     </FormControl>
                     <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">sats/vB</span>
                   </div>
-                  <div className="mt-4 p-3 bg-orange-50 dark:bg-navy-600 rounded-lg">
-                    <p className="text-xs text-orange-800 dark:text-orange-300">
-                      <strong>Estimated cost:</strong> {Number(field.value) * 350} sats (≈${((Number(field.value) * 350) * 0.00006).toFixed(2)} at 60K USD/BTC)
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Higher fee rates increase the chance of quicker inscription confirmation.
-                    </p>
+                  <div className="mt-4 p-4 bg-white dark:bg-navy-700 rounded-lg border border-orange-100 dark:border-navy-600">
+                    <div className="flex items-start">
+                      <Info className="w-4 h-4 text-orange-500 dark:text-orange-400 mt-0.5 mr-2 flex-shrink-0" />
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Fee Calculation</h4>
+                        
+                        {uploadedFile ? (
+                          <>
+                            {/* Dynamic fee calculation based on file size */}
+                            {(() => {
+                              const fileSize = uploadedFile.file.size;
+                              const optimize = !!uploadedFile.optimizationAvailable;
+                              const fee = calculateFee(fileSize, Number(field.value), optimize);
+                              
+                              return (
+                                <>
+                                  <div className="text-xs space-y-1 text-gray-600 dark:text-gray-300">
+                                    <p className="font-semibold text-orange-800 dark:text-orange-300">
+                                      Total estimated fee: {fee.sats.toLocaleString()} sats (≈${fee.usd})
+                                    </p>
+                                    
+                                    <div className="pt-1.5 pb-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                      <div className="mb-1.5">Transaction breakdown:</div>
+                                      <ul className="space-y-1 ml-1.5">
+                                        <li className="flex justify-between">
+                                          <span>Base transaction:</span>
+                                          <span>{fee.breakdown.baseTx} bytes</span>
+                                        </li>
+                                        <li className="flex justify-between">
+                                          <span>Witness data:</span>
+                                          <span>{fee.breakdown.witness} bytes</span>
+                                        </li>
+                                        <li className="flex justify-between">
+                                          <span>Inscription overhead:</span>
+                                          <span>{fee.breakdown.inscriptionOverhead} bytes</span>
+                                        </li>
+                                        <li className="flex justify-between font-medium">
+                                          <span>File content:</span>
+                                          <span>{Math.round(fee.breakdown.content / 1024)} KB (~{fee.breakdown.content.toLocaleString()} bytes)</span>
+                                        </li>
+                                        <li className="flex justify-between pt-1 border-t border-gray-100 dark:border-gray-700 font-medium text-orange-800 dark:text-orange-300">
+                                          <span>Total size:</span>
+                                          <span>{Math.round(fee.bytes / 1024)} KB ({fee.bytes.toLocaleString()} bytes)</span>
+                                        </li>
+                                      </ul>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-gray-700 pt-2">
+                                    Higher fee rates increase the chance of quicker inscription confirmation.
+                                    Current BTC price estimate: ${BTC_PRICE_USD.toLocaleString()} USD
+                                  </p>
+                                </>
+                              );
+                            })()}
+                          </>
+                        ) : (
+                          <>
+                            {/* Static fee calculation when no file is uploaded */}
+                            <p className="text-xs text-orange-800 dark:text-orange-300">
+                              <strong>Estimated base cost:</strong> {Number(field.value) * 350} sats (≈${((Number(field.value) * 350) * 0.00006).toFixed(2)} at 60K USD/BTC)
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                              Upload a file to see a more accurate fee calculation based on file size.
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <FormMessage />
                 </FormItem>
