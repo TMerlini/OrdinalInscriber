@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Form } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
-import { useForm } from "react-hook-form";
+import { useForm, UseFormReturn } from "react-hook-form";
 import FileUploader from "@/components/FileUploader";
 import ImagePreview from "@/components/ImagePreview";
 import ConfigForm from "@/components/ConfigForm";
@@ -11,6 +11,7 @@ import CommandSection from "@/components/CommandSection";
 import ResultSection from "@/components/ResultSection";
 import CacheManager from "@/components/CacheManager";
 import MetadataInput from "@/components/MetadataInput";
+import RareSatSelector from "@/components/RareSatSelector";
 import ThemeToggle from "@/components/ThemeToggle";
 import SectionTitle from "@/components/SectionTitle";
 import { ChevronDown } from "lucide-react";
@@ -30,6 +31,15 @@ export default function Home() {
   const [optimizeImage, setOptimizeImage] = useState(false);
   const [showParentInscription, setShowParentInscription] = useState(false);
   const [parentInscriptionId, setParentInscriptionId] = useState('');
+  const configForm = useForm<ConfigOptions>({
+    defaultValues: {
+      containerName: "ordinals_ord_1",
+      feeRate: 4,
+      advancedMode: false,
+      useSatRarity: false,
+      selectedSatoshi: "",
+    }
+  });
   
   // Form for metadata and destination
   const metadataForm = useForm({
