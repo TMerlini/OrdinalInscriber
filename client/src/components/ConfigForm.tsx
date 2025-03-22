@@ -415,17 +415,31 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                         ) : (
                           <>
                             {/* Static fee calculation when no file is uploaded */}
-                            <p className="text-xs text-orange-800 dark:text-orange-300">
-                              <strong>Estimated base cost:</strong> {Math.floor(Number(field.value) * 350 * 0.8)} sats (≈${((Number(field.value) * 350 * 0.8) * 0.00006).toFixed(2)} at 60K USD/BTC)
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                              <span className="block mb-1">Optimized fee calculation:</span>
-                              <span className="block">- Base fee (150 bytes × {Number(field.value)} sats/vB): {Math.ceil(150 * Number(field.value))} sats</span>
-                              <span className="block">- Content fee (200 bytes × {Math.floor(Number(field.value) * 0.75)} sats/vB): {Math.ceil(200 * Math.floor(Number(field.value) * 0.75))} sats</span>
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                              Upload a file to see a more accurate fee calculation based on file size.
-                            </p>
+                            {(() => {
+                              // Create a simplified version of the InstaCalc calculation 
+                              // for a small sample file (e.g., 5KB)
+                              const sampleSize = 5 * 1024; // 5KB
+                              const dummyFee = calculateFee(sampleSize, Number(field.value), false);
+                              
+                              return (
+                                <>
+                                  <p className="text-xs text-orange-800 dark:text-orange-300">
+                                    <strong>Estimated base cost:</strong> {dummyFee.sats.toLocaleString()} sats (≈${dummyFee.usd} at {BTC_PRICE_USD.toLocaleString()} USD/BTC)
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                    <span className="block mb-1">Transaction breakdown:</span>
+                                    <span className="block">- Base transaction: {dummyFee.breakdown.baseTx} bytes</span>
+                                    <span className="block">- Witness data: {dummyFee.breakdown.witness} bytes</span>
+                                    <span className="block">- Inscription size: {dummyFee.breakdown.inscriptionBytes} bytes</span>
+                                    <span className="block">- Virtual bytes: {dummyFee.vBytes} vB</span>
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                    Upload a file to see a more accurate fee calculation based on file size.
+                                  </p>
+                                </>
+                              );
+                            })()}
+                            
                           </>
                         )}
                       </div>
