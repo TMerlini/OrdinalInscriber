@@ -294,6 +294,21 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
       <Form {...form}>
         <form name="config-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-6">
+            {/* Rare Sats toggle in main section */}
+            <div className="flex items-center space-x-2 mb-6">
+              <Switch 
+                id="rare-sats-toggle"
+                checked={showRareSats}
+                onCheckedChange={handleRareSatsToggle}
+              />
+              <label
+                htmlFor="rare-sats-toggle"
+                className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Use Rare Sats
+              </label>
+            </div>
+          
             <FormField
               control={form.control}
               name="feeRate"
@@ -565,23 +580,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                   )}
                 />
 
-                <div className="flex flex-col space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Switch 
-                      id="rare-sats-toggle"
-                      checked={showRareSats}
-                      onCheckedChange={handleRareSatsToggle}
-                    />
-                    <label
-                      htmlFor="rare-sats-toggle"
-                      className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      Use Rare Sats
-                    </label>
-                  </div>
-                  
-                  {/* RareSatSelector moved to its own section in Home.tsx */}
-                </div>
+                {/* Rare Sats section moved to its own dedicated section */}
 
                 <div className="flex flex-col space-y-4">
                   <div className="flex items-center space-x-2">
