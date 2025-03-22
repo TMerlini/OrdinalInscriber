@@ -41,60 +41,74 @@ interface ConfigFormProps {
   uploadedFile?: UploadedFile | null;
 }
 
-// Fee calculation constants based on Ordinals inscription requirements
-const BASE_TX_SIZE = 150; // Base transaction size in bytes (approximate)
-const WITNESS_OVERHEAD = 110; // Witness overhead in bytes (approximate) 
-const INSCRIPTION_OVERHEAD = 100; // Additional bytes required for inscription metadata
+// Fee calculation constants based on the InstaCalc model
 const BTC_PRICE_USD = 60000; // Current BTC price in USD (approximate)
 
-// Calculate the fee based on file size and fee rate - with optimized calculation similar to OrdinalBot
+// Base transaction constants from the InstaCalc model
+const TX_BASE_SIZE = 43; // vBytes (base transaction virtual bytes)
+const TX_INPUT_SIZE = 68; // vBytes per input
+const TX_INPUT_WITNESS_SIZE = 107; // vBytes per witness
+const TX_OUTPUT_SIZE = 31; // vBytes per output
+const TX_ORDINAL_OVERHEAD = 8; // vBytes overhead for ordinal
+const TX_TAPROOT_ANNEX_SIZE = 0; // Optional taproot annex size in bytes
+
+// Calculate the fee based on file size and fee rate - matching InstaCalc model
 const calculateFee = (fileSizeBytes: number, feeRate: number, isOptimized: boolean = false) => {
-  let effectiveFileSize = fileSizeBytes;
+  let contentSize = fileSizeBytes;
   
-  // If optimization is enabled, adjust file size with a more accurate estimation
+  // Apply optimization if enabled
   if (isOptimized && fileSizeBytes > 46 * 1024) {
-    // Use a dynamic approach for optimized size estimation
-    // Base size is ~46KB but can vary based on image complexity
     const baseOptimizedSize = 46 * 1024;
     const complexityFactor = Math.min(1, fileSizeBytes / (500 * 1024));
-    effectiveFileSize = Math.round(baseOptimizedSize * (1 + complexityFactor * 0.2));
+    contentSize = Math.round(baseOptimizedSize * (1 + complexityFactor * 0.2));
   }
   
-  // Calculate transaction overhead
-  const txOverhead = BASE_TX_SIZE + WITNESS_OVERHEAD + INSCRIPTION_OVERHEAD;
+  // Calculate the components of the transaction
+  // Based on the InstaCalc model for Ordinals inscriptions
+  const numInputs = 1; // Typically one input for inscriptions
+  const numOutputs = 1; // One output for the inscription
+  const burnValue = 100; // Minimum sat value to send (e.g., 100 sats)
   
-  // Calculate total transaction size in bytes
-  const totalBytes = txOverhead + effectiveFileSize;
+  // Calculate the inscription virtual bytes
+  // Following the formula from InstaCalc
+  const inscriptionBytes = 4 + contentSize;
   
-  // OrdinalBot-style optimization: Apply reduced rate to content
-  // Base transaction parts get full fee rate, but content gets a lower effective rate
-  // This is a common approach for large inscriptions to keep costs reasonable
-  const baseFeeSats = txOverhead * feeRate;
-  const contentFeeRate = Math.max(1, Math.min(feeRate, Math.floor(feeRate * 0.75))); // Apply 75% fee rate to content
-  const contentFeeSats = effectiveFileSize * contentFeeRate;
+  // Calculate witness data size (taproot witness)
+  const witnessSize = (TX_INPUT_WITNESS_SIZE * numInputs) + 
+                        inscriptionBytes + 
+                        TX_TAPROOT_ANNEX_SIZE;
   
-  // Total fee is the sum of base fee and content fee
-  const feeSats = Math.ceil(baseFeeSats + contentFeeSats);
+  // Calculate base transaction size (non-witness data)
+  const baseTxSize = TX_BASE_SIZE + 
+                   (TX_INPUT_SIZE * numInputs) + 
+                   (TX_OUTPUT_SIZE * numOutputs) +
+                   TX_ORDINAL_OVERHEAD;
+  
+  // Calculate total virtual bytes using the segwit formula: base * 4 + witness
+  const vBytes = baseTxSize * 4 + witnessSize;
+  
+  // Calculate fee 
+  const feeSats = Math.ceil(vBytes * feeRate / 4); // Divide by 4 due to witness discount
   
   // Calculate USD equivalent
   const feeUsd = (feeSats * BTC_PRICE_USD) / 100000000;
   
-  // Calculate effective fee rate for display
-  const effectiveFeeRate = feeSats / totalBytes;
+  // Calculate effective fee rate
+  const totalBytes = baseTxSize + witnessSize;
+  const effectiveFeeRate = (feeSats / totalBytes).toFixed(2);
   
   return {
     bytes: totalBytes,
+    vBytes: vBytes,
     sats: feeSats,
     usd: feeUsd.toFixed(2),
-    effectiveFeeRate: effectiveFeeRate.toFixed(2),
+    effectiveFeeRate: effectiveFeeRate,
     breakdown: {
-      baseTx: BASE_TX_SIZE,
-      witness: WITNESS_OVERHEAD,
-      inscriptionOverhead: INSCRIPTION_OVERHEAD,
-      content: effectiveFileSize,
-      baseFee: Math.ceil(baseFeeSats),
-      contentFee: Math.ceil(contentFeeSats),
-      contentFeeRate: contentFeeRate
+      baseTx: baseTxSize,
+      witness: witnessSize,
+      content: contentSize,
+      inscriptionBytes: inscriptionBytes,
+      vBytes: vBytes
     }
   };
 };
@@ -346,41 +360,45 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                                       <div className="mb-1.5">Transaction breakdown:</div>
                                       <ul className="space-y-1 ml-1.5">
                                         <li className="flex justify-between">
-                                          <span>Base transaction:</span>
+                                          <span>Base tx size:</span>
                                           <span>{fee.breakdown.baseTx} bytes</span>
                                         </li>
                                         <li className="flex justify-between">
                                           <span>Witness data:</span>
                                           <span>{fee.breakdown.witness} bytes</span>
                                         </li>
-                                        <li className="flex justify-between">
-                                          <span>Inscription overhead:</span>
-                                          <span>{fee.breakdown.inscriptionOverhead} bytes</span>
-                                        </li>
                                         <li className="flex justify-between font-medium">
                                           <span>File content:</span>
                                           <span>{Math.round(fee.breakdown.content / 1024)} KB (~{fee.breakdown.content.toLocaleString()} bytes)</span>
                                         </li>
+                                        <li className="flex justify-between">
+                                          <span>Inscription size:</span>
+                                          <span>{fee.breakdown.inscriptionBytes} bytes</span>
+                                        </li>
                                         <li className="flex justify-between pt-1 border-t border-gray-100 dark:border-gray-700 font-medium">
-                                          <span>Total size:</span>
+                                          <span>Raw bytes:</span>
                                           <span>{Math.round(fee.bytes / 1024)} KB ({fee.bytes.toLocaleString()} bytes)</span>
+                                        </li>
+                                        <li className="flex justify-between font-medium text-orange-800 dark:text-orange-300">
+                                          <span>Virtual bytes (segwit):</span>
+                                          <span>{Math.round(fee.vBytes / 1024)} KB ({fee.vBytes.toLocaleString()} vB)</span>
                                         </li>
                                       </ul>
                                     </div>
                                     
                                     <div className="pt-1.5 pb-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                      <div className="mb-1.5">Optimized fee calculation:</div>
+                                      <div className="mb-1.5">InstaCalc fee calculation:</div>
                                       <ul className="space-y-1 ml-1.5">
                                         <li className="flex justify-between">
-                                          <span>Base fee ({Number(field.value)} sats/vB):</span>
-                                          <span>{fee.breakdown.baseFee.toLocaleString()} sats</span>
+                                          <span>Total vBytes:</span>
+                                          <span>{fee.vBytes.toLocaleString()} vB</span>
                                         </li>
                                         <li className="flex justify-between">
-                                          <span>Content fee ({fee.breakdown.contentFeeRate} sats/vB):</span>
-                                          <span>{fee.breakdown.contentFee.toLocaleString()} sats</span>
+                                          <span>Fee rate:</span>
+                                          <span>{Number(field.value)} sats/vB</span>
                                         </li>
                                         <li className="flex justify-between pt-1 border-t border-gray-100 dark:border-gray-700 font-medium text-orange-800 dark:text-orange-300">
-                                          <span>Total fee (avg {fee.effectiveFeeRate} sats/vB):</span>
+                                          <span>Total fee (≈{fee.effectiveFeeRate} sats/B effective):</span>
                                           <span>{fee.sats.toLocaleString()} sats</span>
                                         </li>
                                       </ul>
