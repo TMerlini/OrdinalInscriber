@@ -463,7 +463,7 @@ export default function Home() {
                 className="w-full"
               >
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-orange-800 dark:text-orange-400">Cache Management</h2>
+                  <SectionTitle number="7" title="Cache Management" className="mb-0" />
                   <CollapsibleTrigger asChild>
                     <button className="p-2 rounded-full hover:bg-orange-100 dark:hover:bg-navy-700 focus:outline-none transition-colors">
                       <ChevronDown className={`h-5 w-5 text-orange-600 dark:text-orange-400 transition-transform duration-200 ${cacheOpen ? 'transform rotate-180' : ''}`} />
