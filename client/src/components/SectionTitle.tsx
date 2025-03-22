@@ -14,17 +14,20 @@ export default function SectionTitle({ title, className = '', showLogo = true, i
         <img 
           src="/src/assets/logo.png" 
           alt="Ordinarinos Logo" 
-          className={`${isMainTitle ? 'w-14 h-14' : 'w-10 h-10'} mr-3 inline-block`} 
+          className={`${isMainTitle ? 'w-16 h-16' : 'w-12 h-12'} mr-3 inline-block`} 
         />
       )}
       <div>
         {isMainTitle ? (
           <>
             <h1 className="text-2xl font-bold text-orange-800 dark:text-orange-400">ORDINARINOS</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{title}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{title}</p>
           </>
         ) : (
-          <h2 className="text-xl font-semibold text-orange-800 dark:text-orange-400">{title}</h2>
+          <>
+            <h2 className="text-lg font-semibold text-orange-800 dark:text-orange-400">ORDINARINOS</h2>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{title}</p>
+          </>
         )}
       </div>
     </div>
