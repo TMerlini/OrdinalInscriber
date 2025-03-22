@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ConfigOptions } from "@/lib/types";
 import { CheckCircle, XCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import SectionTitle from "./SectionTitle";
 
 const formSchema = z.object({
   containerName: z.string().min(1, {
@@ -181,7 +182,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
 
   return (
     <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-      <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Transaction Fee</h2>
+      <SectionTitle number="4" title="Transaction Fee" />
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

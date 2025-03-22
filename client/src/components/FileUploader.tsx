@@ -1,6 +1,7 @@
 import { useState, useRef, DragEvent, ChangeEvent } from "react";
 import { Upload } from "lucide-react";
 import { UploadedFile } from "@/lib/types";
+import SectionTitle from "./SectionTitle";
 
 interface FileUploaderProps {
   onFileUpload: (file: UploadedFile) => void;

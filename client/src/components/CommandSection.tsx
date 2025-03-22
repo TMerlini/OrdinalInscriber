@@ -1,6 +1,7 @@
 import { Play, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExecutionStep, StepStatus } from "@/lib/types";
+import SectionTitle from "./SectionTitle";
 
 interface CommandSectionProps {
   commands: string;
