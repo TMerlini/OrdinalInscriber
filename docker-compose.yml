@@ -1,29 +1,23 @@
 version: '3'
 
 services:
-  ordinals-inscriber:
-    build: .
-    container_name: ordinals-inscriber
+  ordinarinos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ordinarinos-inscription-tool
+    restart: unless-stopped
     ports:
       - "5000:5000"
-    restart: unless-stopped
     volumes:
       - ./cache:/app/cache
-    networks:
-      - ord-network
     environment:
       - NODE_ENV=production
-      
-  # You can uncomment this section and configure it if you have an Ordinals node
-  # ord-node:
-  #   image: ordinalsdev/ord:latest
-  #   container_name: ord-container
-  #   restart: unless-stopped
-  #   volumes:
-  #     - ./ord-data:/ord/data
-  #   networks:
-  #     - ord-network
+      - PORT=5000
+      - CACHE_LIMIT_BYTES=5368709120  # 5GB cache limit
+    networks:
+      - ord-network
 
 networks:
   ord-network:
-    driver: bridge
+    external: true

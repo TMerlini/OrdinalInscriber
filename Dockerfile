@@ -1,21 +1,23 @@
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
-# Copy package files first to leverage Docker cache
+# Copy package files
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm ci --production
 
-# Copy the rest of the application code
-COPY . .
+# Copy built application
+COPY dist/ ./dist/
+COPY assets/ ./assets/
 
-# Build the application
-RUN npm run build
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=5000
 
-# Expose the port the app runs on
+# Expose port
 EXPOSE 5000
 
-# Command to run the application
-CMD ["npm", "start"]
+# Start the application
+CMD ["node", "dist/index.js"]

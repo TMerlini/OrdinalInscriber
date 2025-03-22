@@ -1,96 +1,148 @@
 # Ordinarinos Inscription Tool
 
-A web-based tool for inscribing images and 3D models onto an Ordinals blockchain node running in Docker.
+A sophisticated web-based Ordinals inscription platform that empowers users to seamlessly upload, process, and manage blockchain images through an intuitive and powerful interface.
 
 ## Features
 
 - Upload and preview images and 3D models (GLB/GLTF)
 - Configure inscription parameters
-- Execute commands against a Docker container running an Ordinals node
-- Cache management with automatic cleanup
-- Image optimization features
-- Dark/light mode support
+- Generate and execute inscription commands
+- Manage cached files with automatic cleanup
+- Run commands in step-by-step mode or all at once
+- Add custom metadata with on-chain storage
+- Image optimization to reduce file size
+- Dark and light theme support
 
-## Prerequisites
+## Requirements
 
-- Docker and Docker Compose installed on your Synology NAS or Umbrel server
-- Git installed (for cloning the repository)
-- A Docker container running an Ordinals node (optional, can be set up with this tool)
+- Docker
+- Docker Compose
+- Bitcoin Ordinals node (running in a container)
 
-## Deployment Instructions
+## Quick Installation
 
-### Setting up on GitHub
+1. Download the latest release
+2. Extract the files to a directory on your server
+3. Run the installation script:
 
-1. Clone this repository:
-   ```
-   git clone https://github.com/your-username/ordinarinos-inscription-tool.git
-   cd ordinarinos-inscription-tool
-   ```
+```bash
+./install.sh
+```
 
-2. Build and start the application using Docker Compose:
-   ```
-   docker-compose up -d
-   ```
+This will:
+- Create necessary directories
+- Set up Docker networking
+- Start the application container
 
-3. Access the application through your browser:
-   ```
-   http://your-server-ip:5000
-   ```
+## Manual Installation
 
-### Setting up on Synology NAS
+If you prefer to set up manually:
 
-1. In Synology DSM, open Docker Package
-2. Navigate to Registry, search for your GitHub container registry or use a pre-built image
-3. Download the image
-4. Go to Container and click "Create"
-5. Select the downloaded image
-6. Set the port mapping: 5000 (container) -> 5000 (local)
-7. Configure volume mappings:
-   - /your/synology/path/cache -> /app/cache
-8. Apply and launch the container
+1. Create necessary directories:
 
-### Umbrel Setup
+```bash
+mkdir -p cache
+mkdir -p ord-data
+```
 
-1. SSH into your Umbrel server
-2. Clone this repository:
-   ```
-   git clone https://github.com/your-username/ordinarinos-inscription-tool.git
-   cd ordinarinos-inscription-tool
-   ```
+2. Create a Docker network:
 
-3. Run with Docker Compose:
-   ```
-   docker-compose up -d
-   ```
+```bash
+docker network create ord-network
+```
 
-4. The application will be accessible at:
-   ```
-   http://umbrel.local:5000
-   ```
+3. Start the application using Docker Compose:
 
-## Using with an Existing Ordinals Node
+```bash
+docker-compose up -d
+```
 
-If you already have an Ordinals node running in Docker:
+## Configuration
 
-1. Make sure both containers are on the same Docker network
-2. In the application, use the exact container name in the "Docker Container Name" field
-3. The default data path in the Ordinals container is `/ord/data/`
+The application is pre-configured to work with the following defaults:
 
-## Cache Management
+- Application runs on port 5000
+- Cache storage limit is set to 5GB
+- Default container path for files is `/ord/data/`
 
-- The application maintains a cache of uploaded files
-- By default, the cache limit is set to 5GB
-- You can manually clear the cache through the UI
+You can modify these settings in the `docker-compose.yml` file.
+
+## Bitcoin Ordinals Node Setup
+
+This application is designed to work with a Bitcoin Ordinals node running in a Docker container. The application will generate the proper commands to inscribe files onto the blockchain.
+
+Example Docker Compose setup for an Ordinals node:
+
+```yaml
+version: '3'
+services:
+  bitcoin:
+    image: lncm/bitcoind:v26.0
+    container_name: bitcoin
+    restart: unless-stopped
+    volumes:
+      - ./bitcoin-data:/root/.bitcoin
+    networks:
+      - ord-network
+
+  ord:
+    image: ordinals/ord:latest
+    container_name: ord
+    restart: unless-stopped
+    depends_on:
+      - bitcoin
+    volumes:
+      - ./ord-data:/ord/data
+      - ./bitcoin-data:/root/.bitcoin
+    networks:
+      - ord-network
+    command: server --http-port 8080
+
+networks:
+  ord-network:
+    external: true
+```
+
+## Usage
+
+1. Access the application at `http://localhost:5000` (or your server IP/domain)
+2. Upload an image or 3D model file
+3. Configure inscription parameters
+4. Generate commands
+5. Execute commands (step-by-step or all at once)
+6. View the results
 
 ## Development
 
-To run the application in development mode:
+To set up a development environment:
 
-```
+1. Clone the repository
+2. Install dependencies:
+
+```bash
 npm install
+```
+
+3. Start the development server:
+
+```bash
 npm run dev
 ```
 
+## Building From Source
+
+To build the application from source:
+
+```bash
+./make_release.sh
+```
+
+This creates a distribution package ready for deployment.
+
 ## License
 
-MIT
+Copyright © 2024 Ordinarinos
+
+## Support
+
+For support, visit [ordinarinos.com](https://ordinarinos.com)
