@@ -41,10 +41,10 @@ interface ConfigFormProps {
   uploadedFile?: UploadedFile | null;
 }
 
-// Fee calculation constants based on the InstaCalc model
+// Fee calculation constants for Segwit/Taproot transaction fees
 const BTC_PRICE_USD = 60000; // Current BTC price in USD (approximate)
 
-// Base transaction constants from the InstaCalc model
+// Base transaction constants for Bitcoin Segwit/Taproot transactions
 const TX_BASE_SIZE = 43; // vBytes (base transaction virtual bytes)
 const TX_INPUT_SIZE = 68; // vBytes per input
 const TX_INPUT_WITNESS_SIZE = 107; // vBytes per witness
@@ -52,7 +52,7 @@ const TX_OUTPUT_SIZE = 31; // vBytes per output
 const TX_ORDINAL_OVERHEAD = 8; // vBytes overhead for ordinal
 const TX_TAPROOT_ANNEX_SIZE = 0; // Optional taproot annex size in bytes
 
-// Calculate the fee based on file size and fee rate - matching InstaCalc model
+// Calculate the fee based on file size and fee rate for Bitcoin Segwit transactions
 const calculateFee = (fileSizeBytes: number, feeRate: number, isOptimized: boolean = false) => {
   let contentSize = fileSizeBytes;
   
@@ -64,13 +64,13 @@ const calculateFee = (fileSizeBytes: number, feeRate: number, isOptimized: boole
   }
   
   // Calculate the components of the transaction
-  // Based on the InstaCalc model for Ordinals inscriptions
+  // Standard structure for Ordinals inscriptions
   const numInputs = 1; // Typically one input for inscriptions
   const numOutputs = 1; // One output for the inscription
   const burnValue = 100; // Minimum sat value to send (e.g., 100 sats)
   
   // Calculate the inscription virtual bytes
-  // Following the formula from InstaCalc
+  // Standard formula for inscription data
   const inscriptionBytes = 4 + contentSize;
   
   // Calculate witness data size (taproot witness)
@@ -387,7 +387,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                                     </div>
                                     
                                     <div className="pt-1.5 pb-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                      <div className="mb-1.5">InstaCalc fee calculation:</div>
+                                      <div className="mb-1.5">Segwit fee calculation:</div>
                                       <ul className="space-y-1 ml-1.5">
                                         <li className="flex justify-between">
                                           <span>Total vBytes:</span>
@@ -416,7 +416,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                           <>
                             {/* Static fee calculation when no file is uploaded */}
                             {(() => {
-                              // Create a simplified version of the InstaCalc calculation 
+                              // Create a simplified version of the fee calculation 
                               // for a small sample file (e.g., 5KB)
                               const sampleSize = 5 * 1024; // 5KB
                               const dummyFee = calculateFee(sampleSize, Number(field.value), false);
