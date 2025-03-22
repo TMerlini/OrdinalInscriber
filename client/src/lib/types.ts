@@ -22,6 +22,7 @@ export interface ConfigOptions {
   noLimitCheck?: boolean;
   destination?: string;
   satPoint?: string;
+  selectedSatoshi?: string;
   parentId?: string;
   dryRun?: boolean;
   mimeType?: string;
