@@ -11,6 +11,7 @@ import { ConfigOptions, UploadedFile } from "@/lib/types";
 import { CheckCircle, XCircle, Info } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import SectionTitle from "./SectionTitle";
+import RareSatSelector from "./RareSatSelector";
 
 const formSchema = z.object({
   containerName: z.string().min(1, {
