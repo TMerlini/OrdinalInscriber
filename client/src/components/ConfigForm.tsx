@@ -191,7 +191,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
               name="feeRate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Fee Rate (sats/vB)</FormLabel>
+                  <FormLabel className="text-orange-800 dark:text-orange-400">Fee Rate (sats/vB)</FormLabel>
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     <button
                       type="button"
@@ -358,7 +358,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                       name="satPoint"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Sat Point</FormLabel>
+                          <FormLabel className="text-orange-800 dark:text-orange-400">Sat Point</FormLabel>
                           <FormControl>
                             <Input placeholder="outpoint:vout:offset" {...field} />
                           </FormControl>
@@ -393,7 +393,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                       name="mimeType"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>MIME Type</FormLabel>
+                          <FormLabel className="text-orange-800 dark:text-orange-400">MIME Type</FormLabel>
                           <FormControl>
                             <Input placeholder="image/png, text/plain, etc." {...field} />
                           </FormControl>

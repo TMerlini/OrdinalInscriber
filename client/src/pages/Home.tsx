@@ -354,7 +354,7 @@ export default function Home() {
                 </div>
                 <div className="bg-orange-50 dark:bg-navy-800 p-4 rounded-lg mb-4">
                   <div className="mb-4 text-gray-700 dark:text-gray-300">
-                    <label htmlFor="destination-address" className="block text-sm font-medium mb-1">Bitcoin Address</label>
+                    <label htmlFor="destination-address" className="block text-sm font-medium mb-1 text-orange-800 dark:text-orange-400">Bitcoin Address</label>
                     <input 
                       id="destination-address" 
                       type="text" 
@@ -378,7 +378,7 @@ export default function Home() {
                       />
                       <label
                         htmlFor="parent-inscription-toggle"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
                         Add Parent Inscription ID
                       </label>
@@ -386,7 +386,7 @@ export default function Home() {
                     
                     {showParentInscription && (
                       <div className="ml-7 mt-2">
-                        <label htmlFor="parent-inscription-id" className="block text-sm font-medium mb-1">Parent Inscription ID</label>
+                        <label htmlFor="parent-inscription-id" className="block text-sm font-medium mb-1 text-orange-800 dark:text-orange-400">Parent Inscription ID</label>
                         <input 
                           id="parent-inscription-id" 
                           type="text" 
