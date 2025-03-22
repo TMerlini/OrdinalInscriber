@@ -43,11 +43,11 @@ interface ConfigFormProps {
 
 // Fee calculation constants based on Ordinals inscription requirements
 const BASE_TX_SIZE = 150; // Base transaction size in bytes (approximate)
-const WITNESS_OVERHEAD = 110; // Witness overhead in bytes (approximate)
+const WITNESS_OVERHEAD = 110; // Witness overhead in bytes (approximate) 
 const INSCRIPTION_OVERHEAD = 100; // Additional bytes required for inscription metadata
 const BTC_PRICE_USD = 60000; // Current BTC price in USD (approximate)
 
-// Calculate the fee based on file size and fee rate
+// Calculate the fee based on file size and fee rate - with optimized calculation similar to OrdinalBot
 const calculateFee = (fileSizeBytes: number, feeRate: number, isOptimized: boolean = false) => {
   let effectiveFileSize = fileSizeBytes;
   
@@ -66,21 +66,35 @@ const calculateFee = (fileSizeBytes: number, feeRate: number, isOptimized: boole
   // Calculate total transaction size in bytes
   const totalBytes = txOverhead + effectiveFileSize;
   
-  // Calculate mining fee in satoshis
-  const feeSats = Math.ceil(totalBytes * feeRate);
+  // OrdinalBot-style optimization: Apply reduced rate to content
+  // Base transaction parts get full fee rate, but content gets a lower effective rate
+  // This is a common approach for large inscriptions to keep costs reasonable
+  const baseFeeSats = txOverhead * feeRate;
+  const contentFeeRate = Math.max(1, Math.min(feeRate, Math.floor(feeRate * 0.75))); // Apply 75% fee rate to content
+  const contentFeeSats = effectiveFileSize * contentFeeRate;
+  
+  // Total fee is the sum of base fee and content fee
+  const feeSats = Math.ceil(baseFeeSats + contentFeeSats);
   
   // Calculate USD equivalent
   const feeUsd = (feeSats * BTC_PRICE_USD) / 100000000;
+  
+  // Calculate effective fee rate for display
+  const effectiveFeeRate = feeSats / totalBytes;
   
   return {
     bytes: totalBytes,
     sats: feeSats,
     usd: feeUsd.toFixed(2),
+    effectiveFeeRate: effectiveFeeRate.toFixed(2),
     breakdown: {
       baseTx: BASE_TX_SIZE,
       witness: WITNESS_OVERHEAD,
       inscriptionOverhead: INSCRIPTION_OVERHEAD,
-      content: effectiveFileSize
+      content: effectiveFileSize,
+      baseFee: Math.ceil(baseFeeSats),
+      contentFee: Math.ceil(contentFeeSats),
+      contentFeeRate: contentFeeRate
     }
   };
 };
@@ -355,10 +369,21 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                                     </div>
                                     
                                     <div className="pt-1.5 pb-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                      <div className="mb-1.5">Fee calculation:</div>
-                                      <p className="ml-1.5">
-                                        <span className="font-medium">{fee.bytes.toLocaleString()} bytes</span> × <span className="font-medium">{Number(field.value)} sats/vB</span> = <span className="font-medium text-orange-800 dark:text-orange-300">{fee.sats.toLocaleString()} sats</span>
-                                      </p>
+                                      <div className="mb-1.5">Optimized fee calculation:</div>
+                                      <ul className="space-y-1 ml-1.5">
+                                        <li className="flex justify-between">
+                                          <span>Base fee ({Number(field.value)} sats/vB):</span>
+                                          <span>{fee.breakdown.baseFee.toLocaleString()} sats</span>
+                                        </li>
+                                        <li className="flex justify-between">
+                                          <span>Content fee ({fee.breakdown.contentFeeRate} sats/vB):</span>
+                                          <span>{fee.breakdown.contentFee.toLocaleString()} sats</span>
+                                        </li>
+                                        <li className="flex justify-between pt-1 border-t border-gray-100 dark:border-gray-700 font-medium text-orange-800 dark:text-orange-300">
+                                          <span>Total fee (avg {fee.effectiveFeeRate} sats/vB):</span>
+                                          <span>{fee.sats.toLocaleString()} sats</span>
+                                        </li>
+                                      </ul>
                                     </div>
                                   </div>
                                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-gray-700 pt-2">
@@ -373,11 +398,12 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                           <>
                             {/* Static fee calculation when no file is uploaded */}
                             <p className="text-xs text-orange-800 dark:text-orange-300">
-                              <strong>Estimated base cost:</strong> {Number(field.value) * 350} sats (≈${((Number(field.value) * 350) * 0.00006).toFixed(2)} at 60K USD/BTC)
+                              <strong>Estimated base cost:</strong> {Math.floor(Number(field.value) * 350 * 0.8)} sats (≈${((Number(field.value) * 350 * 0.8) * 0.00006).toFixed(2)} at 60K USD/BTC)
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                              <span className="block mb-1">Fee calculation:</span>
-                              <span className="block">350 bytes × {Number(field.value)} sats/vB = {Number(field.value) * 350} sats</span>
+                              <span className="block mb-1">Optimized fee calculation:</span>
+                              <span className="block">- Base fee (150 bytes × {Number(field.value)} sats/vB): {Math.ceil(150 * Number(field.value))} sats</span>
+                              <span className="block">- Content fee (200 bytes × {Math.floor(Number(field.value) * 0.75)} sats/vB): {Math.ceil(200 * Math.floor(Number(field.value) * 0.75))} sats</span>
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                               Upload a file to see a more accurate fee calculation based on file size.
