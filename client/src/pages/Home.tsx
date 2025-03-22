@@ -12,6 +12,7 @@ import ResultSection from "@/components/ResultSection";
 import CacheManager from "@/components/CacheManager";
 import MetadataInput from "@/components/MetadataInput";
 import ThemeToggle from "@/components/ThemeToggle";
+import SectionTitle from "@/components/SectionTitle";
 import { ChevronDown } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
@@ -332,7 +333,7 @@ export default function Home() {
         <Card className="overflow-hidden border border-orange-200 dark:border-navy-700 shadow-lg rounded-xl dark:bg-navy-800">
           <CardContent className="p-0">
             <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-              <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">1. Upload Image</h2>
+              <SectionTitle number="1" title="Upload Image" />
               <FileUploader onFileUpload={handleFileUpload} />
             </section>
 
@@ -346,7 +347,7 @@ export default function Home() {
             
             {uploadedFile && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-white dark:bg-navy-900">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">2. Destination Address</h2>
+                <SectionTitle number="2" title="Destination Address" />
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Specify a Bitcoin address to receive the inscription (optional).
@@ -408,7 +409,7 @@ export default function Home() {
             
             {uploadedFile && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-white dark:bg-navy-900">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">3. Metadata</h2>
+                <SectionTitle number="3" title="Metadata" />
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Add optional metadata to be stored with your inscription on-chain.
@@ -424,7 +425,7 @@ export default function Home() {
 
             {uploadedFile && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">4. Transaction Fee</h2>
+                <SectionTitle number="4" title="Transaction Fee" />
                 <ConfigForm 
                   onGenerateCommands={handleGenerateCommands} 
                 />
@@ -433,7 +434,7 @@ export default function Home() {
 
             {commandsData && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">5. Execute Commands</h2>
+                <SectionTitle number="5" title="Execute Commands" />
                 <CommandSection 
                   commands={commandsData.commands.join('\n')} 
                   steps={steps}
@@ -446,7 +447,7 @@ export default function Home() {
 
             {result && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">6. Results</h2>
+                <SectionTitle number="6" title="Results" />
                 <ResultSection 
                   result={result} 
                   onReset={resetApplication}
