@@ -182,7 +182,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
 
   return (
     <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-      <SectionTitle number="4" title="Transaction Fee" />
+      <SectionTitle title="Transaction Fee" />
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

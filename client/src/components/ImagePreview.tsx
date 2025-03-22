@@ -32,7 +32,6 @@ export default function ImagePreview({ file, onRemove, onToggleOptimization }: I
   return (
     <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
       <SectionTitle 
-        number="2" 
         title={`Preview ${file.fileType === 'image' ? 'Image' : 'Model'}`} 
       />
       
