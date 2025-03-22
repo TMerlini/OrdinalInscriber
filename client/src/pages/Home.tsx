@@ -436,7 +436,7 @@ export default function Home() {
 
             {commandsData && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <SectionTitle number="5" title="Execute Commands" />
+                <SectionTitle title="Execute Commands" />
                 <CommandSection 
                   commands={commandsData.commands.join('\n')} 
                   steps={steps}
@@ -449,7 +449,7 @@ export default function Home() {
 
             {result && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <SectionTitle number="6" title="Results" />
+                <SectionTitle title="Results" />
                 <ResultSection 
                   result={result} 
                   onReset={resetApplication}
@@ -465,7 +465,7 @@ export default function Home() {
                 className="w-full"
               >
                 <div className="flex items-center justify-between">
-                  <SectionTitle number="7" title="Cache Management" className="mb-0" />
+                  <SectionTitle title="Cache Management" className="mb-0" />
                   <CollapsibleTrigger asChild>
                     <button className="p-2 rounded-full hover:bg-orange-100 dark:hover:bg-navy-700 focus:outline-none transition-colors">
                       <ChevronDown className={`h-5 w-5 text-orange-600 dark:text-orange-400 transition-transform duration-200 ${cacheOpen ? 'transform rotate-180' : ''}`} />
