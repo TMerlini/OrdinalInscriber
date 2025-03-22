@@ -42,12 +42,12 @@ export default function FileUploader({ onFileUpload }: FileUploaderProps) {
     if (fileSizeKB > 400) {
       sizeWarning = {
         type: 'danger' as const,
-        message: 'File exceeds 400KB. Miners may reject this transaction.'
+        message: 'File exceeds 400KB. Miners may reject this transaction without coordination. Consider optimizing your image.'
       };
     } else if (fileSizeKB > 60) {
       sizeWarning = {
         type: 'warning' as const,
-        message: 'File exceeds 60KB. Consider optimization for better results.'
+        message: 'File exceeds 60KB. Bitcoin nodes may have difficulty propagating this transaction. Consider optimization for better results.'
       };
     }
     

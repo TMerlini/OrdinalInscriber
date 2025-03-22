@@ -57,17 +57,22 @@ export default function ImagePreview({ file, onRemove, onToggleOptimization }: I
           </h3>
           
           {file.sizeWarning && (
-            <div className={`mb-4 p-3 rounded-md flex items-start gap-2 ${
+            <div className={`mb-4 p-3 rounded-md flex items-start gap-2 border ${
               file.sizeWarning.type === 'danger' 
-                ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300' 
-                : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300'
+                ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800' 
+                : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
             }`}>
               {file.sizeWarning.type === 'danger' ? (
                 <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
               ) : (
                 <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
               )}
-              <div className="text-sm">{file.sizeWarning.message}</div>
+              <div>
+                <div className="text-sm font-medium">{file.sizeWarning.message}</div>
+                <div className="text-xs mt-1">
+                  {file.optimizationAvailable && "Toggle optimization below to reduce file size for better inscription reliability."}
+                </div>
+              </div>
             </div>
           )}
           
@@ -100,8 +105,13 @@ export default function ImagePreview({ file, onRemove, onToggleOptimization }: I
                 <Label htmlFor="optimize" className="font-medium">Optimize image size</Label>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Convert to WebP format (~46KB) for better inscription success rate
+                Convert to WebP format (~46KB) to improve network propagation and increase inscription success rate
               </p>
+              {file.sizeWarning && (
+                <p className="text-xs mt-2 text-orange-600 dark:text-orange-400">
+                  <strong>Recommended:</strong> Enable optimization to address the file size warning above
+                </p>
+              )}
             </div>
           )}
           
