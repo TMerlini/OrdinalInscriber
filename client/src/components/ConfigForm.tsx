@@ -183,6 +183,13 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
     }
   };
   
+  const handleRareSatsToggle = (checked: boolean) => {
+    setShowRareSats(checked);
+    if (!checked) {
+      form.setValue("satPoint", "");
+    }
+  };
+  
   const checkContainerStatus = async (containerName: string) => {
     try {
       const response = await apiRequest('GET', `/api/container/check?name=${containerName}`);
