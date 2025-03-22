@@ -191,7 +191,9 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
   
   const checkRareSatsAvailability = async () => {
     try {
+      console.log("Checking rare sats availability...");
       const rareSats = await fetchRareSatsFromWallet();
+      console.log(`Found ${rareSats.length} rare sats in wallet`);
       setRareSatsAvailability(rareSats.length > 0 ? 'available' : 'unavailable');
       return rareSats.length > 0;
     } catch (error) {
@@ -208,8 +210,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
     if (checked) {
       // Check if there are rare sats available when toggling on
       const available = await checkRareSatsAvailability();
-      // We don't need to do anything with the result here
-      // The UI will reactively display a warning in the home component if needed
+      console.log(`Rare sats available: ${available}, availability state: ${rareSatsAvailability}`);
     }
     
     if (!checked) {
@@ -597,23 +598,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
               </div>
               
               <div className="space-y-4 mt-4">
-                <FormField
-                  control={form.control}
-                  name="destination"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-orange-800 dark:text-orange-400">Destination Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Bitcoin address to receive inscription" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Address to send the inscription to (leave empty to use the wallet's default address)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
+                {/* Destination address removed as it's in its own section */}
                 {/* Rare Sats section moved to its own dedicated section */}
 
                 <div className="flex flex-col space-y-4">

@@ -264,6 +264,13 @@ export async function fetchRareSatsFromWallet(): Promise<RareSat[]> {
   // 3. Run classification on those satoshis
   // 4. Return only the rare ones that are available in the wallet
   
+  // Simulate empty wallet for testing the warning message
+  const hasRareSats = false;
+  
+  if (!hasRareSats) {
+    return []; // Empty array to simulate wallet with no rare sats
+  }
+  
   // Mock data for demonstration purposes - would be replaced with actual API call
   const mockRareSats: RareSat[] = [
     // Legendary and Epic sats
