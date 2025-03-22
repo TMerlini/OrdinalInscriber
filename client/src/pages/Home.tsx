@@ -441,6 +441,21 @@ export default function Home() {
               </section>
             )}
 
+            {uploadedFile && configForm?.watch("useSatRarity") && (
+              <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-white dark:bg-navy-900">
+                <SectionTitle title="Rare Sat Selection" />
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Select a rare satoshi from your wallet to use for this inscription.
+                  </p>
+                </div>
+                <RareSatSelector 
+                  onSelect={(satoshi) => configForm.setValue("selectedSatoshi", satoshi)}
+                  selectedSatoshi={configForm.watch("selectedSatoshi")}
+                />
+              </section>
+            )}
+
             {commandsData && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
                 <SectionTitle title="Execute Commands" />
