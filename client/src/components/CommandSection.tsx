@@ -66,7 +66,7 @@ export default function CommandSection({
   
   return (
     <section className="p-6 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-transparent">
-      <h2 className="text-xl font-semibold mb-4 text-orange-800">4. Run Commands</h2>
+      <SectionTitle number="4" title="Run Commands" />
       
       <div className="space-y-6">
         {/* Command preview */}
