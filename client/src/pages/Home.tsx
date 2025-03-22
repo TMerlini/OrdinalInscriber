@@ -326,14 +326,16 @@ export default function Home() {
           <div className="absolute right-2 top-2">
             <ThemeToggle />
           </div>
-          <h1 className="text-4xl font-bold text-orange-600 dark:text-orange-500">Ordinals Inscription Tool</h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">Upload, configure, and inscribe images to your Ordinals node</p>
+          <SectionTitle 
+            title="Upload, configure, and inscribe images to your Ordinals node" 
+            isMainTitle={true} 
+          />
         </header>
 
         <Card className="overflow-hidden border border-orange-200 dark:border-navy-700 shadow-lg rounded-xl dark:bg-navy-800">
           <CardContent className="p-0">
             <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-              <SectionTitle number="1" title="Upload Image" />
+              <SectionTitle title="Upload Image" />
               <FileUploader onFileUpload={handleFileUpload} />
             </section>
 
@@ -347,7 +349,7 @@ export default function Home() {
             
             {uploadedFile && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-white dark:bg-navy-900">
-                <SectionTitle number="2" title="Destination Address" />
+                <SectionTitle title="Destination Address" />
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Specify a Bitcoin address to receive the inscription (optional).
@@ -409,7 +411,7 @@ export default function Home() {
             
             {uploadedFile && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-white dark:bg-navy-900">
-                <SectionTitle number="3" title="Metadata" />
+                <SectionTitle title="Metadata" />
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     Add optional metadata to be stored with your inscription on-chain.
@@ -425,7 +427,7 @@ export default function Home() {
 
             {uploadedFile && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <SectionTitle number="4" title="Transaction Fee" />
+                <SectionTitle title="Transaction Fee" />
                 <ConfigForm 
                   onGenerateCommands={handleGenerateCommands} 
                 />
