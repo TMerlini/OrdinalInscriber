@@ -36,19 +36,32 @@ export default function ImagePreview({ file, onRemove, onToggleOptimization }: I
       />
       
       <div className="flex flex-col md:flex-row gap-6">
-        {/* File preview */}
-        <div className="flex-shrink-0 w-full md:w-1/3 bg-gray-100 dark:bg-navy-800 rounded-lg border border-orange-200 dark:border-navy-600 flex items-center justify-center" style={{ height: '256px' }}>
-          {file.fileType === 'image' ? (
-            <div className="w-full h-full overflow-hidden flex items-center justify-center">
-              <img 
-                src={file.preview} 
-                alt="Preview" 
-                className="max-w-full max-h-full object-contain" 
-              />
-            </div>
-          ) : (
-            <ModelViewer url={file.preview} height={256} />
-          )}
+        {/* File preview with remove button */}
+        <div className="flex-shrink-0 w-full md:w-1/3 relative">
+          <div className="bg-gray-100 dark:bg-navy-800 rounded-lg border border-orange-200 dark:border-navy-600 flex items-center justify-center" style={{ height: '256px' }}>
+            {file.fileType === 'image' ? (
+              <div className="w-full h-full overflow-hidden flex items-center justify-center">
+                <img 
+                  src={file.preview} 
+                  alt="Preview" 
+                  className="max-w-full max-h-full object-contain" 
+                />
+              </div>
+            ) : (
+              <ModelViewer url={file.preview} height={256} />
+            )}
+          </div>
+          <div className="mt-2 flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onRemove}
+              className="flex items-center border-orange-200 dark:border-navy-600 hover:bg-orange-50 dark:hover:bg-navy-700"
+            >
+              <Trash2 className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" />
+              Remove
+            </Button>
+          </div>
         </div>
         
         {/* File details */}
@@ -116,17 +129,7 @@ export default function ImagePreview({ file, onRemove, onToggleOptimization }: I
             </div>
           )}
           
-          <div className="mt-6">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={onRemove}
-              className="flex items-center border-orange-200 dark:border-navy-600 hover:bg-orange-50 dark:hover:bg-navy-700"
-            >
-              <Trash2 className="mr-2 h-4 w-4 text-orange-600 dark:text-orange-400" />
-              Remove
-            </Button>
-          </div>
+
         </div>
       </div>
     </section>

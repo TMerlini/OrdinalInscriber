@@ -73,7 +73,7 @@ export default function ModelViewer({ url, width = 400, height = 300 }: ModelVie
         <FileCode className="w-10 h-10 mb-2 text-orange-600 dark:text-orange-400" />
         
         <div className="text-sm font-medium mb-1 text-gray-800 dark:text-gray-200">
-          {getFileType()} Model
+          3D Model
         </div>
         
         <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 overflow-hidden text-ellipsis w-full">
