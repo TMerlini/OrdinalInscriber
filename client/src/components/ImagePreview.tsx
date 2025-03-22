@@ -4,6 +4,7 @@ import { UploadedFile } from "@/lib/types";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import ModelViewer from "./ModelViewer";
+import SectionTitle from "./SectionTitle";
 import { useState } from "react";
 
 interface ImagePreviewProps {
@@ -30,9 +31,10 @@ export default function ImagePreview({ file, onRemove, onToggleOptimization }: I
   
   return (
     <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-      <h2 className="text-xl font-semibold mb-4 text-orange-800 dark:text-orange-400">
-        2. Preview {file.fileType === 'image' ? 'Image' : 'Model'}
-      </h2>
+      <SectionTitle 
+        number="2" 
+        title={`Preview ${file.fileType === 'image' ? 'Image' : 'Model'}`} 
+      />
       
       <div className="flex flex-col md:flex-row gap-6">
         {/* File preview */}
@@ -102,7 +104,7 @@ export default function ImagePreview({ file, onRemove, onToggleOptimization }: I
             <div className="mt-4 p-4 bg-white dark:bg-navy-900 rounded-md border border-orange-100 dark:border-navy-600">
               <div className="flex items-center space-x-2 mb-2">
                 <Switch id="optimize" checked={optimize} onCheckedChange={handleOptimizeToggle} />
-                <Label htmlFor="optimize" className="font-medium">Optimize image size</Label>
+                <Label htmlFor="optimize" className="font-medium text-orange-800 dark:text-orange-400">Optimize image size</Label>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Convert to WebP format (~46KB) to improve network propagation and increase inscription success rate
