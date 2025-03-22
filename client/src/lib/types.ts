@@ -23,6 +23,7 @@ export interface ConfigOptions {
   destination?: string;
   satPoint?: string;
   selectedSatoshi?: string;
+  useSatRarity?: boolean;
   parentId?: string;
   dryRun?: boolean;
   mimeType?: string;

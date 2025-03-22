@@ -26,6 +26,7 @@ const formSchema = z.object({
   destination: z.string().optional(),
   satPoint: z.string().optional(),
   selectedSatoshi: z.string().optional(),
+  useSatRarity: z.boolean().default(false),
   parentId: z.string().optional(),
   dryRun: z.boolean().default(false),
   mimeType: z.string().optional(),
@@ -134,6 +135,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
       destination: "",
       satPoint: "",
       selectedSatoshi: "",
+      useSatRarity: false,
       parentId: "",
       dryRun: false,
       mimeType: "",
@@ -187,6 +189,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
   
   const handleRareSatsToggle = (checked: boolean) => {
     setShowRareSats(checked);
+    form.setValue("useSatRarity", checked);
     if (!checked) {
       form.setValue("selectedSatoshi", "");
     }
