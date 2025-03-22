@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfigOptions, UploadedFile } from "@/lib/types";
-import { CheckCircle, XCircle, Info } from "lucide-react";
+import { CheckCircle, XCircle, Info, AlertTriangle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import SectionTitle from "./SectionTitle";
 import RareSatSelector from "./RareSatSelector";
+import { fetchRareSatsFromWallet } from "@/lib/rareSats";
 
 const formSchema = z.object({
   containerName: z.string().min(1, {
@@ -121,6 +122,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
   const [showSatPoint, setShowSatPoint] = useState(false);
   const [showMimeType, setShowMimeType] = useState(false);
   const [showRareSats, setShowRareSats] = useState(false);
+  const [rareSatsAvailability, setRareSatsAvailability] = useState<'unknown' | 'available' | 'unavailable'>('unknown');
   const [containerStatus, setContainerStatus] = useState<'unknown' | 'valid' | 'invalid'>('unknown');
   const [portStatus, setPortStatus] = useState<'unknown' | 'valid' | 'invalid'>('unknown');
 
@@ -187,9 +189,29 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
     }
   };
   
-  const handleRareSatsToggle = (checked: boolean) => {
+  const checkRareSatsAvailability = async () => {
+    try {
+      const rareSats = await fetchRareSatsFromWallet();
+      setRareSatsAvailability(rareSats.length > 0 ? 'available' : 'unavailable');
+      return rareSats.length > 0;
+    } catch (error) {
+      console.error('Error checking rare sats availability:', error);
+      setRareSatsAvailability('unavailable');
+      return false;
+    }
+  };
+
+  const handleRareSatsToggle = async (checked: boolean) => {
     setShowRareSats(checked);
     form.setValue("useSatRarity", checked);
+    
+    if (checked) {
+      // Check if there are rare sats available when toggling on
+      const available = await checkRareSatsAvailability();
+      // We don't need to do anything with the result here
+      // The UI will reactively display a warning in the home component if needed
+    }
+    
     if (!checked) {
       form.setValue("selectedSatoshi", "");
     }
@@ -295,18 +317,30 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
         <form name="config-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-6">
             {/* Rare Sats toggle in main section */}
-            <div className="flex items-center space-x-2 mb-6">
-              <Switch 
-                id="rare-sats-toggle"
-                checked={showRareSats}
-                onCheckedChange={handleRareSatsToggle}
-              />
-              <label
-                htmlFor="rare-sats-toggle"
-                className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Use Rare Sats
-              </label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="rare-sats-toggle"
+                  checked={showRareSats}
+                  onCheckedChange={handleRareSatsToggle}
+                />
+                <label
+                  htmlFor="rare-sats-toggle"
+                  className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Use Rare Sats
+                </label>
+              </div>
+              
+              {/* Warning message when no rare sats available */}
+              {showRareSats && rareSatsAvailability === 'unavailable' && (
+                <div className="p-2 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-start">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 dark:text-amber-400 mt-0.5 mr-2 flex-shrink-0" />
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    No rare sats found in your wallet. Your inscription will use regular satoshis instead.
+                  </p>
+                </div>
+              )}
             </div>
           
             <FormField
