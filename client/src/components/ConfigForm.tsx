@@ -580,12 +580,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                     </label>
                   </div>
                   
-                  {showRareSats && (
-                    <RareSatSelector 
-                      onSelect={(satoshi) => form.setValue("selectedSatoshi", satoshi)}
-                      selectedSatoshi={form.watch("selectedSatoshi")}
-                    />
-                  )}
+                  {/* RareSatSelector moved to its own section in Home.tsx */}
                 </div>
 
                 <div className="flex flex-col space-y-4">
