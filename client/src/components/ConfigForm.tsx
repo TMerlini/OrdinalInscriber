@@ -41,39 +41,52 @@ interface ConfigFormProps {
   uploadedFile?: UploadedFile | null;
 }
 
-// Fee calculation constants based on Ordinals inscription requirements
+// Fee calculation constants based on Ordinals inscription requirements and OrdinalBot's model
 const BASE_TX_SIZE = 150; // Base transaction size in bytes (approximate)
 const WITNESS_OVERHEAD = 110; // Witness overhead in bytes (approximate)
 const INSCRIPTION_OVERHEAD = 100; // Additional bytes required for inscription metadata
+const SERVICE_FEE = 20000; // Service fee in satoshis (similar to OrdinalBot's model)
 const BTC_PRICE_USD = 60000; // Current BTC price in USD (approximate)
 
-// Calculate the fee based on file size and fee rate
+// Calculate the fee based on file size and fee rate (OrdinalBot-compatible calculation)
 const calculateFee = (fileSizeBytes: number, feeRate: number, isOptimized: boolean = false) => {
   let effectiveFileSize = fileSizeBytes;
   
-  // If optimized, estimate the size at about 46KB
+  // If optimization is enabled, adjust file size with a more accurate estimation
   if (isOptimized && fileSizeBytes > 46 * 1024) {
-    effectiveFileSize = 46 * 1024;
+    // Use a more dynamic approach for optimized size estimation (similar to OrdinalBot)
+    // Base size is ~46KB but can vary based on image complexity
+    const baseOptimizedSize = 46 * 1024;
+    const complexityFactor = Math.min(1, fileSizeBytes / (500 * 1024));
+    effectiveFileSize = Math.round(baseOptimizedSize * (1 + complexityFactor * 0.2));
   }
   
-  // Calculate total transaction size in bytes
-  const totalBytes = BASE_TX_SIZE + WITNESS_OVERHEAD + INSCRIPTION_OVERHEAD + effectiveFileSize;
+  // Calculate transaction overhead (OrdinalBot uses a similar approach)
+  const txOverhead = BASE_TX_SIZE + WITNESS_OVERHEAD + INSCRIPTION_OVERHEAD;
   
-  // Calculate fee in satoshis
-  const feeSats = Math.ceil(totalBytes * feeRate);
+  // Calculate total transaction size in bytes
+  const totalBytes = txOverhead + effectiveFileSize;
+  
+  // Calculate mining fee in satoshis (what miners receive)
+  const miningFeeSats = Math.ceil(totalBytes * feeRate);
+  
+  // Add service fee (similar to OrdinalBot's model)
+  const totalFeeSats = miningFeeSats + SERVICE_FEE;
   
   // Calculate USD equivalent
-  const feeUsd = (feeSats * BTC_PRICE_USD) / 100000000;
+  const feeUsd = (totalFeeSats * BTC_PRICE_USD) / 100000000;
   
   return {
     bytes: totalBytes,
-    sats: feeSats,
+    sats: totalFeeSats,
     usd: feeUsd.toFixed(2),
     breakdown: {
       baseTx: BASE_TX_SIZE,
       witness: WITNESS_OVERHEAD,
       inscriptionOverhead: INSCRIPTION_OVERHEAD,
-      content: effectiveFileSize
+      content: effectiveFileSize,
+      miningFee: miningFeeSats,
+      serviceFee: SERVICE_FEE
     }
   };
 };
@@ -340,9 +353,27 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                                           <span>File content:</span>
                                           <span>{Math.round(fee.breakdown.content / 1024)} KB (~{fee.breakdown.content.toLocaleString()} bytes)</span>
                                         </li>
-                                        <li className="flex justify-between pt-1 border-t border-gray-100 dark:border-gray-700 font-medium text-orange-800 dark:text-orange-300">
+                                        <li className="flex justify-between pt-1 border-t border-gray-100 dark:border-gray-700 font-medium">
                                           <span>Total size:</span>
                                           <span>{Math.round(fee.bytes / 1024)} KB ({fee.bytes.toLocaleString()} bytes)</span>
+                                        </li>
+                                      </ul>
+                                    </div>
+                                    
+                                    <div className="pt-1.5 pb-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                      <div className="mb-1.5">Fee breakdown:</div>
+                                      <ul className="space-y-1 ml-1.5">
+                                        <li className="flex justify-between">
+                                          <span>Mining fee ({Number(field.value)} sats/vB):</span>
+                                          <span>{fee.breakdown.miningFee.toLocaleString()} sats</span>
+                                        </li>
+                                        <li className="flex justify-between">
+                                          <span>Service fee:</span>
+                                          <span>{fee.breakdown.serviceFee.toLocaleString()} sats</span>
+                                        </li>
+                                        <li className="flex justify-between pt-1 border-t border-gray-100 dark:border-gray-700 font-medium text-orange-800 dark:text-orange-300">
+                                          <span>Total fee:</span>
+                                          <span>{fee.sats.toLocaleString()} sats</span>
                                         </li>
                                       </ul>
                                     </div>
@@ -359,7 +390,12 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                           <>
                             {/* Static fee calculation when no file is uploaded */}
                             <p className="text-xs text-orange-800 dark:text-orange-300">
-                              <strong>Estimated base cost:</strong> {Number(field.value) * 350} sats (≈${((Number(field.value) * 350) * 0.00006).toFixed(2)} at 60K USD/BTC)
+                              <strong>Estimated base cost:</strong> {(Number(field.value) * 350) + SERVICE_FEE} sats (≈${(((Number(field.value) * 350) + SERVICE_FEE) * 0.00006).toFixed(2)} at 60K USD/BTC)
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                              <span className="block mb-1">Fee breakdown:</span>
+                              <span className="block">- Mining fee: {Number(field.value) * 350} sats</span>
+                              <span className="block">- Service fee: {SERVICE_FEE} sats</span>
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                               Upload a file to see a more accurate fee calculation based on file size.
