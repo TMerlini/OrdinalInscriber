@@ -25,6 +25,7 @@ const formSchema = z.object({
   noLimitCheck: z.boolean().default(false),
   destination: z.string().optional(),
   satPoint: z.string().optional(),
+  selectedSatoshi: z.string().optional(),
   parentId: z.string().optional(),
   dryRun: z.boolean().default(false),
   mimeType: z.string().optional(),
@@ -132,6 +133,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
       noLimitCheck: false,
       destination: "",
       satPoint: "",
+      selectedSatoshi: "",
       parentId: "",
       dryRun: false,
       mimeType: "",
@@ -186,7 +188,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
   const handleRareSatsToggle = (checked: boolean) => {
     setShowRareSats(checked);
     if (!checked) {
-      form.setValue("satPoint", "");
+      form.setValue("selectedSatoshi", "");
     }
   };
   
