@@ -262,7 +262,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
             />
             <label
               htmlFor="advanced-mode"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
               Enable advanced options
             </label>
@@ -346,7 +346,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                     />
                     <label
                       htmlFor="sat-point-toggle"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
                       Specify Sat Point
                     </label>
@@ -381,7 +381,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                     />
                     <label
                       htmlFor="mime-type-toggle"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
                       Specify MIME Type
                     </label>
@@ -416,7 +416,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                     <div>
                       <label
                         htmlFor="no-limit-check"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
                         No Limit Check
                       </label>
@@ -445,7 +445,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                     <div>
                       <label
                         htmlFor="dry-run"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
                         Dry Run
                       </label>

@@ -20,7 +20,7 @@ export default function MetadataInput({ form }: MetadataInputProps) {
         render={({ field }) => (
           <FormItem className="flex flex-row items-center justify-between rounded-lg border border-orange-100 dark:border-navy-700 p-4">
             <div className="space-y-0.5">
-              <FormLabel className="text-base">Include Metadata</FormLabel>
+              <FormLabel className="text-base text-orange-800 dark:text-orange-400">Include Metadata</FormLabel>
               <FormDescription>
                 Store additional information with your inscription
               </FormDescription>
@@ -41,7 +41,7 @@ export default function MetadataInput({ form }: MetadataInputProps) {
           name="metadataJson"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Metadata JSON</FormLabel>
+              <FormLabel className="text-orange-800 dark:text-orange-400">Metadata JSON</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Enter JSON metadata"
