@@ -215,15 +215,35 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
       checkPortStatus(Number(port));
     }
     
-    return () => subscription.unsubscribe();
-  }, [form.watch]);
+    // Listen for optimization updates from ImagePreview component
+    const handleUpdateOptimization = (event: any) => {
+      if (event.detail && event.detail.optimize !== undefined) {
+        form.setValue("optimizeImage", event.detail.optimize);
+      }
+    };
+    
+    // Add event listener to the form element once it's mounted
+    const formElement = document.querySelector('form[name="config-form"]');
+    if (formElement) {
+      formElement.addEventListener('update-optimization', handleUpdateOptimization);
+    }
+    
+    return () => {
+      subscription.unsubscribe();
+      // Clean up event listener
+      const formElement = document.querySelector('form[name="config-form"]');
+      if (formElement) {
+        formElement.removeEventListener('update-optimization', handleUpdateOptimization);
+      }
+    };
+  }, [form.watch, form.setValue]);
 
   return (
     <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
       {/* Title is now provided in Home.tsx */}
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form name="config-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-6">
             <FormField
               control={form.control}
@@ -290,7 +310,8 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                             {/* Dynamic fee calculation based on file size */}
                             {(() => {
                               const fileSize = uploadedFile.file.size;
-                              const optimize = !!uploadedFile.optimizationAvailable;
+                              // Use optimization setting if available, otherwise check if optimization is available
+                              const optimize = form.watch("optimizeImage") || false;
                               const fee = calculateFee(fileSize, Number(field.value), optimize);
                               
                               return (

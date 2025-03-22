@@ -76,6 +76,12 @@ export default function Home() {
   
   const handleToggleOptimization = (optimize: boolean) => {
     setOptimizeImage(optimize);
+    // If a form is rendered in ConfigForm, update its optimizeImage value
+    const configForm = document.querySelector('form[name="config-form"]');
+    if (configForm) {
+      const event = new CustomEvent('update-optimization', { detail: { optimize } });
+      configForm.dispatchEvent(event);
+    }
   };
   
   const handleGenerateCommands = async (config: ConfigOptions) => {
@@ -429,7 +435,8 @@ export default function Home() {
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
                 <SectionTitle title="Transaction Fee" />
                 <ConfigForm 
-                  onGenerateCommands={handleGenerateCommands} 
+                  onGenerateCommands={handleGenerateCommands}
+                  uploadedFile={uploadedFile}
                 />
               </section>
             )}
