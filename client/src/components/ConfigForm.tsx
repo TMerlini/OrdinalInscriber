@@ -50,10 +50,10 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      containerName: "ord-container",
+      containerName: "ordinals_ord_1",
       feeRate: 4,
       advancedMode: false,
-      port: 8000,
+      port: 4000,
       noLimitCheck: false,
       destination: "",
       satPoint: "",
@@ -295,7 +295,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                         )}
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="ord-container" {...field} />
+                        <Input placeholder="ordinals_ord_1" {...field} />
                       </FormControl>
                       <FormDescription>
                         The name of your docker container running the ordinals node
@@ -326,7 +326,7 @@ export default function ConfigForm({ onGenerateCommands }: ConfigFormProps) {
                         )}
                       </FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="8000" {...field} />
+                        <Input type="number" placeholder="4000" {...field} />
                       </FormControl>
                       <FormDescription>
                         Local port to use for serving the file
