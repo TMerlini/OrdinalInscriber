@@ -545,6 +545,46 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
               </div>
               
               <div className="space-y-4 mt-4">
+                <FormField
+                  control={form.control}
+                  name="destination"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-orange-800 dark:text-orange-400">Destination Address</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Bitcoin address to receive inscription" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        Address to send the inscription to (leave empty to use the wallet's default address)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex flex-col space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="rare-sats-toggle"
+                      checked={showRareSats}
+                      onCheckedChange={handleRareSatsToggle}
+                    />
+                    <label
+                      htmlFor="rare-sats-toggle"
+                      className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Use Rare Sats
+                    </label>
+                  </div>
+                  
+                  {showRareSats && (
+                    <RareSatSelector 
+                      onSelect={(satoshi) => form.setValue("selectedSatoshi", satoshi)}
+                      selectedSatoshi={form.watch("selectedSatoshi")}
+                    />
+                  )}
+                </div>
+
                 <div className="flex flex-col space-y-4">
                   <div className="flex items-center space-x-2">
                     <Switch 
