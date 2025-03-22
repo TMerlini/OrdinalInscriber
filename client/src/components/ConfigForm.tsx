@@ -118,6 +118,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showSatPoint, setShowSatPoint] = useState(false);
   const [showMimeType, setShowMimeType] = useState(false);
+  const [showRareSats, setShowRareSats] = useState(false);
   const [containerStatus, setContainerStatus] = useState<'unknown' | 'valid' | 'invalid'>('unknown');
   const [portStatus, setPortStatus] = useState<'unknown' | 'valid' | 'invalid'>('unknown');
 
