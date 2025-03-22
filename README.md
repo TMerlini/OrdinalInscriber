@@ -61,9 +61,10 @@ docker-compose up -d
 
 The application is pre-configured to work with the following defaults:
 
-- Application runs on port 5000
+- Application runs on port 3500
 - Cache storage limit is set to 5GB
 - Default container path for files is `/ord/data/`
+- Configured to work with Umbrel's Ordinals node (container name: ordinals_ord_1, API port: 4000)
 
 You can modify these settings in the `docker-compose.yml` file.
 
@@ -71,41 +72,47 @@ You can modify these settings in the `docker-compose.yml` file.
 
 This application is designed to work with a Bitcoin Ordinals node running in a Docker container. The application will generate the proper commands to inscribe files onto the blockchain.
 
-Example Docker Compose setup for an Ordinals node:
+This application is designed to work out of the box with Umbrel's Ordinals node. Umbrel's Ordinals app typically uses:
+
+- Container name: `ordinals_ord_1`
+- API port: `4000`
+- Network: `umbrel_main_network`
+
+If you're using a different setup, you may need to adjust the environment variables in the `docker-compose.yml` file:
 
 ```yaml
-version: '3'
-services:
-  bitcoin:
-    image: lncm/bitcoind:v26.0
-    container_name: bitcoin
-    restart: unless-stopped
-    volumes:
-      - ./bitcoin-data:/root/.bitcoin
-    networks:
-      - ord-network
+environment:
+  - ORD_CONTAINER_NAME=your_container_name
+  - ORD_API_PORT=your_port_number
+```
 
+For reference, a typical Umbrel Ordinals Docker setup looks like:
+
+```yaml
+version: "3.7"
+
+services:
   ord:
     image: ordinals/ord:latest
-    container_name: ord
+    container_name: ordinals_ord_1
     restart: unless-stopped
-    depends_on:
-      - bitcoin
+    ports:
+      - "4000:4000"
     volumes:
-      - ./ord-data:/ord/data
-      - ./bitcoin-data:/root/.bitcoin
+      - ${ORD_DATA_DIR}:/data
+      - ${BITCOIN_DATA_DIR}:/root/.bitcoin
+    command: server --http-port 4000 --data-dir /data
     networks:
-      - ord-network
-    command: server --http-port 8080
+      - umbrel_main_network
 
 networks:
-  ord-network:
+  umbrel_main_network:
     external: true
 ```
 
 ## Usage
 
-1. Access the application at `http://localhost:5000` (or your server IP/domain)
+1. Access the application at `http://localhost:3500` (or your server IP/domain)
 2. Upload an image or 3D model file
 3. Configure inscription parameters
 4. Generate commands

@@ -21,10 +21,16 @@ fi
 
 echo "Creating necessary directories..."
 mkdir -p cache
-mkdir -p ord-data
 
-echo "Setting up Docker network..."
-docker network create ord-network 2>/dev/null || true
+echo "Checking for Umbrel Docker network..."
+NETWORK_EXISTS=$(docker network ls | grep umbrel_main_network || echo "")
+if [ -z "$NETWORK_EXISTS" ]; then
+    echo "Warning: umbrel_main_network not found."
+    echo "This application is designed to work with an Umbrel Ordinals node."
+    echo "If you're not using Umbrel, you may need to adjust the network settings."
+    echo "Creating umbrel_main_network as a fallback..."
+    docker network create umbrel_main_network 2>/dev/null || true
+fi
 
 echo "Starting Ordinarinos Inscription Tool..."
 docker-compose up -d
@@ -36,7 +42,7 @@ if [ $? -eq 0 ]; then
     echo "Ordinarinos Inscription Tool installed successfully!"
     echo
     echo "You can access the application at:"
-    echo "http://localhost:5000"
+    echo "http://localhost:3500"
     echo
     echo "If you're running this on a server, replace 'localhost'"
     echo "with your server's IP address or domain name."
