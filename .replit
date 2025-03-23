@@ -52,7 +52,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "NODE_ENV=development npm run dev"
+args = "PORT=5104 NODE_ENV=development npm run dev"
 
 [[workflows.workflow]]
 name = "Start API Server (Secondary)"
@@ -61,4 +61,4 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "NODE_ENV=development npm run dev"
+args = "PORT=5200 NODE_ENV=development npm run dev"

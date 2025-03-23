@@ -56,9 +56,8 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000 in development
-  // In production, we'll use PORT from the environment (3500 for Umbrel compatibility)
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+  // Use configured port from environment or fallback to 5104
+  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5104;
   const host = "0.0.0.0";
   const ordNodeIp = process.env.ORD_NODE_IP || "10.21.21.4"; // Configurable Ord node IP
   server.listen({
