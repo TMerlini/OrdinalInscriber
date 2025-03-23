@@ -8,6 +8,8 @@ const execPromise = promisify(exec);
 // To keep track of our web server process
 let serverProcess: ReturnType<typeof spawn> | null = null;
 let activeServerPid: number | null = null; // Added to track the server PID
+// Rename to be consistent with our variable names
+let webServerProcess: ReturnType<typeof spawn> | null = null;
 
 interface CommandResult {
   error: boolean;
@@ -175,6 +177,7 @@ export async function startWebServer(directory: string, port: number = 8000): Pr
     // Kill any existing python web server or process on the same port
     await execCommand(`lsof -t -i:${port} | xargs kill -9 2>/dev/null || true`);
     await execCommand(`pkill -f "python3 -m http.server ${port}" || true`);
+    await execCommand(`pkill -f "serve -s -p ${port}" || true`);
 
     // Check if Python3 is available
     const pythonCheck = await execCommand('which python3 || which python');
@@ -191,21 +194,63 @@ export async function startWebServer(directory: string, port: number = 8000): Pr
 
     const process = spawn(command, args, {
       cwd: directory,
-      detached: true,
+      detached: false, // Changed to false to avoid process detachment issues
       stdio: 'pipe'
     });
 
-    // Store the process ID for later use
+    // Store the process for later use
+    serverProcess = process;
     webServerProcess = process;
+    
+    if (process.pid) {
+      activeServerPid = process.pid;
+    }
 
-    // Return success after a short delay to give the server time to start
+    // Add error handler
+    process.on('error', (err) => {
+      console.error('Web server process error:', err);
+    });
+
+    // Check if server started successfully
     return new Promise((resolve) => {
-      setTimeout(() => {
+      // Set a timeout for server startup
+      const timeout = setTimeout(() => {
         resolve({
-          error: false,
-          output: `Serving HTTP on 0.0.0.0 port ${port}...`
+          error: true,
+          output: "Timeout starting server"
         });
-      }, 1000); // Increased timeout to ensure server starts
+      }, 5000); // 5 second timeout
+
+      // Check if server is up by attempting to connect to it
+      const checkServerUp = () => {
+        const net = require('net');
+        const client = new net.Socket();
+        
+        client.setTimeout(500);
+        
+        client.on('connect', () => {
+          clearTimeout(timeout);
+          client.destroy();
+          resolve({
+            error: false,
+            output: `Serving HTTP on 0.0.0.0 port ${port}...`
+          });
+        });
+        
+        client.on('error', () => {
+          // Try again in 500ms if still within timeout window
+          setTimeout(checkServerUp, 500);
+        });
+        
+        client.on('timeout', () => {
+          client.destroy();
+        });
+        
+        client.connect(port, '127.0.0.1');
+      };
+      
+      // Start checking if server is up
+      setTimeout(checkServerUp, 500);
     });
   } catch (error) {
     console.error('Error starting web server:', error);
@@ -221,24 +266,40 @@ export async function startWebServer(directory: string, port: number = 8000): Pr
  */
 export async function stopWebServer(): Promise<void> {
   if (serverProcess) {
+    console.log('Stopping web server...');
     try {
-      // Kill the process group
-      if (process.platform === 'win32') {
-        // Windows
-        if (serverProcess.pid) {
+      // Try standard kill first
+      if (serverProcess.pid) {
+        console.log(`Killing process with PID ${serverProcess.pid}`);
+        
+        // Kill directly
+        serverProcess.kill('SIGTERM');
+        
+        // As a backup, use system commands
+        if (process.platform === 'win32') {
+          // Windows
           exec(`taskkill /pid ${serverProcess.pid} /T /F`);
-        }
-      } else {
-        // Unix-like
-        if (serverProcess.pid) {
-          kill(-serverProcess.pid, 'SIGTERM');
+        } else {
+          // Unix-like
+          exec(`kill -15 ${serverProcess.pid} || kill -9 ${serverProcess.pid}`);
         }
       }
+      
+      // Clean up any remaining processes
+      const port = 8000; // Default port, we should ideally store the current port
+      await execCommand(`lsof -t -i:${port} | xargs kill -9 2>/dev/null || true`);
+      await execCommand(`pkill -f "python3 -m http.server" || true`);
+      await execCommand(`pkill -f "serve -s -p" || true`);
+      
+      console.log('Web server stopped');
     } catch (error) {
       console.error('Error stopping server:', error);
     } finally {
       serverProcess = null;
+      webServerProcess = null;
       activeServerPid = null; // Reset activeServerPid
     }
+  } else {
+    console.log('No web server process to stop');
   }
 }
