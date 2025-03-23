@@ -476,6 +476,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Run network diagnostics
+  app.get('/api/network/diagnostics', async (req, res) => {
+    try {
+      console.log('Network diagnostics request received');
+      const { container } = req.query;
+      
+      // Get container name from query or use default Umbrel container name
+      const containerName = (container && typeof container === 'string') 
+        ? container 
+        : 'ordinals_ord_1';
+      
+      console.log(`Running network diagnostics for container: ${containerName}`);
+      
+      // Run network diagnostics
+      const diagnosticResults = await checkNetworkConnectivity(containerName);
+      
+      // Calculate selected IP address based on our algorithm
+      let selectedIp = '';
+      
+      // Get the IP that would be used by our getLocalIpAddress function
+      selectedIp = getLocalIpAddress();
+      
+      // Return the comprehensive diagnostic data
+      return res.json({
+        diagnostics: diagnosticResults,
+        selectedIp,
+        umbrelMode: process.env.USE_SIMPLIFIED_STARTUP === 'true',
+        ordNodeIp: process.env.ORD_NODE_IP || null,
+        environment: {
+          NODE_ENV: process.env.NODE_ENV || 'development',
+          PORT: process.env.PORT || '5000',
+        }
+      });
+    } catch (error) {
+      console.error('Error running network diagnostics:', error);
+      return res.status(500).json({ error: 'Failed to run network diagnostics' });
+    }
+  });
+  
   // Inscribe the file
   app.post('/api/execute/inscribe', async (req, res) => {
     try {

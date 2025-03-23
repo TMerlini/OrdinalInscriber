@@ -137,3 +137,20 @@ If you're having trouble accessing the application:
    ```
    docker logs ordinarinos-inscription-tool | grep "Application accessible at"
    ```
+   
+6. Use the built-in network diagnostics tool for comprehensive troubleshooting:
+   ```
+   curl -s http://localhost:3500/api/network/diagnostics | grep -v "^<!DOCTYPE" | grep -v "^<html"
+   ```
+   
+   or in a web browser, navigate to:
+   ```
+   http://localhost:3500/api/network/diagnostics
+   ```
+   
+   This will return detailed information about:
+   - All network interfaces and their IP addresses
+   - Container connectivity status
+   - Docker host connectivity
+   - Network mode and configuration
+   - Selected IP address for connections
