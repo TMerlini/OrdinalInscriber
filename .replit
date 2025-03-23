@@ -7,7 +7,7 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "NODE_ENV=production PORT=5000 node dist/index.js"]
+run = ["sh", "-c", "NODE_ENV=production node dist/index.js"]
 build = ["sh", "-c", "npm run build"]
 
 [[ports]]
@@ -19,7 +19,7 @@ localPort = 5000
 externalPort = 80
 
 [workflows]
-runButton = "Start application"
+runButton = "Start API Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -44,3 +44,12 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Start API Server"
+author = 40711098
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "NODE_ENV=development npm run dev"

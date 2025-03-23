@@ -59,11 +59,13 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000 in development
   // In production, we'll use PORT from the environment (3500 for Umbrel compatibility)
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+  const host = "0.0.0.0";
   server.listen({
     port,
-    host: "0.0.0.0",
+    host,
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    log(`serving on ${host}:${port}`);
+    log(`API endpoints available at http://${host}:${port}/api/*`);
   });
 })();
