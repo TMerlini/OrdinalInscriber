@@ -3,6 +3,13 @@ FROM node:20-slim
 
 WORKDIR /app
 
+# Install necessary tools
+RUN apt-get update && apt-get install -y \
+    procps \
+    net-tools \
+    lsof \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy package files
 COPY package*.json ./
 
@@ -12,13 +19,18 @@ RUN npm ci --production
 # Copy built application
 COPY dist/ ./dist/
 COPY assets/ ./assets/
+COPY start.sh ./start.sh
+RUN chmod +x ./start.sh
+
+# Create cache directory
+RUN mkdir -p /app/cache
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=5104
+ENV PORT=5000
 
 # Expose port
-EXPOSE 5104
+EXPOSE 5000
 
 # Start the application
-CMD ["node", "dist/index.js"]
+CMD ["./start.sh"]
