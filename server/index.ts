@@ -66,11 +66,17 @@ app.use((req, res, next) => {
   const ordNodeIp = process.env.ORD_NODE_IP || "10.21.21.4"; // Configurable Ord node IP
 
   // Primary server instance on port 3500 (or environment PORT)
-  server.listen({
-    port: primaryPort,
-    host,
-    reusePort: true,
-  }, () => {
+  // Add error handling for server listening
+  let serverStartAttempt = 0;
+  const maxAttempts = 3;
+  
+  const startServer = () => {
+    try {
+      server.listen({
+        port: primaryPort,
+        host,
+        reusePort: true,
+      }, () => {
     log(`Primary server running on ${host}:${primaryPort}`);
 
     // Instead of just showing 0.0.0.0, show all possible access URLs
@@ -134,4 +140,31 @@ app.use((req, res, next) => {
       }
     }
   });
+  
+  // Add error handler for primary server
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      log(`Warning: Port ${primaryPort} already in use. Attempting to kill the process and retry...`);
+      
+      // Try to force close the port and retry
+      serverStartAttempt++;
+      if (serverStartAttempt <= maxAttempts) {
+        log(`Retry attempt ${serverStartAttempt}/${maxAttempts}...`);
+        
+        // Try to use a different port or kill the process using the port
+        const { exec } = require('child_process');
+        exec(`lsof -t -i:${primaryPort} | xargs kill -9 2>/dev/null || true`, () => {
+          setTimeout(startServer, 1000); // Wait 1 second before retrying
+        });
+      } else {
+        log(`Error: Failed to start server after ${maxAttempts} attempts. Please restart the application or use a different port.`);
+      }
+    } else {
+      log(`Error starting server: ${err.message}`);
+    }
+  });
+};
+
+// Start the server with retry mechanism
+startServer();
 })();

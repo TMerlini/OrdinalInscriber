@@ -35,7 +35,7 @@ localPort = 5200
 externalPort = 4200
 
 [workflows]
-runButton = "Run App (Exposed Port)"
+runButton = "Start App (Fixed Ports)"
 
 [[workflows.workflow]]
 name = "Project"
@@ -87,3 +87,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "PORT=3000 SECONDARY_PORT=5200 NODE_ENV=development npm run dev"
+
+[[workflows.workflow]]
+name = "Start App (Fixed Ports)"
+author = 40711098
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=3500 SECONDARY_PORT=5104 NODE_ENV=development npm run dev"

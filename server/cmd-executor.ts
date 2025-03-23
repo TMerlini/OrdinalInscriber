@@ -170,145 +170,45 @@ export async function checkNetworkConnectivity(containerName?: string): Promise<
 /**
  * Start a Python HTTP server in the specified directory
  */
-export async function startWebServer(directoryPath: string, port: number = 8000): Promise<CommandResult> {
+export async function startWebServer(directory: string, port: number = 8000): Promise<CommandResult> {
   try {
-    // Kill any existing server
-    await stopWebServer();
+    // Kill any existing python web server or process on the same port
+    await execCommand(`lsof -t -i:${port} | xargs kill -9 2>/dev/null || true`);
+    await execCommand(`pkill -f "python3 -m http.server ${port}" || true`);
 
-    // Try multiple ports if necessary (starting with requested port)
-    const tryStartServer = async (currentPort: number, maxAttempts: number = 3): Promise<CommandResult> => {
-      if (maxAttempts <= 0) {
-        return {
-          error: true,
-          output: "Failed to find an available port after multiple attempts"
-        };
-      }
+    // Check if Python3 is available
+    const pythonCheck = await execCommand('which python3 || which python');
+    const pythonCommand = pythonCheck.error ? 'npx serve' : 'python3 -m http.server';
 
-      // Try to start a Python HTTP server on the current port
-      console.log(`Attempting to start web server on port ${currentPort}...`);
+    // Change to the directory and start a HTTP server
+    const args = pythonCheck.error 
+      ? ['-s', '-p', port.toString()] 
+      : ['-m', 'http.server', port.toString()];
 
-      // Try using python3 first, then fallback to python if not available
-      const command = process.platform === 'win32' ? 'python' : 'python3';
-      const pythonProcess = spawn(command, ['-m', 'http.server', currentPort.toString()], {
-        cwd: directoryPath,
-        detached: true,
-        stdio: ['ignore', 'pipe', 'pipe']
-      });
+    const command = pythonCheck.error ? 'npx' : 'python3';
 
-      // Store the process ID for later reference
-      activeServerPid = pythonProcess.pid;
+    console.log(`Starting web server with command: ${command} ${args.join(' ')} in directory ${directory}`);
 
-      // Return a promise that resolves when the server starts (or fails)
-      return new Promise((resolve) => {
-        let outputData = '';
-        let errorData = '';
+    const process = spawn(command, args, {
+      cwd: directory,
+      detached: true,
+      stdio: 'pipe'
+    });
 
-        pythonProcess.stdout.on('data', (data) => {
-          outputData += data.toString();
+    // Store the process ID for later use
+    webServerProcess = process;
 
-          // If we see the server started message, resolve with success
-          if (outputData.includes('Serving HTTP')) {
-            resolve({
-              error: false,
-              output: outputData
-            });
-          }
+    // Return success after a short delay to give the server time to start
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          error: false,
+          output: `Serving HTTP on 0.0.0.0 port ${port}...`
         });
-
-        pythonProcess.stderr.on('data', (data) => {
-          errorData += data.toString();
-
-          // If we get an address in use error, try the next port
-          if (errorData.includes('Address already in use')) {
-            // Kill the process
-            try {
-              process.kill(pythonProcess.pid);
-              activeServerPid = null;
-            } catch (e) {
-              // Ignore errors here
-            }
-
-            // Try the next port
-            resolve(tryStartServer(currentPort + 1, maxAttempts - 1));
-          } 
-          // If we get any other error, resolve with the error
-          else if (errorData.includes('Error')) {
-            resolve({
-              error: true,
-              output: errorData
-            });
-          }
-        });
-
-        // If the process ends unexpectedly
-        pythonProcess.on('exit', (code) => {
-          // If process exited with an error but we didn't capture stderr
-          if (code !== 0 && !errorData.includes('Address already in use')) {
-            resolve({
-              error: true,
-              output: errorData || `Server process exited with code ${code}`
-            });
-          }
-        });
-
-        // If there's an error spawning the process
-        pythonProcess.on('error', (err) => {
-          // If command not found (ENOENT), try with alternative command
-          if (err.code === 'ENOENT' && command === 'python3') {
-            console.log('python3 not found, trying with python...');
-            pythonProcess.removeAllListeners();
-
-            // Try with plain 'python' instead
-            const altPythonProcess = spawn('python', ['-m', 'http.server', currentPort.toString()], {
-              cwd: directoryPath,
-              detached: true,
-              stdio: ['ignore', 'pipe', 'pipe']
-            });
-
-            // Replace the process
-            activeServerPid = altPythonProcess.pid;
-
-            // Reattach listeners
-            altPythonProcess.stdout.on('data', data => pythonProcess.stdout.emit('data', data));
-            altPythonProcess.stderr.on('data', data => pythonProcess.stderr.emit('data', data));
-            altPythonProcess.on('error', err => {
-              resolve({
-                error: true,
-                output: `Failed to start HTTP server: ${err.toString()}`
-              });
-            });
-          } else {
-            resolve({
-              error: true,
-              output: `Failed to start HTTP server: ${err.toString()}`
-            });
-          }
-        });
-
-        // Set a timeout to ensure we don't hang indefinitely
-        setTimeout(() => {
-          if (!outputData.includes('Serving HTTP') && !errorData.includes('Address already in use')) {
-            // Kill the process if it's still running
-            if (activeServerPid) {
-              try {
-                process.kill(activeServerPid);
-                activeServerPid = null;
-              } catch (e) {
-                // Ignore errors here
-              }
-            }
-
-            resolve({
-              error: true,
-              output: errorData || 'Timeout starting server'
-            });
-          }
-        }, 5000);
-      });
-    };
-
-    return tryStartServer(port);
+      }, 1000); // Increased timeout to ensure server starts
+    });
   } catch (error) {
+    console.error('Error starting web server:', error);
     return {
       error: true,
       output: String(error)
