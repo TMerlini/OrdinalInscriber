@@ -1,8 +1,13 @@
 #!/bin/sh
-# Ultra minimal startup script specifically for Umbrel with no dependencies
+# Ultra minimal startup script for Umbrel with no dependencies
 mkdir -p /app/cache
 chmod 777 /app/cache
-echo "Starting Ordinarinos with completely simplified mode..."
-# Set environment variable to tell app to use simplified mode
+
+# Export environment variables
 export USE_SIMPLIFIED_STARTUP=true
+export ORD_NODE_IP=ordinals_ord_1
+export PORT=3500
+export NODE_ENV=production 
+
+echo "Starting Ordinarinos Inscription Tool for Umbrel..."
 node /app/dist/index.js

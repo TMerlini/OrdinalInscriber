@@ -46,20 +46,38 @@ function formatByteSize(bytes: number): string {
 
 // Function to get local IP address
 function getLocalIpAddress(): string {
-  const nets = networkInterfaces();
-  
-  for (const name of Object.keys(nets)) {
-    const net = nets[name];
-    if (!net) continue;
-    
-    for (const netInterface of net) {
-      // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-      if (netInterface.family === 'IPv4' && !netInterface.internal) {
-        return netInterface.address;
-      }
-    }
+  // Check for environment variable first (for Umbrel and container deployments)
+  if (process.env.ORD_NODE_IP) {
+    console.log(`Using ORD_NODE_IP environment variable: ${process.env.ORD_NODE_IP}`);
+    return process.env.ORD_NODE_IP;
   }
   
+  // Check for simplified mode flag (for Umbrel deployments)
+  if (process.env.USE_SIMPLIFIED_STARTUP === 'true') {
+    console.log('Using simplified startup mode - returning localhost');
+    return 'localhost';
+  }
+  
+  // Otherwise use network interface detection
+  try {
+    const nets = networkInterfaces();
+    
+    for (const name of Object.keys(nets)) {
+      const net = nets[name];
+      if (!net) continue;
+      
+      for (const netInterface of net) {
+        // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
+        if (netInterface.family === 'IPv4' && !netInterface.internal) {
+          return netInterface.address;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error detecting network interfaces:', error);
+  }
+  
+  console.log('Falling back to localhost for IP address');
   return 'localhost'; // Fallback
 }
 
