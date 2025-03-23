@@ -70,10 +70,12 @@ app.use((req, res, next) => {
   let serverStartAttempt = 0;
   const maxAttempts = 3;
   
+  // Import child_process at the top level
+  import { exec } from 'child_process';
+  
   const startServer = () => {
     try {
       // First try to free the port if it's in use
-      const { exec } = require('child_process');
       exec(`lsof -t -i:${primaryPort} | xargs kill -9 2>/dev/null || true`, () => {
         server.listen({
           port: primaryPort,
