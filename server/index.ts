@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes, getLocalIpAddress } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { networkInterfaces } from "os";
+import * as http from "http";
 
 const app = express();
 app.use(express.json());
@@ -57,25 +58,27 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Use configured port from environment or fallback to development port
-  // In production (Umbrel), we use port 3500, in development we use 5000
-  const isProduction = process.env.NODE_ENV === 'production';
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : (isProduction ? 3500 : 5000);
+  // Use configured port from environment or fallback to port 3500
+  // We consistently use port 3500 to avoid conflicts with Synology NAS (port 5000)
+  const primaryPort = process.env.PORT ? parseInt(process.env.PORT, 10) : 3500;
+  const developmentPort = 5000; // For Replit workflow compatibility
   const host = "0.0.0.0";
   const ordNodeIp = process.env.ORD_NODE_IP || "10.21.21.4"; // Configurable Ord node IP
+  
+  // Primary server instance on port 3500 (or environment PORT)
   server.listen({
-    port,
+    port: primaryPort,
     host,
     reusePort: true,
   }, () => {
-    log(`serving on ${host}:${port}`);
+    log(`Primary server running on ${host}:${primaryPort}`);
     
     // Instead of just showing 0.0.0.0, show all possible access URLs
     const nets = networkInterfaces() || {};
     const accessURLs: string[] = [];
     
     // Always add localhost
-    accessURLs.push(`http://localhost:${port}`);
+    accessURLs.push(`http://localhost:${primaryPort}`);
     
     // Add all network interfaces
     try {
@@ -86,7 +89,7 @@ app.use((req, res, next) => {
         for (const net of interfaces) {
           // Skip over internal and non-IPv4 addresses
           if (net.family === 'IPv4' && !net.internal) {
-            accessURLs.push(`http://${net.address}:${port}`);
+            accessURLs.push(`http://${net.address}:${primaryPort}`);
           }
         }
       }
@@ -100,5 +103,14 @@ app.use((req, res, next) => {
     
     log(`API endpoints available at ${accessURLs[0]}/api/*`);
     log(`Environment: ${process.env.NODE_ENV}`);
+    
+    // Create a secondary server for Replit compatibility that listens on port 5000
+    if (process.env.NODE_ENV === 'development') {
+      const secondary = http.createServer(app);
+      secondary.listen(developmentPort, host, () => {
+        log(`Secondary development server running on ${host}:${developmentPort} (for Replit workflow compatibility)`);
+        log(`Additional access URL: http://localhost:${developmentPort}`);
+      });
+    }
   });
 })();
