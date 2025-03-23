@@ -17,6 +17,7 @@ services:
       - CACHE_LIMIT_BYTES=5368709120  # 5GB cache limit
       - ORD_CONTAINER_NAME=ordinals_ord_1
       - ORD_API_PORT=4000
+      - ORD_NODE_IP=10.21.21.4
     networks:
       - umbrel_main_network
 
