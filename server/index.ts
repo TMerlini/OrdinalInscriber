@@ -106,16 +106,31 @@ app.use((req, res, next) => {
 
     // Create a secondary server for Replit compatibility
     if (process.env.NODE_ENV === 'development') {
-      // Use a different secondary port if the main port is already 5000
-      const secondaryPort = primaryPort === 5000 ? 5001 : developmentPort;
+      // Use environment variable for secondary port if provided, or fallback to default logic
+      const secondaryPort = process.env.SECONDARY_PORT 
+        ? parseInt(process.env.SECONDARY_PORT, 10)
+        : (primaryPort === 5000 ? 5001 : developmentPort);
 
       // Only start secondary server if secondary port is different from primary
       if (secondaryPort !== primaryPort) {
-        const secondary = http.createServer(app);
-        secondary.listen(secondaryPort, host, () => {
-          log(`Secondary development server running on ${host}:${secondaryPort} (for Replit workflow compatibility)`);
-          log(`Additional access URL: http://localhost:${secondaryPort}`);
-        });
+        try {
+          const secondary = http.createServer(app);
+          secondary.listen(secondaryPort, host, () => {
+            log(`Secondary development server running on ${host}:${secondaryPort} (for Replit workflow compatibility)`);
+            log(`Additional access URL: http://localhost:${secondaryPort}`);
+          });
+          
+          // Handle errors gracefully
+          secondary.on('error', (err) => {
+            if ((err as any).code === 'EADDRINUSE') {
+              log(`Warning: Secondary port ${secondaryPort} already in use, secondary server not started`);
+            } else {
+              log(`Warning: Failed to start secondary server: ${err.message}`);
+            }
+          });
+        } catch (error) {
+          log(`Warning: Failed to create secondary server: ${error}`);
+        }
       }
     }
   });

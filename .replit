@@ -82,4 +82,4 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=3000 SECONDARY_PORT=5001 NODE_ENV=development npm run dev"
+args = "PORT=3000 SECONDARY_PORT=5200 NODE_ENV=development npm run dev"
