@@ -1,0 +1,165 @@
+Merlini@Ordinarinos:/volume1/docker/OrdinalInscriber/OrdinalInscriber/dist$ npm start
+
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+
+8:28:39 PM [express] Primary server running on 0.0.0.0:3500
+8:28:39 PM [express] Application accessible at:
+8:28:39 PM [express]   - http://localhost:3500
+8:28:39 PM [express]   - http://172.17.0.1:3500
+8:28:39 PM [express]   - http://172.18.0.1:3500
+8:28:39 PM [express]   - http://10.21.0.1:3500
+8:28:39 PM [express]   - http://192.168.1.92:3500
+8:28:39 PM [express]   - http://10.32.0.1:3500
+8:28:39 PM [express] API endpoints available at http://localhost:3500/api/*
+8:28:39 PM [express] Environment: production
+Port check request received: { port: '4000' }
+Container check request received: { name: 'ordinals_ord_1' }
+Port available: false
+8:29:00 PM [express] GET /api/port/check 304 in 33ms :: {"available":false}
+Command execution failed: docker ps -q -f name=ordinals_ord_1 Error: Command failed: docker ps -q -f name=ordinals_ord_1
+permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json?filters=%7B%22name%22%3A%7B%22ordinals_ord_1%22%3Atrue%7D%7D": dial unix /var/run/docker.sock: connect: permission denied
+
+    at ChildProcess.exithandler (node:child_process:422:12)
+    at ChildProcess.emit (node:events:514:28)
+    at maybeClose (node:internal/child_process:1105:16)
+    at Socket.<anonymous> (node:internal/child_process:457:11)
+    at Socket.emit (node:events:514:28)
+    at Pipe.<anonymous> (node:net:337:12) {
+  code: 1,
+  killed: false,
+  signal: null,
+  cmd: 'docker ps -q -f name=ordinals_ord_1',
+  stdout: '',
+  stderr: 'permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json?filters=%7B%22name%22%3A%7B%22ordinals_ord_1%22%3Atrue%7D%7D": dial unix /var/run/docker.sock: connect: permission denied\n'
+}
+Container exists: false
+8:29:00 PM [express] GET /api/container/check 304 in 35ms :: {"exists":false}
+Container check request received: { name: 'ordinals_ord_1' }
+Port check request received: { port: '4000' }
+Port available: false
+8:29:00 PM [express] GET /api/port/check 304 in 25ms :: {"available":false}
+Command execution failed: docker ps -q -f name=ordinals_ord_1 Error: Command failed: docker ps -q -f name=ordinals_ord_1
+permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json?filters=%7B%22name%22%3A%7B%22ordinals_ord_1%22%3Atrue%7D%7D": dial unix /var/run/docker.sock: connect: permission denied
+
+    at ChildProcess.exithandler (node:child_process:422:12)
+    at ChildProcess.emit (node:events:514:28)
+    at maybeClose (node:internal/child_process:1105:16)
+    at Socket.<anonymous> (node:internal/child_process:457:11)
+    at Socket.emit (node:events:514:28)
+    at Pipe.<anonymous> (node:net:337:12) {
+  code: 1,
+  killed: false,
+  signal: null,
+  cmd: 'docker ps -q -f name=ordinals_ord_1',
+  stdout: '',
+  stderr: 'permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json?filters=%7B%22name%22%3A%7B%22ordinals_ord_1%22%3Atrue%7D%7D": dial unix /var/run/docker.sock: connect: permission denied\n'
+}
+Container exists: false
+8:29:00 PM [express] GET /api/container/check 304 in 30ms :: {"exists":false}
+Container check request received: { name: 'ordinals_ord_1' }
+Port check request received: { port: '4000' }
+Command execution failed: docker ps -q -f name=ordinals_ord_1 Error: Command failed: docker ps -q -f name=ordinals_ord_1
+permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json?filters=%7B%22name%22%3A%7B%22ordinals_ord_1%22%3Atrue%7D%7D": dial unix /var/run/docker.sock: connect: permission denied
+
+    at ChildProcess.exithandler (node:child_process:422:12)
+    at ChildProcess.emit (node:events:514:28)
+    at maybeClose (node:internal/child_process:1105:16)
+    at Socket.<anonymous> (node:internal/child_process:457:11)
+    at Socket.emit (node:events:514:28)
+    at Pipe.<anonymous> (node:net:337:12) {
+  code: 1,
+  killed: false,
+  signal: null,
+  cmd: 'docker ps -q -f name=ordinals_ord_1',
+  stdout: '',
+  stderr: 'permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json?filters=%7B%22name%22%3A%7B%22ordinals_ord_1%22%3Atrue%7D%7D": dial unix /var/run/docker.sock: connect: permission denied\n'
+}
+Container exists: false
+8:29:07 PM [express] GET /api/container/check 304 in 23ms :: {"exists":false}
+Port available: false
+8:29:07 PM [express] GET /api/port/check 304 in 25ms :: {"available":false}
+Container check request received: { name: 'ordinals_ord_1' }
+Port check request received: { port: '4000' }
+Port available: false
+8:29:09 PM [express] GET /api/port/check 304 in 19ms :: {"available":false}
+Command execution failed: docker ps -q -f name=ordinals_ord_1 Error: Command failed: docker ps -q -f name=ordinals_ord_1
+permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json?filters=%7B%22name%22%3A%7B%22ordinals_ord_1%22%3Atrue%7D%7D": dial unix /var/run/docker.sock: connect: permission denied
+
+    at ChildProcess.exithandler (node:child_process:422:12)
+    at ChildProcess.emit (node:events:514:28)
+    at maybeClose (node:internal/child_process:1105:16)
+    at Socket.<anonymous> (node:internal/child_process:457:11)
+    at Socket.emit (node:events:514:28)
+    at Pipe.<anonymous> (node:net:337:12) {
+  code: 1,
+  killed: false,
+  signal: null,
+  cmd: 'docker ps -q -f name=ordinals_ord_1',
+  stdout: '',
+  stderr: 'permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json?filters=%7B%22name%22%3A%7B%22ordinals_ord_1%22%3Atrue%7D%7D": dial unix /var/run/docker.sock: connect: permission denied\n'
+}
+Container exists: false
+8:29:09 PM [express] GET /api/container/check 304 in 25ms :: {"exists":false}
+Container check request received: { name: 'ordinals_ord_1' }
+Port check request received: { port: '4000' }
+8:29:13 PM [express] POST /api/commands/generate 200 in 25ms :: {"commands":["python3 -m http.server…
+Port available: false
+8:29:13 PM [express] GET /api/port/check 304 in 22ms :: {"available":false}
+Command execution failed: docker ps -q -f name=ordinals_ord_1 Error: Command failed: docker ps -q -f name=ordinals_ord_1
+permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json?filters=%7B%22name%22%3A%7B%22ordinals_ord_1%22%3Atrue%7D%7D": dial unix /var/run/docker.sock: connect: permission denied
+
+    at ChildProcess.exithandler (node:child_process:422:12)
+    at ChildProcess.emit (node:events:514:28)
+    at maybeClose (node:internal/child_process:1105:16)
+    at Socket.<anonymous> (node:internal/child_process:457:11)
+    at Socket.emit (node:events:514:28)
+    at Pipe.<anonymous> (node:net:337:12) {
+  code: 1,
+  killed: false,
+  signal: null,
+  cmd: 'docker ps -q -f name=ordinals_ord_1',
+  stdout: '',
+  stderr: 'permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/containers/json?filters=%7B%22name%22%3A%7B%22ordinals_ord_1%22%3Atrue%7D%7D": dial unix /var/run/docker.sock: connect: permission denied\n'
+}
+Container exists: false
+8:29:13 PM [express] GET /api/container/check 304 in 28ms :: {"exists":false}
+Optimization did not reduce file size for logo__1_.png, using original
+Command execution failed: pkill -f "python3 -m http.server 4000" || true Error: Command failed: pkill -f "python3 -m http.server 4000" || true
+
+    at ChildProcess.exithandler (node:child_process:422:12)
+    at ChildProcess.emit (node:events:514:28)
+    at maybeClose (node:internal/child_process:1105:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:305:5) {
+  code: null,
+  killed: false,
+  signal: 'SIGTERM',
+  cmd: 'pkill -f "python3 -m http.server 4000" || true',
+  stdout: '',
+  stderr: ''
+}
+Command execution failed: pkill -f "serve -s -p 4000" || true Error: Command failed: pkill -f "serve -s -p 4000" || true
+
+    at ChildProcess.exithandler (node:child_process:422:12)
+    at ChildProcess.emit (node:events:514:28)
+    at maybeClose (node:internal/child_process:1105:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:305:5) {
+  code: null,
+  killed: false,
+  signal: 'SIGTERM',
+  cmd: 'pkill -f "serve -s -p 4000" || true',
+  stdout: '',
+  stderr: ''
+}
+Starting web server with command: python3 -m http.server 4000 in directory /tmp
+file:///volume1/docker/OrdinalInscriber/OrdinalInscriber/dist/index.js:5
+  throw Error('Dynamic require of "' + x + '" is not supported');
+  ^
+
+Error: Dynamic require of "net" is not supported
+    at file:///volume1/docker/OrdinalInscriber/OrdinalInscriber/dist/index.js:5:9
+    at Timeout.checkServerUp [as _onTimeout] (file:///volume1/docker/OrdinalInscriber/OrdinalInscriber/dist/index.js:159:21)
+    at listOnTimeout (node:internal/timers:573:17)
+    at process.processTimers (node:internal/timers:514:7)
+
+Node.js v20.9.0
