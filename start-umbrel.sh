@@ -6,8 +6,9 @@ chmod 777 /app/cache
 # Export environment variables
 export USE_SIMPLIFIED_STARTUP=true
 export ORD_NODE_IP=ordinals_ord_1
-export PORT=5000
+export PORT=3500
 export NODE_ENV=production 
 
 echo "Starting Ordinarinos Inscription Tool for Umbrel..."
+echo "Service will be available at port 3500"
 node /app/dist/index.js
