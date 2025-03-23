@@ -2,6 +2,7 @@ import { exec, spawn } from "child_process";
 import { promisify } from "util";
 import { kill } from "process";
 import { networkInterfaces } from "os";
+import * as net from "net";
 
 const execPromise = promisify(exec);
 
@@ -47,7 +48,7 @@ export async function execCommand(command: string): Promise<CommandResult> {
       } catch (err) {
         return {
           error: true,
-          output: "Docker is not available in this environment. This application requires Docker and a Bitcoin Ordinals node to function properly."
+          output: "Docker is not available in the Replit environment. This application requires Docker and a Bitcoin Ordinals node to function properly. While the UI will work, the inscription functionality cannot be performed without Docker access."
         };
       }
     }
@@ -223,7 +224,6 @@ export async function startWebServer(directory: string, port: number = 8000): Pr
 
       // Check if server is up by attempting to connect to it
       const checkServerUp = () => {
-        const net = require('net');
         const client = new net.Socket();
 
         client.setTimeout(500);
