@@ -26,6 +26,7 @@ cp docker-compose.yml release/
 cp README.md release/
 cp .gitignore release/
 cp start.sh release/
+cp umbrel-debug.md release/
 
 # Create a deployment archive
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")

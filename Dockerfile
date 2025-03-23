@@ -12,11 +12,15 @@ RUN npm ci --production
 # Copy built application
 COPY dist/ ./dist/
 COPY assets/ ./assets/
-COPY start.sh ./start.sh
-RUN chmod +x ./start.sh
+
+# Create and setup start script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+RUN cat /app/start.sh
 
 # Create cache directory
 RUN mkdir -p /app/cache
+RUN chmod 777 /app/cache
 
 # Set environment variables
 ENV NODE_ENV=production

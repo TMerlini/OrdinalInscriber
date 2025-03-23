@@ -1,0 +1,121 @@
+2025/03/23 09:28:59	stdout	Found application at /app/dist/index.js
+2025/03/23 09:28:59	stdout	Starting application in offline mode...
+2025/03/23 09:28:59	stdout	- Port: 5000
+2025/03/23 09:28:59	stdout	- Container Name: ordinals_ord_1
+2025/03/23 09:28:59	stdout	- Ordinals Node IP: 
+2025/03/23 09:28:59	stdout	Using the following configuration:
+2025/03/23 09:28:59	stdout	
+2025/03/23 09:28:59	stderr	/app/start.sh: 6: ip: not found
+2025/03/23 09:28:59	stdout	Network interfaces:
+2025/03/23 09:28:59	stdout	Running with simplified configuration
+2025/03/23 09:28:59	stdout	Starting Ordinarinos Inscription Tool...
+2025/03/23 09:28:07	stdout	Found application at /app/dist/index.js
+2025/03/23 09:28:07	stdout	Starting application in offline mode...
+2025/03/23 09:28:07	stdout	- Port: 5000
+2025/03/23 09:28:07	stdout	- Container Name: ordinals_ord_1
+2025/03/23 09:28:07	stdout	- Ordinals Node IP: 
+2025/03/23 09:28:07	stdout	Using the following configuration:
+2025/03/23 09:28:07	stdout	
+2025/03/23 09:28:07	stderr	/app/start.sh: 6: ip: not found
+2025/03/23 09:28:07	stdout	Network interfaces:
+2025/03/23 09:28:07	stdout	Running with simplified configuration
+2025/03/23 09:28:07	stdout	Starting Ordinarinos Inscription Tool...
+2025/03/23 09:27:41	stdout	Found application at /app/dist/index.js
+2025/03/23 09:27:41	stdout	Starting application in offline mode...
+2025/03/23 09:27:41	stdout	- Port: 5000
+2025/03/23 09:27:41	stdout	- Container Name: ordinals_ord_1
+2025/03/23 09:27:41	stdout	- Ordinals Node IP: 
+2025/03/23 09:27:41	stdout	Using the following configuration:
+2025/03/23 09:27:41	stdout	
+2025/03/23 09:27:41	stderr	/app/start.sh: 6: ip: not found
+2025/03/23 09:27:41	stdout	Network interfaces:
+2025/03/23 09:27:41	stdout	Running with simplified configuration
+2025/03/23 09:27:41	stdout	Starting Ordinarinos Inscription Tool...
+2025/03/23 09:27:28	stdout	Found application at /app/dist/index.js
+2025/03/23 09:27:28	stdout	Starting application in offline mode...
+2025/03/23 09:27:28	stdout	- Port: 5000
+2025/03/23 09:27:28	stdout	- Container Name: ordinals_ord_1
+2025/03/23 09:27:28	stdout	- Ordinals Node IP: 
+2025/03/23 09:27:28	stdout	Using the following configuration:
+2025/03/23 09:27:28	stdout	
+2025/03/23 09:27:28	stderr	/app/start.sh: 6: ip: not found
+2025/03/23 09:27:28	stdout	Network interfaces:
+2025/03/23 09:27:28	stdout	Running with simplified configuration
+2025/03/23 09:27:28	stdout	Starting Ordinarinos Inscription Tool...
+2025/03/23 09:27:21	stdout	Found application at /app/dist/index.js
+2025/03/23 09:27:21	stdout	Starting application in offline mode...
+2025/03/23 09:27:21	stdout	- Port: 5000
+2025/03/23 09:27:21	stdout	- Container Name: ordinals_ord_1
+2025/03/23 09:27:21	stdout	- Ordinals Node IP: 
+2025/03/23 09:27:21	stdout	Using the following configuration:
+2025/03/23 09:27:21	stdout	
+2025/03/23 09:27:21	stdout	Network interfaces:
+2025/03/23 09:27:21	stdout	Running with simplified configuration
+2025/03/23 09:27:21	stdout	Starting Ordinarinos Inscription Tool...
+2025/03/23 09:27:21	stderr	/app/start.sh: 6: ip: not found
+2025/03/23 09:27:17	stdout	Found application at /app/dist/index.js
+2025/03/23 09:27:17	stdout	Starting application in offline mode...
+2025/03/23 09:27:17	stdout	- Port: 5000
+2025/03/23 09:27:17	stdout	- Container Name: ordinals_ord_1
+2025/03/23 09:27:17	stdout	- Ordinals Node IP: 
+2025/03/23 09:27:17	stdout	Using the following configuration:
+2025/03/23 09:27:17	stdout	
+2025/03/23 09:27:17	stderr	/app/start.sh: 6: ip: not found
+2025/03/23 09:27:17	stdout	Network interfaces:
+2025/03/23 09:27:17	stdout	Running with simplified configuration
+2025/03/23 09:27:17	stdout	Starting Ordinarinos Inscription Tool...
+2025/03/23 09:27:15	stdout	Found application at /app/dist/index.js
+2025/03/23 09:27:15	stdout	Starting application in offline mode...
+2025/03/23 09:27:15	stdout	- Port: 5000
+2025/03/23 09:27:15	stdout	- Container Name: ordinals_ord_1
+2025/03/23 09:27:15	stdout	- Ordinals Node IP: 
+2025/03/23 09:27:15	stdout	Using the following configuration:
+2025/03/23 09:27:15	stdout	
+2025/03/23 09:27:15	stderr	/app/start.sh: 6: ip: not found
+2025/03/23 09:27:15	stdout	Network interfaces:
+2025/03/23 09:27:15	stdout	Running with simplified configuration
+2025/03/23 09:27:15	stdout	Starting Ordinarinos Inscription Tool...
+2025/03/23 09:27:14	stdout	Found application at /app/dist/index.js
+2025/03/23 09:27:14	stdout	Starting application in offline mode...
+2025/03/23 09:27:14	stderr	/app/start.sh: 6: ip: not found
+2025/03/23 09:27:14	stdout	- Port: 5000
+2025/03/23 09:27:14	stdout	- Container Name: ordinals_ord_1
+2025/03/23 09:27:14	stdout	- Ordinals Node IP: 
+2025/03/23 09:27:14	stdout	Using the following configuration:
+2025/03/23 09:27:14	stdout	
+2025/03/23 09:27:14	stdout	Network interfaces:
+2025/03/23 09:27:14	stdout	Running with simplified configuration
+2025/03/23 09:27:14	stdout	Starting Ordinarinos Inscription Tool...
+2025/03/23 09:27:13	stdout	Found application at /app/dist/index.js
+2025/03/23 09:27:13	stdout	Starting application in offline mode...
+2025/03/23 09:27:13	stdout	- Port: 5000
+2025/03/23 09:27:13	stdout	- Container Name: ordinals_ord_1
+2025/03/23 09:27:13	stdout	- Ordinals Node IP: 
+2025/03/23 09:27:13	stdout	Using the following configuration:
+2025/03/23 09:27:13	stdout	
+2025/03/23 09:27:13	stderr	/app/start.sh: 6: ip: not found
+2025/03/23 09:27:13	stdout	Network interfaces:
+2025/03/23 09:27:13	stdout	Running with simplified configuration
+2025/03/23 09:27:13	stdout	Starting Ordinarinos Inscription Tool...
+2025/03/23 09:27:12	stdout	Found application at /app/dist/index.js
+2025/03/23 09:27:12	stdout	Starting application in offline mode...
+2025/03/23 09:27:12	stdout	- Port: 5000
+2025/03/23 09:27:12	stdout	- Container Name: ordinals_ord_1
+2025/03/23 09:27:12	stdout	- Ordinals Node IP: 
+2025/03/23 09:27:12	stdout	Using the following configuration:
+2025/03/23 09:27:12	stdout	
+2025/03/23 09:27:12	stderr	/app/start.sh: 6: ip: not found
+2025/03/23 09:27:12	stdout	Network interfaces:
+2025/03/23 09:27:12	stdout	Running with simplified configuration
+2025/03/23 09:27:12	stdout	Starting Ordinarinos Inscription Tool...
+2025/03/23 09:27:11	stdout	Found application at /app/dist/index.js
+2025/03/23 09:27:11	stdout	Starting application in offline mode...
+2025/03/23 09:27:11	stdout	- Port: 5000
+2025/03/23 09:27:11	stdout	- Container Name: ordinals_ord_1
+2025/03/23 09:27:11	stdout	- Ordinals Node IP: 
+2025/03/23 09:27:11	stdout	Using the following configuration:
+2025/03/23 09:27:11	stdout	
+2025/03/23 09:27:11	stdout	Network interfaces:
+2025/03/23 09:27:11	stderr	/app/start.sh: 6: ip: not found
+2025/03/23 09:27:11	stdout	Running with simplified configuration
+2025/03/23 09:27:11	stdout	Starting Ordinarinos Inscription Tool...
