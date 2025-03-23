@@ -375,9 +375,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Container name is required' });
       }
       
-      // In a real application, this would check if the docker container exists
-      // For demo purposes, we'll simulate the check
-      const containerExists = true; // Simulate that all containers exist
+      // Actually check if the docker container exists
+      const result = await execCommand(`docker ps -q -f name=${name}`);
+      const containerExists = !result.error && result.output.trim() !== '';
       console.log('Container exists:', containerExists);
       
       return res.json({ exists: containerExists });
@@ -405,9 +405,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid port number' });
       }
       
-      // In a real application, this would check if the port is in use
-      // For demo purposes, we'll simulate the check
-      const portAvailable = true; // Simulate that all ports are available
+      // Check if the port is in use by checking for listening processes
+      const result = await execCommand(`lsof -i :${portNumber} || netstat -tuln | grep ${portNumber} || echo "Port available"`);
+      const portAvailable = !result.error && (result.output.includes("Port available") || result.output.trim() === "");
       console.log('Port available:', portAvailable);
       
       return res.json({ available: portAvailable });
