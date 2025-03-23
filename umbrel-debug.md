@@ -140,7 +140,12 @@ If you're having trouble accessing the application:
    
 6. Use the built-in network diagnostics tool for comprehensive troubleshooting:
    ```
-   curl -s http://localhost:3500/api/network/diagnostics | grep -v "^<!DOCTYPE" | grep -v "^<html"
+   curl -s -H "Accept: application/json" http://localhost:3500/api/network/diagnostics
+   ```
+   
+   For a more readable format with pretty-printing:
+   ```
+   curl -s -H "Accept: application/json" http://localhost:3500/api/network/diagnostics | jq
    ```
    
    or in a web browser, navigate to:

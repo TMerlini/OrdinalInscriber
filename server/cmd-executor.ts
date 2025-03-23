@@ -91,23 +91,46 @@ export async function checkNetworkConnectivity(containerName?: string): Promise<
   // Check if container exists and can be pinged
   if (containerName) {
     try {
-      // Check if container exists
-      const containerCheck = await execCommand(`docker ps -q -f name=${containerName}`);
-      result.containerConnectivity.containerExists = !containerCheck.error && containerCheck.output.trim() !== '';
-      
-      if (result.containerConnectivity.containerExists) {
-        // Get container info
-        const containerInfo = await execCommand(`docker inspect ${containerName}`);
-        if (!containerInfo.error) {
-          result.containerConnectivity.containerInfo = containerInfo.output;
+      // Check if we have docker installed
+      const dockerCheck = await execCommand('command -v docker || echo "not found"');
+      if (dockerCheck.error || dockerCheck.output.includes('not found')) {
+        result.containerConnectivity.containerExists = false;
+        result.containerConnectivity.containerInfo = 'Docker is not installed or not in PATH';
+      } else {
+        // Check if container exists
+        const containerCheck = await execCommand(`docker ps -q -f name=${containerName}`);
+        result.containerConnectivity.containerExists = !containerCheck.error && containerCheck.output.trim() !== '';
+        
+        // If original container doesn't exist, try with Umbrel naming convention (append '_1')
+        if (!result.containerConnectivity.containerExists && !containerName.endsWith('_1')) {
+          const umbrelContainerName = `${containerName}_1`;
+          console.log(`Container ${containerName} not found, trying Umbrel naming convention: ${umbrelContainerName}`);
           
-          // Try to ping the container
-          const pingResult = await execCommand(`docker exec ${containerName} echo "Container is responding"`);
-          result.containerConnectivity.canPing = !pingResult.error;
+          const umbrelContainerCheck = await execCommand(`docker ps -q -f name=${umbrelContainerName}`);
+          if (!umbrelContainerCheck.error && umbrelContainerCheck.output.trim() !== '') {
+            result.containerConnectivity.containerExists = true;
+            result.containerConnectivity.containerInfo = `Found container with Umbrel naming convention: ${umbrelContainerName}`;
+            
+            // Update containerName for further checks
+            containerName = umbrelContainerName;
+          }
+        }
+        
+        if (result.containerConnectivity.containerExists) {
+          // Get container info
+          const containerInfo = await execCommand(`docker inspect ${containerName}`);
+          if (!containerInfo.error) {
+            result.containerConnectivity.containerInfo = containerInfo.output;
+            
+            // Try to ping the container
+            const pingResult = await execCommand(`docker exec ${containerName} echo "Container is responding"`);
+            result.containerConnectivity.canPing = !pingResult.error;
+          }
         }
       }
     } catch (error) {
       console.error('Error checking container connectivity:', error);
+      result.containerConnectivity.containerInfo = `Error: ${error instanceof Error ? error.message : String(error)}`;
     }
   }
   

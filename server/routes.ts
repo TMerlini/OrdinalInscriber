@@ -482,6 +482,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Network diagnostics request received');
       const { container } = req.query;
       
+      // Check Accept header to handle browser and API requests differently
+      const acceptHeader = req.headers.accept || '';
+      const wantsHTML = acceptHeader.includes('text/html');
+      
+      // Override content-type for API clients
+      if (!wantsHTML) {
+        res.setHeader('Content-Type', 'application/json');
+      }
+      
       // Get container name from query or use default Umbrel container name
       const containerName = (container && typeof container === 'string') 
         ? container 
@@ -498,8 +507,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the IP that would be used by our getLocalIpAddress function
       selectedIp = getLocalIpAddress();
       
-      // Return the comprehensive diagnostic data
-      return res.json({
+      // Prepare the diagnostic data
+      const diagnosticData = {
         diagnostics: diagnosticResults,
         selectedIp,
         umbrelMode: process.env.USE_SIMPLIFIED_STARTUP === 'true',
@@ -508,10 +517,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           NODE_ENV: process.env.NODE_ENV || 'development',
           PORT: process.env.PORT || '5000',
         }
-      });
+      };
+      
+      // If this is a browser request and we're in development mode, pass through to Vite
+      if (wantsHTML && process.env.NODE_ENV === 'development') {
+        return res.json(diagnosticData);
+      }
+      
+      // Otherwise, force JSON response
+      return res.status(200)
+        .setHeader('Content-Type', 'application/json')
+        .send(JSON.stringify(diagnosticData, null, 2));
     } catch (error) {
       console.error('Error running network diagnostics:', error);
-      return res.status(500).json({ error: 'Failed to run network diagnostics' });
+      return res.status(500)
+        .setHeader('Content-Type', 'application/json')
+        .send(JSON.stringify({ error: 'Failed to run network diagnostics' }, null, 2));
     }
   });
   
