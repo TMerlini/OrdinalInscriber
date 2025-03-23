@@ -64,7 +64,7 @@ app.use((req, res, next) => {
   const developmentPort = 5000; // For Replit workflow compatibility
   const host = "0.0.0.0";
   const ordNodeIp = process.env.ORD_NODE_IP || "10.21.21.4"; // Configurable Ord node IP
-  
+
   // Primary server instance on port 3500 (or environment PORT)
   server.listen({
     port: primaryPort,
@@ -72,20 +72,20 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`Primary server running on ${host}:${primaryPort}`);
-    
+
     // Instead of just showing 0.0.0.0, show all possible access URLs
     const nets = networkInterfaces() || {};
     const accessURLs: string[] = [];
-    
+
     // Always add localhost
     accessURLs.push(`http://localhost:${primaryPort}`);
-    
+
     // Add all network interfaces
     try {
       for (const name of Object.keys(nets || {})) {
         const interfaces = nets[name];
         if (!interfaces) continue;
-        
+
         for (const net of interfaces) {
           // Skip over internal and non-IPv4 addresses
           if (net.family === 'IPv4' && !net.internal) {
@@ -96,21 +96,27 @@ app.use((req, res, next) => {
     } catch (error) {
       console.error('Error getting network interfaces:', error);
     }
-    
+
     // Log access URLs
     log(`Application accessible at:`);
     accessURLs.forEach(url => log(`  - ${url}`));
-    
+
     log(`API endpoints available at ${accessURLs[0]}/api/*`);
     log(`Environment: ${process.env.NODE_ENV}`);
-    
-    // Create a secondary server for Replit compatibility that listens on port 5000
+
+    // Create a secondary server for Replit compatibility
     if (process.env.NODE_ENV === 'development') {
-      const secondary = http.createServer(app);
-      secondary.listen(developmentPort, host, () => {
-        log(`Secondary development server running on ${host}:${developmentPort} (for Replit workflow compatibility)`);
-        log(`Additional access URL: http://localhost:${developmentPort}`);
-      });
+      // Use a different secondary port if the main port is already 5000
+      const secondaryPort = primaryPort === 5000 ? 5001 : developmentPort;
+
+      // Only start secondary server if secondary port is different from primary
+      if (secondaryPort !== primaryPort) {
+        const secondary = http.createServer(app);
+        secondary.listen(secondaryPort, host, () => {
+          log(`Secondary development server running on ${host}:${secondaryPort} (for Replit workflow compatibility)`);
+          log(`Additional access URL: http://localhost:${secondaryPort}`);
+        });
+      }
     }
   });
 })();
