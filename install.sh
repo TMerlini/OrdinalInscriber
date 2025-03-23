@@ -42,7 +42,7 @@ if [ $? -eq 0 ]; then
     echo "Ordinarinos Inscription Tool installed successfully!"
     echo
     echo "You can access the application at:"
-    echo "http://localhost:3500"
+    echo "http://localhost:5104"
     echo
     echo "If you're running this on a server, replace 'localhost'"
     echo "with your server's IP address or domain name."
