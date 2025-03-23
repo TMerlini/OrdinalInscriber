@@ -15,6 +15,10 @@ npm run build
 mkdir -p release
 rm -rf release/*
 
+# Create cache directory with proper permissions
+mkdir -p release/cache
+chmod 777 release/cache
+
 # Copy the necessary files
 echo "Packaging files for release..."
 cp -r dist release/

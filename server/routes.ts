@@ -45,7 +45,7 @@ function formatByteSize(bytes: number): string {
 }
 
 // Function to get local IP address
-function getLocalIpAddress(): string {
+export function getLocalIpAddress(): string {
   // Check for environment variable first (for Umbrel and container deployments)
   if (process.env.ORD_NODE_IP) {
     console.log(`Using ORD_NODE_IP environment variable: ${process.env.ORD_NODE_IP}`);
