@@ -181,7 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const config = JSON.parse(req.body.config);
       const file = req.file;
       const fileName = path.basename(file.path);
-      const localIp = getLocalIpAddress();
+      const localIp = process.env.ORD_NODE_IP || getLocalIpAddress();
       const containerPath = config.containerPath || '/ord/data/';
       const containerFilePath = `${containerPath}${fileName}`;
       const port = config.port || 8000;

@@ -1,3 +1,4 @@
+
 FROM node:20-slim
 
 WORKDIR /app
@@ -14,10 +15,10 @@ COPY assets/ ./assets/
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3500
+ENV PORT=5000
 
 # Expose port
-EXPOSE 3500
+EXPOSE 5000
 
 # Start the application
 CMD ["node", "dist/index.js"]
