@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
-import { execCommand, startWebServer, stopWebServer } from "./cmd-executor";
+import { execCommand, startWebServer, stopWebServer, checkNetworkConnectivity } from "./cmd-executor";
 import { getCacheInfo, clearAllCachedImages, cleanCacheIfNeeded } from "./cache-manager";
 import os from "os";
 import { networkInterfaces } from "os";
@@ -54,14 +54,16 @@ export function getLocalIpAddress(): string {
   
   // Check for simplified mode flag (for Umbrel deployments)
   if (process.env.USE_SIMPLIFIED_STARTUP === 'true') {
-    console.log('Using simplified startup mode - returning localhost');
-    return 'localhost';
+    console.log('Using simplified startup mode - returning ordinals_ord_1');
+    return 'ordinals_ord_1'; // Return the container name in Umbrel network
   }
   
   // Otherwise use network interface detection
   try {
     const nets = networkInterfaces();
+    let candidates: string[] = [];
     
+    // First pass: collect all potential IP addresses
     for (const name of Object.keys(nets)) {
       const net = nets[name];
       if (!net) continue;
@@ -69,12 +71,51 @@ export function getLocalIpAddress(): string {
       for (const netInterface of net) {
         // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
         if (netInterface.family === 'IPv4' && !netInterface.internal) {
-          return netInterface.address;
+          // Prioritize Docker bridge interfaces
+          if (name.includes('docker') || name.includes('br-')) {
+            // Docker bridge interfaces get priority
+            return netInterface.address;
+          }
+          // Otherwise add to candidates
+          candidates.push(netInterface.address);
         }
       }
     }
+    
+    // Second pass: prefer networks in 172.x.x.x range (common for Docker)
+    const dockerRangeIP = candidates.find(ip => ip.startsWith('172.'));
+    if (dockerRangeIP) {
+      console.log(`Selected Docker range IP: ${dockerRangeIP}`);
+      return dockerRangeIP;
+    }
+    
+    // Third pass: prefer 10.x.x.x range (common for internal networks)
+    const internalRangeIP = candidates.find(ip => ip.startsWith('10.'));
+    if (internalRangeIP) {
+      console.log(`Selected internal range IP: ${internalRangeIP}`);
+      return internalRangeIP;
+    }
+    
+    // Finally: use any available non-internal IP
+    if (candidates.length > 0) {
+      console.log(`Selected IP address: ${candidates[0]}`);
+      return candidates[0];
+    }
   } catch (error) {
     console.error('Error detecting network interfaces:', error);
+  }
+  
+  // Try 'host.docker.internal' for Docker for Desktop
+  try {
+    const { execSync } = require('child_process');
+    // Check if we can resolve host.docker.internal
+    const result = execSync('getent hosts host.docker.internal || echo "not found"').toString();
+    if (!result.includes('not found')) {
+      console.log('Using host.docker.internal as IP address');
+      return 'host.docker.internal';
+    }
+  } catch (err) {
+    // Ignore errors
   }
   
   console.log('Falling back to localhost for IP address');
