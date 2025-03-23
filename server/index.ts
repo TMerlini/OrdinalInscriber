@@ -60,7 +60,7 @@ app.use((req, res, next) => {
   // In production, we'll use PORT from the environment (3500 for Umbrel compatibility)
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
   const host = "0.0.0.0";
-  const ordNodeIp = "10.21.21.4"; // Umbrel Ord node IP
+  const ordNodeIp = process.env.ORD_NODE_IP || "10.21.21.4"; // Configurable Ord node IP
   server.listen({
     port,
     host,
