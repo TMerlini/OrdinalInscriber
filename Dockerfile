@@ -13,12 +13,12 @@ RUN npm ci --production
 COPY dist/ ./dist/
 COPY assets/ ./assets/
 
-# Create and setup start script
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
-RUN cat /app/start.sh
+# Create and setup run script (completely new file)
+COPY run.sh /app/run.sh
+RUN chmod +x /app/run.sh
+RUN cat /app/run.sh
 
-# Create cache directory
+# Create cache directory with proper permissions
 RUN mkdir -p /app/cache
 RUN chmod 777 /app/cache
 
@@ -29,5 +29,5 @@ ENV PORT=5000
 # Expose port
 EXPOSE 5000
 
-# Start the application
-CMD ["/bin/sh", "/app/start.sh"]
+# Start the application using the new run.sh script
+CMD ["/bin/sh", "/app/run.sh"]
