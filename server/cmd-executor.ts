@@ -48,7 +48,7 @@ export async function execCommand(command: string): Promise<CommandResult> {
       } catch (err) {
         return {
           error: true,
-          output: "Docker is not available in the Replit environment. This application requires Docker and a Bitcoin Ordinals node to function properly. While the UI will work, the inscription functionality cannot be performed without Docker access."
+          output: "Docker is not available in the Replit environment. This application requires Docker and a Bitcoin Ordinals node to function properly. This UI preview works, but inscription functionality requires a local Docker environment with an Ordinals node."
         };
       }
     }
