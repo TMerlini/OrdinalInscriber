@@ -72,8 +72,16 @@ for file in "${REQUIRED_FILES[@]}"; do
 done
 
 # Verify that the networking diagnostics endpoint is included
-if ! grep -q "checkNetworkConnectivity" "release/dist/routes.js" && ! grep -q "/api/network/diagnostics" "release/dist/routes.js"; then
-  echo "⚠️ Warning: Network diagnostics endpoint may be missing in the build."
+if [ -f "release/dist/routes.js" ]; then
+  if ! grep -q "checkNetworkConnectivity" "release/dist/routes.js" && ! grep -q "/api/network/diagnostics" "release/dist/routes.js"; then
+    echo "⚠️ Warning: Network diagnostics endpoint may be missing in the build."
+  fi
+elif [ -f "release/dist/routes.mjs" ]; then
+  if ! grep -q "checkNetworkConnectivity" "release/dist/routes.mjs" && ! grep -q "/api/network/diagnostics" "release/dist/routes.mjs"; then
+    echo "⚠️ Warning: Network diagnostics endpoint may be missing in the build."
+  fi
+else
+  echo "⚠️ Warning: Network diagnostics endpoint file not found in expected locations."
 fi
 
 echo "✅ Verification passed."

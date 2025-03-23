@@ -201,7 +201,7 @@ export async function startWebServer(directory: string, port: number = 8000): Pr
     // Store the process for later use
     serverProcess = process;
     webServerProcess = process;
-    
+
     if (process.pid) {
       activeServerPid = process.pid;
     }
@@ -225,9 +225,9 @@ export async function startWebServer(directory: string, port: number = 8000): Pr
       const checkServerUp = () => {
         const net = require('net');
         const client = new net.Socket();
-        
+
         client.setTimeout(500);
-        
+
         client.on('connect', () => {
           clearTimeout(timeout);
           client.destroy();
@@ -236,19 +236,19 @@ export async function startWebServer(directory: string, port: number = 8000): Pr
             output: `Serving HTTP on 0.0.0.0 port ${port}...`
           });
         });
-        
+
         client.on('error', () => {
           // Try again in 500ms if still within timeout window
           setTimeout(checkServerUp, 500);
         });
-        
+
         client.on('timeout', () => {
           client.destroy();
         });
-        
+
         client.connect(port, '127.0.0.1');
       };
-      
+
       // Start checking if server is up
       setTimeout(checkServerUp, 500);
     });
@@ -271,10 +271,10 @@ export async function stopWebServer(): Promise<void> {
       // Try standard kill first
       if (serverProcess.pid) {
         console.log(`Killing process with PID ${serverProcess.pid}`);
-        
+
         // Kill directly
         serverProcess.kill('SIGTERM');
-        
+
         // As a backup, use system commands
         if (process.platform === 'win32') {
           // Windows
@@ -284,13 +284,13 @@ export async function stopWebServer(): Promise<void> {
           exec(`kill -15 ${serverProcess.pid} || kill -9 ${serverProcess.pid}`);
         }
       }
-      
+
       // Clean up any remaining processes
       const port = 8000; // Default port, we should ideally store the current port
       await execCommand(`lsof -t -i:${port} | xargs kill -9 2>/dev/null || true`);
       await execCommand(`pkill -f "python3 -m http.server" || true`);
       await execCommand(`pkill -f "serve -s -p" || true`);
-      
+
       console.log('Web server stopped');
     } catch (error) {
       console.error('Error stopping server:', error);
