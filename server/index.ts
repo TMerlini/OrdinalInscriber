@@ -67,5 +67,6 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on ${host}:${port}`);
     log(`API endpoints available at http://${host}:${port}/api/*`);
+    log(`Environment: ${process.env.NODE_ENV}`);
   });
 })();
