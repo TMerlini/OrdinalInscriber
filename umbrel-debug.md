@@ -84,3 +84,56 @@ docker exec -it ordinarinos-inscription-tool ping ordinals_ord_1
 ```
 
 If this fails, check your Docker network configuration.
+
+## Accessing the Web Interface
+
+The application should be accessible via your browser at:
+
+```
+http://umbrel.local:3500
+```
+
+or
+
+```
+http://<your-umbrel-ip>:3500
+```
+
+If you're having trouble accessing the application:
+
+1. Make sure the container is actually running:
+   ```
+   docker ps | grep ordinarinos-inscription-tool
+   ```
+
+2. Check if the application is serving on the correct port inside the container:
+   ```
+   docker exec -it ordinarinos-inscription-tool netstat -tulpn | grep 5000
+   ```
+   
+   You should see something like:
+   ```
+   tcp        0      0 0.0.0.0:5000            0.0.0.0:*               LISTEN      1/node
+   ```
+
+3. Verify the port mapping:
+   ```
+   docker port ordinarinos-inscription-tool
+   ```
+   
+   This should show:
+   ```
+   5000/tcp -> 0.0.0.0:3500
+   ```
+
+4. If all else fails, try accessing the application directly through the Docker network:
+   ```
+   curl http://localhost:3500
+   ```
+   
+   If this works but your browser doesn't, it might be a network firewall issue.
+
+5. Check the container logs for actual IP addresses it's serving on:
+   ```
+   docker logs ordinarinos-inscription-tool | grep "Application accessible at"
+   ```

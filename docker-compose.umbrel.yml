@@ -12,12 +12,22 @@ services:
     volumes:
       - ./cache:/app/cache
     networks:
-      - umbrel_network
+      umbrel_network:
+        aliases:
+          - ordinarinos-inscription-tool
     environment:
       - NODE_ENV=production
       - PORT=5000
       - USE_SIMPLIFIED_STARTUP=true
       - ORD_NODE_IP=ordinals_ord_1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 networks:
   umbrel_network:

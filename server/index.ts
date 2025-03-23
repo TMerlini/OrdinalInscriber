@@ -71,16 +71,19 @@ app.use((req, res, next) => {
     log(`serving on ${host}:${port}`);
     
     // Instead of just showing 0.0.0.0, show all possible access URLs
-    const nets = networkInterfaces();
-    const accessURLs = [];
+    const nets = networkInterfaces() || {};
+    const accessURLs: string[] = [];
     
     // Always add localhost
     accessURLs.push(`http://localhost:${port}`);
     
     // Add all network interfaces
     try {
-      for (const name of Object.keys(nets)) {
-        for (const net of nets[name]) {
+      for (const name of Object.keys(nets || {})) {
+        const interfaces = nets[name];
+        if (!interfaces) continue;
+        
+        for (const net of interfaces) {
           // Skip over internal and non-IPv4 addresses
           if (net.family === 'IPv4' && !net.internal) {
             accessURLs.push(`http://${net.address}:${port}`);
