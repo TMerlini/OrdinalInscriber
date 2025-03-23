@@ -28,6 +28,12 @@ cp .gitignore release/
 cp start.sh release/
 cp umbrel-debug.md release/
 
+# Add Umbrel-specific files
+cp umbrel-install.sh release/
+cp start-umbrel.sh release/
+cp Dockerfile.umbrel release/
+cp docker-compose.umbrel.yml release/
+
 # Create a deployment archive
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")
 RELEASE_NAME="ordinarinos-inscription-tool-${TIMESTAMP}.tar.gz"

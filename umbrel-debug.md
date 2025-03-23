@@ -11,7 +11,23 @@ If your container keeps restarting, follow these steps:
    docker logs ordinarinos-inscription-tool
    ```
 
-3. Check if the start.sh script is correct:
+3. **RECOMMENDED APPROACH**: Use the Umbrel-specific installation:
+   
+   We've created a special installation script for Umbrel that avoids all common issues:
+   
+   ```
+   cd /path/to/extracted/release
+   chmod +x umbrel-install.sh
+   ./umbrel-install.sh
+   ```
+   
+   This will:
+   - Create a simplified startup script without any dependencies
+   - Setup a specific Dockerfile.umbrel file
+   - Use a custom docker-compose.umbrel.yml configuration
+   - Set the USE_SIMPLIFIED_STARTUP environment variable
+
+4. Alternatively, check if the start.sh script is correct:
    ```
    docker exec -it ordinarinos-inscription-tool cat /app/start.sh
    ```
@@ -20,20 +36,24 @@ If your container keeps restarting, follow these steps:
    #!/bin/sh
    # Ultra minimal startup script with no dependencies
    mkdir -p /app/cache
-   echo "Starting Ordinarinos Inscription Tool..."
+   chmod 777 /app/cache
+   echo "Starting Ordinarinos with completely simplified mode..."
+   export USE_SIMPLIFIED_STARTUP=true
    node /app/dist/index.js
    ```
 
-4. If the script is different, you can update it manually:
+5. If the script is different, you can update it manually:
    ```
    docker exec -it ordinarinos-inscription-tool sh -c "echo '#!/bin/sh
    # Ultra minimal startup script with no dependencies
    mkdir -p /app/cache
-   echo \"Starting Ordinarinos Inscription Tool...\"
+   chmod 777 /app/cache
+   echo \"Starting Ordinarinos with completely simplified mode...\"
+   export USE_SIMPLIFIED_STARTUP=true
    node /app/dist/index.js' > /app/start.sh && chmod +x /app/start.sh"
    ```
 
-5. Restart the container:
+6. Restart the container:
    ```
    docker restart ordinarinos-inscription-tool
    ```

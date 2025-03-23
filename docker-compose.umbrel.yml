@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  ordinarinos:
+    build:
+      context: .
+      dockerfile: Dockerfile.umbrel
+    container_name: ordinarinos-inscription-tool
+    restart: unless-stopped
+    ports:
+      - "3500:5000"
+    volumes:
+      - ./cache:/app/cache
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - CACHE_LIMIT_BYTES=5368709120  # 5GB cache limit
+      - ORD_CONTAINER_NAME=ordinals_ord_1
+      - ORD_API_PORT=4000
+      - ORD_NODE_IP=10.21.21.4
+      - USE_SIMPLIFIED_STARTUP=true
+    networks:
+      - umbrel_main_network
+
+networks:
+  umbrel_main_network:
+    external: true
