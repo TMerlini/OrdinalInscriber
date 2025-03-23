@@ -3,13 +3,6 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Install necessary tools
-RUN apt-get update && apt-get install -y \
-    procps \
-    net-tools \
-    lsof \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy package files
 COPY package*.json ./
 
@@ -33,4 +26,4 @@ ENV PORT=5000
 EXPOSE 5000
 
 # Start the application
-CMD ["./start.sh"]
+CMD ["/bin/sh", "/app/start.sh"]

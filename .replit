@@ -22,6 +22,10 @@ externalPort = 80
 localPort = 5104
 externalPort = 3001
 
+[[ports]]
+localPort = 5105
+externalPort = 3002
+
 [workflows]
 runButton = "Start API Server"
 
