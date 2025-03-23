@@ -3,6 +3,7 @@ import { registerRoutes, getLocalIpAddress } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { networkInterfaces } from "os";
 import * as http from "http";
+import { exec } from 'child_process';
 
 const app = express();
 app.use(express.json());
@@ -69,9 +70,6 @@ app.use((req, res, next) => {
   // Add error handling for server listening
   let serverStartAttempt = 0;
   const maxAttempts = 3;
-  
-  // Import child_process at the top level
-  import { exec } from 'child_process';
   
   const startServer = () => {
     try {
