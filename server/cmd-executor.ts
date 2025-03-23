@@ -36,6 +36,19 @@ interface NetworkDiagnosticResult {
  */
 export async function execCommand(command: string): Promise<CommandResult> {
   try {
+    // Check if we're trying to run a docker command in an environment without docker
+    if (command.startsWith('docker ')) {
+      // Check if docker is installed
+      try {
+        await execPromise('command -v docker', { timeout: 2000 });
+      } catch (err) {
+        return {
+          error: true,
+          output: "Docker is not available in this environment. This application requires Docker and a Bitcoin Ordinals node to function properly."
+        };
+      }
+    }
+    
     const { stdout, stderr } = await execPromise(command, { timeout: 30000 });
     
     return {
@@ -163,7 +176,46 @@ export async function startWebServer(directory: string, port = 8000): Promise<Co
       await stopWebServer();
     }
     
-    // Start a new server process
+    // Check if Python3 is available
+    try {
+      await execPromise('command -v python3', { timeout: 2000 });
+    } catch (err) {
+      // If Python3 is not available, try using Node's built-in HTTP server
+      console.log('Python3 not found, using Node.js HTTP server instead');
+      
+      // Create a simple Node.js HTTP server
+      const http = require('http');
+      const fs = require('fs');
+      const path = require('path');
+      
+      const server = http.createServer((req, res) => {
+        const filePath = path.join(directory, req.url === '/' ? '' : req.url || '');
+        
+        fs.stat(filePath, (err, stats) => {
+          if (err || !stats.isFile()) {
+            res.writeHead(404);
+            res.end('File not found');
+            return;
+          }
+          
+          const fileStream = fs.createReadStream(filePath);
+          fileStream.pipe(res);
+        });
+      });
+      
+      server.listen(port);
+      serverProcess = { 
+        pid: null, 
+        kill: () => { server.close(); }
+      } as any;
+      
+      return {
+        error: false,
+        output: `Node.js HTTP server started on port ${port}`
+      };
+    }
+    
+    // Start a new server process with Python
     serverProcess = spawn('python3', ['-m', 'http.server', port.toString()], {
       cwd: directory,
       detached: true,

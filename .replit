@@ -27,7 +27,7 @@ localPort = 5105
 externalPort = 3002
 
 [workflows]
-runButton = "Start API Server"
+runButton = "Run App (Exposed Port)"
 
 [[workflows.workflow]]
 name = "Project"
@@ -70,3 +70,12 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "PORT=5200 NODE_ENV=development npm run dev"
+
+[[workflows.workflow]]
+name = "Run App (Exposed Port)"
+author = 40711098
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=3000 NODE_ENV=development npm run dev"

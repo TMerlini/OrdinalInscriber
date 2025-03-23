@@ -58,6 +58,19 @@ export default function ResultSection({ result, onReset, onTryAgain }: ResultSec
             <pre className="text-red-700 text-sm whitespace-pre-wrap font-mono bg-red-100 p-3 rounded max-h-40 overflow-y-auto">
               {result.errorMessage || 'Unknown error occurred'}
             </pre>
+            
+            {(result.errorMessage?.includes('docker: not found') || result.errorMessage?.includes('502')) && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md text-amber-800">
+                <p className="font-medium">Replit Environment Notice:</p>
+                <p className="text-sm mt-1">
+                  This tool requires a Bitcoin Ordinals node running in Docker, which is not supported in the Replit environment. 
+                  The 502 error occurs because the application is trying to communicate with a Docker container that doesn't exist.
+                </p>
+                <p className="text-sm mt-2">
+                  To use this tool, you would need to run it in an environment with Docker support and a Bitcoin Ordinals node.
+                </p>
+              </div>
+            )}
           </div>
           
           <div className="mt-6 flex flex-col sm:flex-row gap-4">
