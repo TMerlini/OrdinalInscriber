@@ -11,6 +11,8 @@ export interface UploadedFile {
     message: string;
   };
   optimizationAvailable?: boolean;
+  id?: string; // Unique ID for tracking in batch processing
+  selected?: boolean; // Whether the file is selected for batch processing
 }
 
 export interface ConfigOptions {
@@ -31,11 +33,13 @@ export interface ConfigOptions {
   includeMetadata?: boolean;
   metadataStorage?: 'on-chain';
   metadataJson?: string;
+  batchMode?: boolean; // Whether this is a batch processing operation
 }
 
 export interface CommandsData {
   commands: string[];
   fileName: string;
+  fileId?: string; // ID of the file for batch processing
 }
 
 export enum StepStatus {
@@ -57,4 +61,21 @@ export interface InscriptionResult {
   transactionId?: string;
   feePaid?: string;
   errorMessage?: string;
+}
+
+export interface BatchProcessingItem {
+  fileId: string;
+  fileName: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  commands?: string[];
+  result?: InscriptionResult;
+  steps: ExecutionStep[];
+}
+
+export interface BatchProcessingState {
+  inProgress: boolean;
+  items: BatchProcessingItem[];
+  currentItemIndex: number;
+  completedCount: number;
+  failedCount: number;
 }
