@@ -886,13 +886,6 @@ export default function Home() {
                 
                 <TabsContent value="single">
                   <FileUploader onFileUpload={handleFileUpload} />
-                  {uploadedFile && (
-                    <ImagePreview 
-                      file={uploadedFile} 
-                      onRemove={handleFileRemove}
-                      onToggleOptimization={handleToggleOptimization} 
-                    />
-                  )}
                 </TabsContent>
                 
                 <TabsContent value="batch">
