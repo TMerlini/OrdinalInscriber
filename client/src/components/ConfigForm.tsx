@@ -43,6 +43,8 @@ export const DEFAULT_CONTAINER_PATH = "/ord/data/";
 interface ConfigFormProps {
   onGenerateCommands: (config: ConfigOptions) => void;
   uploadedFile?: UploadedFile | null;
+  isBatchMode?: boolean;
+  batchFileCount?: number;
 }
 
 // Fee calculation constants for Segwit/Taproot transaction fees
@@ -117,7 +119,7 @@ const calculateFee = (fileSizeBytes: number, feeRate: number, isOptimized: boole
   };
 };
 
-export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: ConfigFormProps) {
+export default function ConfigForm({ onGenerateCommands, uploadedFile = null, isBatchMode = false, batchFileCount = 0 }: ConfigFormProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showSatPoint, setShowSatPoint] = useState(false);
   const [showMimeType, setShowMimeType] = useState(false);
@@ -404,7 +406,30 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
                       <div>
                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Fee Calculation</h4>
                         
-                        {uploadedFile ? (
+                        {isBatchMode ? (
+                          <>
+                            {/* Batch processing fee calculation */}
+                            <div className="text-xs space-y-1 text-gray-600 dark:text-gray-300">
+                              <p className="font-semibold text-orange-800 dark:text-orange-300">
+                                Batch Processing: {batchFileCount} files selected
+                              </p>
+                              <p className="text-sm mt-2">
+                                Each file will be inscribed sequentially with the fee rate of {field.value} sats/vB.
+                              </p>
+                              <p className="mt-2 text-orange-600 dark:text-orange-400 font-medium">
+                                Be sure to check "Optimize Image" for large files to reduce inscription costs.
+                              </p>
+                              <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded mt-2 border border-amber-200 dark:border-amber-800">
+                                <p className="font-medium">Estimated total fee: 
+                                  {batchFileCount > 0 ? 
+                                    ` ${(Number(field.value) * 250 * batchFileCount).toLocaleString()} to ${(Number(field.value) * 1000 * batchFileCount).toLocaleString()} sats`
+                                    : ' (select files to calculate)'}
+                                </p>
+                                <p className="text-xs mt-1">Individual fees will vary based on file sizes and optimization settings.</p>
+                              </div>
+                            </div>
+                          </>
+                        ) : uploadedFile ? (
                           <>
                             {/* Dynamic fee calculation based on file size */}
                             {(() => {
@@ -750,7 +775,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null }: 
           
           <div className="pt-2">
             <Button type="submit" className="w-full bg-orange-600 dark:bg-orange-700 hover:bg-orange-700 dark:hover:bg-orange-600">
-              Confirm Ordinal Inscription
+              {isBatchMode ? 'Prepare Batch Processing' : 'Confirm Ordinal Inscription'}
             </Button>
           </div>
         </form>

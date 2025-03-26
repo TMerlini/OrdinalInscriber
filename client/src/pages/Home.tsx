@@ -48,6 +48,7 @@ export default function Home() {
   const [optimizeImage, setOptimizeImage] = useState(false);
   const [showParentInscription, setShowParentInscription] = useState(false);
   const [parentInscriptionId, setParentInscriptionId] = useState('');
+  const [loading, setLoading] = useState(false);
   const configForm = useForm<ConfigOptions>({
     defaultValues: {
       containerName: "ordinals_ord_1",
@@ -428,7 +429,7 @@ export default function Home() {
     );
   };
   
-  const prepareBatchProcessing = () => {
+  const prepareBatchProcessing = async (config: ConfigOptions) => {
     // Get only selected files for processing
     const selectedFiles = batchFiles.filter(file => file.selected);
     
@@ -437,26 +438,117 @@ export default function Home() {
       return;
     }
     
-    // Create batch processing items for each selected file
-    const batchItems: BatchProcessingItem[] = selectedFiles.map(file => ({
-      fileId: file.id || '',
-      fileName: file.file.name,
-      status: 'pending',
-      steps: [
-        { status: StepStatus.DEFAULT, output: '' },
-        { status: StepStatus.DEFAULT, output: '' },
-        { status: StepStatus.DEFAULT, output: '' }
-      ]
-    }));
-    
-    // Initialize batch processing state
-    setBatchProcessingState({
-      inProgress: false,
-      items: batchItems,
-      currentItemIndex: 0,
-      completedCount: 0,
-      failedCount: 0
-    });
+    try {
+      // Start loading
+      setLoading(true);
+      
+      // Get metadata values
+      const metadataValues = metadataForm.getValues();
+      
+      // Create batch processing items for each selected file
+      const batchItems: BatchProcessingItem[] = selectedFiles.map(file => ({
+        fileId: file.id || '',
+        fileName: file.file.name,
+        status: 'pending',
+        steps: [
+          { status: StepStatus.DEFAULT, output: '' },
+          { status: StepStatus.DEFAULT, output: '' },
+          { status: StepStatus.DEFAULT, output: '' }
+        ]
+      }));
+      
+      // Initialize batch processing state
+      setBatchProcessingState({
+        inProgress: false,
+        items: batchItems,
+        currentItemIndex: 0,
+        completedCount: 0,
+        failedCount: 0
+      });
+      
+      // Generate commands for each file and prepare them for processing
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        
+        // Create a complete config that includes metadata and optimization settings
+        const mergedConfig: ConfigOptions = {
+          ...config,
+          optimizeImage: file.optimizationAvailable || false,
+          includeMetadata: metadataValues.includeMetadata,
+          metadataStorage: "on-chain" as const,
+          metadataJson: metadataValues.metadataJson,
+          destination: metadataValues.destination,
+          parentId: showParentInscription ? parentInscriptionId : undefined,
+          batchMode: true
+        };
+        
+        try {
+          // First upload the file
+          const uploadFormData = new FormData();
+          uploadFormData.append('file', file.file);
+          uploadFormData.append('config', JSON.stringify(mergedConfig));
+          
+          await apiRequest('POST', '/api/upload', uploadFormData, true);
+          
+          // Then generate commands
+          const commandsFormData = new FormData();
+          commandsFormData.append('file', file.file);
+          commandsFormData.append('config', JSON.stringify(mergedConfig));
+          
+          const response = await apiRequest('POST', '/api/commands/generate', commandsFormData, true);
+          const data = await response.json();
+          
+          // Update the batch item with the generated commands
+          setBatchProcessingState(prev => {
+            const updatedItems = [...prev.items];
+            const itemIndex = updatedItems.findIndex(item => item.fileId === file.id);
+            
+            if (itemIndex !== -1) {
+              updatedItems[itemIndex] = {
+                ...updatedItems[itemIndex],
+                commands: data.commands
+              };
+            }
+            
+            return {
+              ...prev,
+              items: updatedItems
+            };
+          });
+        } catch (error) {
+          console.error(`Error preparing file ${file.file.name}:`, error);
+          
+          // Mark this item as failed
+          setBatchProcessingState(prev => {
+            const updatedItems = [...prev.items];
+            const itemIndex = updatedItems.findIndex(item => item.fileId === file.id);
+            
+            if (itemIndex !== -1) {
+              updatedItems[itemIndex] = {
+                ...updatedItems[itemIndex],
+                status: 'failed',
+                steps: [
+                  { status: StepStatus.ERROR, output: `Failed to prepare file: ${error}` },
+                  { status: StepStatus.DEFAULT, output: '' },
+                  { status: StepStatus.DEFAULT, output: '' }
+                ]
+              };
+            }
+            
+            return {
+              ...prev,
+              items: updatedItems,
+              failedCount: prev.failedCount + 1
+            };
+          });
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error preparing batch processing:', error);
+    } finally {
+      setLoading(false);
+    }
   };
   
   const startBatchProcessing = async () => {
@@ -763,12 +855,7 @@ export default function Home() {
     }));
   };
   
-  // Effect to initialize batch processing when files are added
-  useEffect(() => {
-    if (batchMode && batchFiles.length > 0 && batchProcessingState.items.length === 0) {
-      prepareBatchProcessing();
-    }
-  }, [batchMode, batchFiles]);
+  // Batch processing is now triggered by the form submit in the transaction fee section
   
   return (
     <div className="bg-orange-50 dark:bg-navy-950 min-h-screen font-sans text-gray-800 dark:text-gray-100">
@@ -930,12 +1017,14 @@ export default function Home() {
               </section>
             )}
 
-            {(!batchMode && uploadedFile) && (
+            {((!batchMode && uploadedFile) || (batchMode && batchFiles.length > 0)) && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
                 <SectionTitle title="Transaction Fee" />
                 <ConfigForm 
-                  onGenerateCommands={handleGenerateCommands}
-                  uploadedFile={uploadedFile}
+                  onGenerateCommands={!batchMode ? handleGenerateCommands : prepareBatchProcessing}
+                  uploadedFile={!batchMode ? uploadedFile : batchFiles.length > 0 ? batchFiles[0] : null}
+                  isBatchMode={batchMode}
+                  batchFileCount={batchFiles.length}
                 />
               </section>
             )}

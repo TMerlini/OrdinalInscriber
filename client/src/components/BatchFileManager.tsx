@@ -153,12 +153,12 @@ export default function BatchFileManager({
                       </div>
                     )}
                     
-                    {/* Optimization toggle */}
-                    {file.optimizationAvailable && onToggleOptimization && (
+                    {/* Optimization toggle - only show for images that can be optimized */}
+                    {file.fileType === 'image' && onToggleOptimization && (
                       <div className="flex items-center mt-2">
                         <Checkbox 
                           id={`optimize-${file.id}`}
-                          checked={file.optimizationAvailable}
+                          checked={!!file.optimizationAvailable}
                           onCheckedChange={(checked) => 
                             onToggleOptimization(file.id || '', checked === true)
                           }
