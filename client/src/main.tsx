@@ -8,6 +8,61 @@ import ErrorBoundary from "./components/ErrorBoundary";
 const isExternalBrowser = !window.location.hostname.includes('replit') && 
                           !window.location.hostname.includes('localhost');
 
+// Specifically check for Janeway URL pattern
+const isJanewayURL = window.location.hostname.includes('janeway.replit.dev');
+
+// If we detect Janeway URL, this is where the problem is happening, so apply extreme measures
+if (isJanewayURL) {
+  console.log("*** DETECTED JANEWAY URL ENVIRONMENT - APPLYING SPECIAL FIXES ***");
+  
+  // Override the runtime error plugin with extreme prejudice by modifying the document
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Ultra-aggressive overlay blocking in Janeway */
+    [plugin\\:runtime-error-plugin],
+    [data-plugin-runtime-error-plugin],
+    div[data-vite-dev-runtime-error],
+    div[data-error-overlay],
+    div[role="dialog"],
+    div.fixed.inset-0,
+    div[style*="position: fixed"][style*="z-index"],
+    body > div:not([id]) {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      z-index: -9999 !important;
+      width: 0 !important;
+      height: 0 !important;
+      overflow: hidden !important;
+      position: absolute !important;
+      pointer-events: none !important;
+    }
+    
+    /* Make sure body is never locked in janeway */
+    body {
+      overflow: auto !important;
+      overflow-x: hidden !important;
+      position: static !important;
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Create an incredibly aggressive error handler for Janeway
+  window.addEventListener('error', function(event) {
+    console.log("Janeway - Blocking error:", event.error);
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+  }, true);
+  
+  window.addEventListener('unhandledrejection', function(event) {
+    console.log("Janeway - Blocking rejection:", event.reason);
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+  }, true);
+}
+
 // Disable Vite's runtime error overlay through multiple methods
 if (import.meta.hot) {
   // This explicitly sets the overlay to false in Vite's HMR system

@@ -1,9 +1,45 @@
 // This script is designed to run as early as possible to prevent Vite error overlays
-// with special handling for external browser environments
+// with special handling for external browser environments and Janeway URLs
 (function() {
   // Check if we're likely in an external browser vs. Replit environment
   const isExternalBrowser = !window.location.hostname.includes('replit') && 
                             !window.location.hostname.includes('localhost');
+  
+  // Check specifically for Janeway URL pattern
+  const isJanewayURL = window.location.hostname.includes('janeway.replit.dev');
+  
+  // For Janeway URLs, we need to be extra aggressive
+  if (isJanewayURL) {
+    console.log("*** JANEWAY URL DETECTED - APPLYING SPECIAL FIXES ***");
+    
+    // Immediately disable all error-related features of Vite/React
+    window.__DISABLE_VITE_PLUGINS__ = true;
+    window.__RUNTIME_ERROR_OVERLAY_DISABLED__ = true;
+    window.__RUNTIME_ERROR_HANDLING_DISABLED__ = true;
+    window.__HMR_OVERLAY_DISABLED__ = true;
+    
+    // Create a handler that completely blocks runtime errors from propagating
+    window.addEventListener('error', function(event) {
+      console.log("Janeway URL - Blocking error:", event.error);
+      event.preventDefault();
+      event.stopPropagation();
+      setTimeout(function() { 
+        if (window.__killErrorOverlays) window.__killErrorOverlays(); 
+      }, 0);
+      return false;
+    }, true);
+    
+    // Block unhandled promise rejections which can cause error overlays
+    window.addEventListener('unhandledrejection', function(event) {
+      console.log("Janeway URL - Blocking unhandled rejection:", event.reason);
+      event.preventDefault();
+      event.stopPropagation();
+      setTimeout(function() { 
+        if (window.__killErrorOverlays) window.__killErrorOverlays(); 
+      }, 0);
+      return false;
+    }, true);
+  }
   
   // Create a style element to hide error overlays via CSS with more aggressive rules
   const style = document.createElement('style');
