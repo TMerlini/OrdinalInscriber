@@ -1,4 +1,6 @@
 import React from 'react';
+// Import the logo image directly to ensure it's properly bundled
+import logoImage from '../assets/logo.png';
 
 interface SectionTitleProps {
   title: string;
@@ -12,7 +14,7 @@ export default function SectionTitle({ title, className = '', showLogo = true, i
     <div className={`flex items-center mb-4 ${className}`}>
       {showLogo && (
         <img 
-          src="/src/assets/logo.png" 
+          src={logoImage} 
           alt="Ordinarinos Logo" 
           className={`${isMainTitle ? 'w-14 h-14' : 'w-10 h-10'} mr-3 inline-block`} 
         />
