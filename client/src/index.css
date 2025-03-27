@@ -48,6 +48,34 @@
   .dark input, .dark textarea, .dark select {
     @apply bg-navy-950 border-navy-700;
   }
+
+  /* Enhanced list styles with custom bullets */
+  ul:not(.reset-list) {
+    @apply pl-5 space-y-1;
+  }
+
+  ul:not(.reset-list) li {
+    @apply relative pl-1;
+  }
+
+  ul:not(.reset-list) li::before {
+    content: '';
+    @apply absolute w-2 h-2 bg-orange-500 dark:bg-orange-400 rounded-full -left-4 top-2;
+  }
+
+  /* Special styling for transaction breakdown lists */
+  ul.transaction-breakdown {
+    @apply space-y-1 ml-0 pl-4;
+  }
+
+  ul.transaction-breakdown li {
+    @apply flex justify-between text-xs text-gray-600 dark:text-gray-400 pl-0 relative;
+  }
+
+  ul.transaction-breakdown li::before {
+    content: '';
+    @apply absolute w-1.5 h-1.5 bg-orange-400 dark:bg-orange-500 rounded-full -left-3 top-1.5;
+  }
 }
 
 /* Main content container */
@@ -105,6 +133,15 @@
 
 .status-progress {
   @apply text-blue-600 dark:text-blue-400;
+}
+
+/* Fix for missing images in production */
+img[src*="assets"] {
+  display: inline-block;
+}
+
+img[alt="Ordinarinos Logo"] {
+  content: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0iI2Y5NzMxNiIvPjx0ZXh0IHg9IjEwIiB5PSIyNSIgZm9udC1zaXplPSIxNiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIj5PPC90ZXh0Pjwvc3ZnPg==");
 }
 
 /* Error overlay prevention */

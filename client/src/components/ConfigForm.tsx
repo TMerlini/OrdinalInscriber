@@ -447,28 +447,28 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
                                     
                                     <div className="pt-1.5 pb-0.5 text-xs text-gray-500 dark:text-gray-400">
                                       <div className="mb-1.5">Transaction breakdown:</div>
-                                      <ul className="space-y-1 ml-1.5">
-                                        <li className="flex justify-between">
+                                      <ul className="transaction-breakdown">
+                                        <li>
                                           <span>Base tx size:</span>
                                           <span>{fee.breakdown.baseTx} bytes</span>
                                         </li>
-                                        <li className="flex justify-between">
+                                        <li>
                                           <span>Witness data:</span>
                                           <span>{fee.breakdown.witness} bytes</span>
                                         </li>
-                                        <li className="flex justify-between font-medium">
+                                        <li className="font-medium">
                                           <span>File content:</span>
                                           <span>{Math.round(fee.breakdown.content / 1024)} KB (~{fee.breakdown.content.toLocaleString()} bytes)</span>
                                         </li>
-                                        <li className="flex justify-between">
+                                        <li>
                                           <span>Inscription size:</span>
                                           <span>{fee.breakdown.inscriptionBytes} bytes</span>
                                         </li>
-                                        <li className="flex justify-between pt-1 border-t border-gray-100 dark:border-gray-700 font-medium">
+                                        <li className="pt-1 border-t border-gray-100 dark:border-gray-700 font-medium">
                                           <span>Raw bytes:</span>
                                           <span>{Math.round(fee.bytes / 1024)} KB ({fee.bytes.toLocaleString()} bytes)</span>
                                         </li>
-                                        <li className="flex justify-between font-medium text-orange-800 dark:text-orange-300">
+                                        <li className="font-medium text-orange-800 dark:text-orange-300">
                                           <span>Virtual bytes (segwit):</span>
                                           <span>{Math.round(fee.vBytes / 1024)} KB ({fee.vBytes.toLocaleString()} vB)</span>
                                         </li>
@@ -477,16 +477,16 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
                                     
                                     <div className="pt-1.5 pb-0.5 text-xs text-gray-500 dark:text-gray-400">
                                       <div className="mb-1.5">Segwit fee calculation:</div>
-                                      <ul className="space-y-1 ml-1.5">
-                                        <li className="flex justify-between">
+                                      <ul className="transaction-breakdown">
+                                        <li>
                                           <span>Total vBytes:</span>
                                           <span>{fee.vBytes.toLocaleString()} vB</span>
                                         </li>
-                                        <li className="flex justify-between">
+                                        <li>
                                           <span>Fee rate:</span>
                                           <span>{Number(field.value)} sats/vB</span>
                                         </li>
-                                        <li className="flex justify-between pt-1 border-t border-gray-100 dark:border-gray-700 font-medium text-orange-800 dark:text-orange-300">
+                                        <li className="pt-1 border-t border-gray-100 dark:border-gray-700 font-medium text-orange-800 dark:text-orange-300">
                                           <span>Total fee (≈{fee.effectiveFeeRate} sats/B effective):</span>
                                           <span>{fee.sats.toLocaleString()} sats</span>
                                         </li>
@@ -515,13 +515,27 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
                                   <p className="text-xs text-orange-800 dark:text-orange-300">
                                     <strong>Estimated base cost:</strong> {dummyFee.sats.toLocaleString()} sats (≈${dummyFee.usd} at {BTC_PRICE_USD.toLocaleString()} USD/BTC)
                                   </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                     <span className="block mb-1">Transaction breakdown:</span>
-                                    <span className="block">- Base transaction: {dummyFee.breakdown.baseTx} bytes</span>
-                                    <span className="block">- Witness data: {dummyFee.breakdown.witness} bytes</span>
-                                    <span className="block">- Inscription size: {dummyFee.breakdown.inscriptionBytes} bytes</span>
-                                    <span className="block">- Virtual bytes: {dummyFee.vBytes} vB</span>
-                                  </p>
+                                    <ul className="transaction-breakdown">
+                                      <li>
+                                        <span>Base transaction:</span>
+                                        <span>{dummyFee.breakdown.baseTx} bytes</span>
+                                      </li>
+                                      <li>
+                                        <span>Witness data:</span>
+                                        <span>{dummyFee.breakdown.witness} bytes</span>
+                                      </li>
+                                      <li>
+                                        <span>Inscription size:</span>
+                                        <span>{dummyFee.breakdown.inscriptionBytes} bytes</span>
+                                      </li>
+                                      <li>
+                                        <span>Virtual bytes:</span>
+                                        <span>{dummyFee.vBytes} vB</span>
+                                      </li>
+                                    </ul>
+                                  </div>
                                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                                     Upload a file to see a more accurate fee calculation based on file size.
                                   </p>
