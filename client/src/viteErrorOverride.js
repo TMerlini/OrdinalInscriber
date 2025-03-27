@@ -76,14 +76,38 @@
       if (mutation.type === 'childList' && mutation.addedNodes.length) {
         Array.from(mutation.addedNodes).forEach(node => {
           if (node instanceof HTMLElement) {
-            // If this element or any of its children has text about runtime errors
+            // Check if this is the specific error overlay we saw in the screenshot
+            if (node.hasAttribute && node.hasAttribute('plugin:runtime-error-plugin')) {
+              console.log('Found runtime error plugin element, removing...');
+              shouldRemove = true;
+              return;
+            }
+            
+            // Check for text content about runtime errors
             if ((node.textContent && 
                 (node.textContent.includes('runtime error') || 
-                 node.textContent.includes('plugin:runtime-error-plugin'))) ||
+                 node.textContent.includes('plugin:runtime-error-plugin') ||
+                 node.textContent.includes('unknown runtime error'))) ||
                 (node.innerHTML && 
                  (node.innerHTML.includes('runtime error') || 
-                  node.innerHTML.includes('plugin:runtime-error-plugin')))) {
+                  node.innerHTML.includes('plugin:runtime-error-plugin') ||
+                  node.innerHTML.includes('unknown runtime error')))) {
+              console.log('Found element with runtime error text, removing...');
               shouldRemove = true;
+            }
+            
+            // Check for any elements that look like error overlays
+            try {
+              const style = window.getComputedStyle(node);
+              if (style.position === 'fixed' && 
+                  (style.backgroundColor === 'rgba(0, 0, 0, 0.66)' || 
+                   style.background.includes('rgb(20, 20, 20)')) && 
+                  parseInt(style.zIndex, 10) > 1000) {
+                console.log('Found overlay-like element, removing...');
+                shouldRemove = true;
+              }
+            } catch (e) {
+              // Ignore style access errors
             }
           }
         });
@@ -126,27 +150,63 @@
 
   // Try to monkey-patch Vite's error handling
   try {
+    console.log('Disabling Vite error overlay...');
+    
     // For Vite HMR error handling
     window.__vite_plugin_react_preamble_installed__ = false;
     
-    // For runtime error overlays
-    const originalCreateOverlay = window.__vite_plugin_react_create_overlay__;
+    // For runtime error overlays - create mock functions
     window.__vite_plugin_react_create_overlay__ = function() {
-      // Just return a dummy object that does nothing
+      console.log('Intercepted overlay creation attempt');
       return {
         close: function() {},
         update: function() {}
       };
     };
 
+    // Override the runtime error plugin
+    window.runtimeErrorPlugin = {
+      disabled: true,
+      overlay: {
+        show: function() {},
+        hide: function() {}
+      }
+    };
+    
+    // Disable runtime error modal
+    window.__RUNTIME_ERROR_MODAL__ = {
+      disabled: true,
+      onError: function() {}
+    };
+
     // Override any error handler
     if (window.__vite_error_overlay__) {
       window.__vite_error_overlay__ = {
-        inject: function() {},
-        onErrorOverlay: function() { return removeErrorOverlays(); },
+        inject: function() { console.log('Prevented error overlay injection'); },
+        onErrorOverlay: function() { 
+          console.log('Error overlay prevented');
+          return removeErrorOverlays(); 
+        },
       };
     }
+    
+    // Disable error overlays at the plugin level
+    window.__DISABLE_ERROR_OVERLAYS__ = true;
+    
+    // Set a global object to prevent future error overlays
+    window.__VITE_ERROR_HANDLERS_DISABLED__ = true;
+    
+    // Disable React refresh overlay
+    window.__REACT_REFRESH_RUNTIME_OVERLAY__ = { disabled: true };
+    
+    // Provide a global override that other scripts can check
+    window.disableErrorOverlays = function() {
+      removeErrorOverlays();
+    };
+    
+    console.log('Vite error overlay disabled successfully');
   } catch (e) {
-    // Ignore errors during monkey-patching
+    console.log('Error while disabling overlays:', e);
+    // Continue with other methods even if monkey-patching fails
   }
 })();

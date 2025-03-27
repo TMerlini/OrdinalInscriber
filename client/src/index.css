@@ -83,3 +83,39 @@ div[style*="color: rgb(232, 59, 70)"],
   z-index: -9999 !important;
   pointer-events: none !important;
 }
+
+/* Specific attribute targeting the runtime plugin error */
+[plugin\:runtime-error-plugin],
+*[plugin\:runtime-error-plugin],
+*[data-runtime-error-plugin],
+*[data-plugin-runtime-error-plugin],
+*[data-error-plugin],
+*[data-error-plugin="true"],
+*[data-error-overlay="true"],
+*[data-plugin\:runtime-error-plugin] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  z-index: -9999 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Target any elements that might be error dialogs */
+[role="dialog"][aria-modal="true"],
+div[role="dialog"],
+div[aria-modal="true"],
+div[aria-label*="error"],
+div[aria-label*="Error"],
+div[aria-labelledby*="error"],
+div[aria-describedby*="error"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}

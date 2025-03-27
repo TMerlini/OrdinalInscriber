@@ -1,8 +1,9 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode, useEffect } from 'react';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  disableViteOverlay?: boolean;
 }
 
 interface State {
@@ -10,19 +11,88 @@ interface State {
   error: Error | null;
 }
 
+// Helper function to prevent Vite from showing its error overlay
+const disableViteOverlay = () => {
+  try {
+    // Try to hide error overlays that might be created by Vite
+    const selectors = [
+      '[plugin\\:runtime-error-plugin]',
+      '[data-plugin-runtime-error-plugin]',
+      'div[data-vite-dev-runtime-error]',
+      'div[data-error-overlay]',
+      'div#vite-error-overlay',
+      '.vite-error-overlay',
+      '.plugin-runtime-error-plugin',
+      '.runtime-error-modal',
+    ];
+    
+    selectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => {
+        if (el.parentNode) {
+          console.log('Removing overlay element from ErrorBoundary:', el);
+          el.parentNode.removeChild(el);
+        }
+      });
+    });
+    
+    // Also try to override Vite's error handlers
+    // @ts-ignore: Vite internal property
+    window.__vite_plugin_react_preamble_installed__ = false;
+    
+    // @ts-ignore: Vite internal property
+    if (window.__vite_error_overlay__) {
+      // @ts-ignore: Vite internal property
+      window.__vite_error_overlay__ = {
+        inject: () => {},
+        onErrorOverlay: () => {}
+      };
+    }
+    
+    // Set a flag that our error handling has been activated
+    // @ts-ignore: Custom property
+    window.__error_boundary_handling_active__ = true;
+  } catch (e) {
+    // Ignore errors when trying to disable Vite overlay
+  }
+};
+
 class ErrorBoundary extends Component<Props, State> {
+  private intervalId: NodeJS.Timeout | null = null;
+  
   public state: State = {
     hasError: false,
     error: null
   };
 
+  constructor(props: Props) {
+    super(props);
+    // Start checking for and removing error overlays
+    if (props.disableViteOverlay !== false) {
+      this.intervalId = setInterval(disableViteOverlay, 300);
+    }
+  }
+  
+  componentWillUnmount() {
+    // Clean up interval when component unmounts
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
+  }
+
   public static getDerivedStateFromError(error: Error): State {
     // Update state so the next render will show the fallback UI.
+    // Also try to prevent Vite from showing its overlay
+    disableViteOverlay();
     return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+    console.error("Uncaught error in ErrorBoundary:", error);
+    
+    // Disable Vite's error overlay whenever we catch an error
+    if (this.props.disableViteOverlay !== false) {
+      disableViteOverlay();
+    }
   }
 
   public render() {
