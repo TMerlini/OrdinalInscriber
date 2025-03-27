@@ -19,96 +19,107 @@
     --card: 215 50% 15%;
     --card-foreground: 210 40% 98%;
     
-    --popover: 215 50% 15%;
+    --popover: 215 50% 10%;
     --popover-foreground: 210 40% 98%;
     
-    --primary: 24 95% 50%;
+    --primary: 36 100% 50%;
     --primary-foreground: 210 40% 98%;
     
     --secondary: 215 50% 20%;
     --secondary-foreground: 210 40% 98%;
     
-    --muted: 215 50% 20%;
-    --muted-foreground: 215 20% 70%;
+    --muted: 215 50% 18%;
+    --muted-foreground: 215 20% 65%;
     
-    --accent: 215 50% 25%;
+    --accent: 215 50% 20%;
     --accent-foreground: 210 40% 98%;
     
-    --destructive: 0 60% 50%;
+    --destructive: 0 50% 50%;
     --destructive-foreground: 210 40% 98%;
     
-    --border: 215 50% 25%;
-    --input: 215 50% 25%;
-    --ring: 215 50% 45%;
+    --border: 215 50% 20%;
+    --input: 215 50% 20%;
+    --ring: 215 50% 30%;
+    
+    --radius: 0.5rem;
+  }
+
+  /* Improve dark mode form inputs */
+  .dark input, .dark textarea, .dark select {
+    @apply bg-navy-950 border-navy-700;
   }
 }
 
-/* Hide Vite runtime error overlays */
-[data-vite-dev-runtime-error],
-[data-plugin-runtime-error-plugin],
-[plugin\:runtime-error-plugin],
-div[data-error-overlay],
-div#vite-error-overlay,
+/* Main content container */
+.container-main {
+  @apply max-w-screen-2xl mx-auto px-4 sm:px-6 py-8;
+}
+
+/* Section container with card-like styling */
+.section-container {
+  @apply bg-white dark:bg-navy-900 p-6 sm:p-8 rounded-xl shadow-sm border border-gray-100 dark:border-navy-700;
+}
+
+/* Create gradient effect for background panels */
+.gradient-panel {
+  @apply bg-gradient-to-br from-orange-50 to-amber-100 dark:from-navy-900 dark:to-navy-950;
+}
+
+/* Gradient text effect for headings */
+.gradient-text {
+  @apply bg-gradient-to-r from-orange-500 to-amber-600 dark:from-orange-400 dark:to-amber-500 bg-clip-text text-transparent;
+}
+
+/* Logo image styles */
+.logo-image {
+  @apply w-8 h-8 mr-3 inline-block;
+}
+
+/* Button with gradient effect */
+.gradient-button {
+  @apply bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-semibold rounded-lg;
+}
+
+/* Soft background for info panels */
+.info-panel {
+  @apply bg-orange-50 dark:bg-navy-800 border border-orange-100 dark:border-navy-700 rounded-lg p-4;
+}
+
+/* Separator with gradient */
+.gradient-separator {
+  @apply h-0.5 w-full bg-gradient-to-r from-orange-500 to-amber-600 dark:from-orange-400 dark:to-amber-500 my-4;
+}
+
+/* Status indicator colors */
+.status-success {
+  @apply text-green-600 dark:text-green-400;
+}
+
+.status-error {
+  @apply text-red-600 dark:text-red-400;
+}
+
+.status-warning {
+  @apply text-amber-600 dark:text-amber-400;
+}
+
+.status-progress {
+  @apply text-blue-600 dark:text-blue-400;
+}
+
+/* Error overlay prevention */
 .vite-error-overlay,
-.error-overlay,
 .plugin-runtime-error-plugin,
 .runtime-error-modal,
-div[role="dialog"][aria-modal="true"],
-/* Specific selector targeting errors from screenshot */
-div[style*="background-color: rgba(0, 0, 0, 0.66)"][style*="overflow: auto"],
-div[style*="background: rgb(20, 20, 20)"] {
+.error-overlay,
+div[role="dialog"][aria-modal="true"] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
   z-index: -9999 !important;
-  pointer-events: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
-  position: absolute !important;
-}
-
-/* Additional overlay targeting based on exact error from screenshot */
-div[class^="plugin-runtime-error"],
-div[class*=" plugin-runtime-error"],
-div[class*="unknown runtime error"],
-div[style*="background-color: rgba(0, 0, 0, 0.66)"],
-div[style*="background: rgb(20, 20, 20)"],
-div[style*="position: fixed"][style*="width: 100%"][style*="height: 100%"],
-div[style*="color: rgb(232, 59, 70)"],
-[plugin\:runtime-error-plugin] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  z-index: -9999 !important;
-  pointer-events: none !important;
-}
-
-/* Specific attribute targeting the runtime plugin error */
-[plugin\:runtime-error-plugin],
-*[plugin\:runtime-error-plugin],
-*[data-runtime-error-plugin],
-*[data-plugin-runtime-error-plugin],
-*[data-error-plugin],
-*[data-error-plugin="true"],
-*[data-error-overlay="true"],
-*[data-plugin\:runtime-error-plugin] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  z-index: -9999 !important;
-  pointer-events: none !important;
-  position: absolute !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
-  clip: rect(0, 0, 0, 0) !important;
-  white-space: nowrap !important;
-  border: 0 !important;
 }
 
 /* Target any elements that might be error dialogs */
-[role="dialog"][aria-modal="true"],
 div[role="dialog"],
 div[aria-modal="true"],
 div[aria-label*="error"],
@@ -119,11 +130,6 @@ div[aria-describedby*="error"] {
   visibility: hidden !important;
   opacity: 0 !important;
   z-index: -9999 !important;
-  pointer-events: none !important;
-  position: absolute !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
 }
 
 /* External browser specific handling */
@@ -131,13 +137,12 @@ div[aria-describedby*="error"] {
   /* Ultra-aggressive rule for external browsers */
   body > div:not(#root):last-child, 
   body > div:not(#root)[style*="position: fixed"],
-  body > div:not(#root)[style*="z-index: 9"],
   body > div:not([id])[style*="position: fixed"],
   body > div:not([class])[style*="position: fixed"],
   div[style*="backdrop-filter"][style*="position: fixed"],
-  div[style*="background-color: rgba(0, 0, 0"][style*="position: fixed"],
+  div[style*="background-color: rgba(0, 0, 0)"][style*="position: fixed"],
   div[class*="overlay"],
-  div[class*="modal"], 
+  div[class*="modal"],
   div[class*="dialog"],
   div[class*="error-container"],
   div[class*="error-message"],
@@ -147,23 +152,12 @@ div[aria-describedby*="error"] {
     opacity: 0 !important;
     z-index: -9999 !important;
     pointer-events: none !important;
-    transform: scale(0) !important;
-    width: 0 !important;
-    height: 0 !important;
-    max-width: 0 !important;
-    max-height: 0 !important;
-    overflow: hidden !important;
-    position: absolute !important;
-    top: -9999px !important;
-    left: -9999px !important;
   }
   
   /* Ensure the body is never locked */
   body {
     overflow: auto !important;
     position: static !important;
-    width: auto !important;
-    height: auto !important;
   }
   
   body.overflow-hidden,
