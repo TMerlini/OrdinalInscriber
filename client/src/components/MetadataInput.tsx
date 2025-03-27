@@ -21,6 +21,8 @@ export default function MetadataInput({
 }: MetadataInputProps) {
   const { watch, setValue } = form;
   const includeMetadata = watch("includeMetadata");
+  const [lastBatchMode, setLastBatchMode] = useState(isBatchMode);
+  const [lastBatchCount, setLastBatchCount] = useState(batchFileCount);
 
   // Generate example metadata based on batch mode and file count
   const generateExampleMetadata = () => {
@@ -60,37 +62,33 @@ export default function MetadataInput({
       }, null, 2);
     }
   };
-
-  // Track previous batch mode and count to detect changes
-  const [prevBatchMode, setPrevBatchMode] = useState(isBatchMode);
-  const [prevBatchCount, setPrevBatchCount] = useState(batchFileCount);
-
-  // Update the example metadata when batch mode or file count changes
+  
+  // Effect for batch mode and file count changes
   useEffect(() => {
-    // If batch mode changed, regenerate metadata
-    if (prevBatchMode !== isBatchMode) {
-      setPrevBatchMode(isBatchMode);
-      if (includeMetadata) {
-        setValue("metadataJson", generateExampleMetadata());
-      }
+    const batchModeChanged = lastBatchMode !== isBatchMode;
+    const batchCountChanged = lastBatchCount !== batchFileCount;
+    
+    // Update tracking state
+    if (batchModeChanged) {
+      setLastBatchMode(isBatchMode);
     }
     
-    // If file count changed in batch mode, regenerate metadata
-    if (isBatchMode && prevBatchCount !== batchFileCount) {
-      setPrevBatchCount(batchFileCount);
-      if (includeMetadata && batchFileCount > 0) {
-        setValue("metadataJson", generateExampleMetadata());
-      }
+    if (batchCountChanged) {
+      setLastBatchCount(batchFileCount);
     }
-  }, [isBatchMode, batchFileCount, includeMetadata]);
-
-  // Handle the switch toggle effect
-  useEffect(() => {
-    if (includeMetadata) {
-      // When toggling metadata on, always regenerate example
+    
+    // If anything important changed and metadata is enabled, update the JSON
+    if (includeMetadata && (batchModeChanged || (isBatchMode && batchCountChanged))) {
       setValue("metadataJson", generateExampleMetadata());
     }
-  }, [includeMetadata]);
+  }, [isBatchMode, batchFileCount, lastBatchMode, lastBatchCount, includeMetadata, setValue]);
+  
+  // Separate effect for metadata toggle to avoid dependency issues
+  useEffect(() => {
+    if (includeMetadata) {
+      setValue("metadataJson", generateExampleMetadata());
+    }
+  }, [includeMetadata, setValue]);
 
   return (
     <div className="space-y-4">
