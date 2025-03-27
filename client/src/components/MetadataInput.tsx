@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
@@ -62,8 +62,8 @@ export default function MetadataInput({
   };
 
   // Track previous batch mode and count to detect changes
-  const [prevBatchMode, setPrevBatchMode] = React.useState(isBatchMode);
-  const [prevBatchCount, setPrevBatchCount] = React.useState(batchFileCount);
+  const [prevBatchMode, setPrevBatchMode] = useState(isBatchMode);
+  const [prevBatchCount, setPrevBatchCount] = useState(batchFileCount);
 
   // Update the example metadata when batch mode or file count changes
   useEffect(() => {

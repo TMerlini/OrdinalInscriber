@@ -35,7 +35,7 @@ localPort = 5200
 externalPort = 4200
 
 [workflows]
-runButton = "Run ESM Compatible App"
+runButton = "Start application"
 
 [[workflows.workflow]]
 name = "Project"
