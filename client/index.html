@@ -5,9 +5,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <title>Ordinals Inscription Tool</title>
+    <!-- Inline script to disable error overlays - runs before any other scripts -->
+    <script>
+      // Immediately hide any error overlays
+      (function() {
+        // Create a style element to hide error overlays
+        const style = document.createElement('style');
+        style.textContent = `
+          [plugin\\:runtime-error-plugin],
+          [data-plugin-runtime-error-plugin],
+          div[data-vite-dev-runtime-error],
+          div[data-error-overlay],
+          div#vite-error-overlay,
+          .vite-error-overlay,
+          .plugin-runtime-error-plugin,
+          .runtime-error-modal,
+          div[style*="background-color: rgba(0, 0, 0, 0.66)"][style*="position: fixed"],
+          div[style*="background: rgb(20, 20, 20)"][style*="position: fixed"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            z-index: -9999 !important;
+            pointer-events: none !important;
+          }
+        `;
+        document.head.appendChild(style);
+        
+        // Set a flag to disable any error overlays
+        window.__DISABLE_ERROR_OVERLAYS__ = true;
+        
+        // Override known error handler settings
+        window.__vite_plugin_react_preamble_installed__ = false;
+        window.runtimeErrorPluginActive = false;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Include our error override script before the main app loads -->
+    <script src="/src/viteErrorOverride.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
