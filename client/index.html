@@ -9,9 +9,10 @@
     <script>
       // Immediately hide any error overlays
       (function() {
-        // Create a style element to hide error overlays
+        // Create a style element to hide error overlays with more comprehensive selectors
         const style = document.createElement('style');
         style.textContent = `
+          /* Target every possible error overlay selector */
           [plugin\\:runtime-error-plugin],
           [data-plugin-runtime-error-plugin],
           div[data-vite-dev-runtime-error],
@@ -20,23 +21,97 @@
           .vite-error-overlay,
           .plugin-runtime-error-plugin,
           .runtime-error-modal,
+          .error-overlay,
+          [data-error-handler],
+          [data-plugin-error],
+          
+          /* Target fixed position dark overlays using attribute selectors */
           div[style*="background-color: rgba(0, 0, 0, 0.66)"][style*="position: fixed"],
-          div[style*="background: rgb(20, 20, 20)"][style*="position: fixed"] {
+          div[style*="background: rgb(20, 20, 20)"][style*="position: fixed"],
+          div[style*="z-index: 99"][style*="position: fixed"],
+          div[style*="z-index: 9"][style*="background"][style*="position: fixed"],
+          
+          /* Target dialog/modal elements that might contain errors */
+          div[role="dialog"][aria-modal="true"],
+          div.modal[style*="display: block"],
+          div.modal-backdrop,
+          
+          /* Target specific elements by content or class names */
+          body > div:not([id]):not([class]) {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
             z-index: -9999 !important;
             pointer-events: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            position: absolute !important;
+            top: -9999px !important;
+            left: -9999px !important;
+          }
+          
+          /* Additional specific selectors for external browser environment */
+          .runtime-error-content,
+          div[data-error-message],
+          .error-message-container,
+          [data-vite-error-overlay],
+          [data-replit-error-overlay],
+          .plugin-overlay,
+          .runtime-plugin-overlay {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            z-index: -9999 !important;
           }
         `;
         document.head.appendChild(style);
         
-        // Set a flag to disable any error overlays
+        // Set flags to disable any error overlays
         window.__DISABLE_ERROR_OVERLAYS__ = true;
+        window.__VITE_ERROR_OVERLAY_DISABLED__ = true;
+        window.__ERROR_OVERLAY_DISABLED__ = true;
         
-        // Override known error handler settings
+        // Override every known error handler setting
         window.__vite_plugin_react_preamble_installed__ = false;
+        window.__vite_error_overlay__ = null;
         window.runtimeErrorPluginActive = false;
+        window.runtimeErrorPlugin = null;
+        window.__RUNTIME_ERROR_MODAL__ = null;
+        
+        // Keep track of when this script ran to detect external browser vs. Replit
+        window.__ERROR_OVERLAY_INIT_TIME__ = Date.now();
+        
+        // Create global accessor for manually killing overlays later
+        window.__killErrorOverlays = function() {
+          const selectors = [
+            '[plugin\\:runtime-error-plugin]',
+            '[data-plugin-runtime-error-plugin]',
+            'div[data-vite-dev-runtime-error]',
+            'div[data-error-overlay]',
+            'div#vite-error-overlay',
+            '.vite-error-overlay',
+            '.plugin-runtime-error-plugin',
+            '.runtime-error-modal',
+            'div[role="dialog"][aria-modal="true"]'
+          ];
+          
+          selectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(el => {
+              if (el && el.parentNode) el.parentNode.removeChild(el);
+            });
+          });
+          
+          document.querySelectorAll('body > div').forEach(el => {
+            const style = window.getComputedStyle(el);
+            if (style.position === 'fixed' && 
+                (style.backgroundColor.includes('rgba(0, 0, 0') || 
+                 style.background.includes('rgb(20, 20, 20)')) &&
+                style.zIndex && parseInt(style.zIndex) > 100) {
+              if (el.parentNode) el.parentNode.removeChild(el);
+            }
+          });
+        };
       })();
     </script>
   </head>

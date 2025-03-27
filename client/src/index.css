@@ -118,4 +118,58 @@ div[aria-describedby*="error"] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
+  z-index: -9999 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* External browser specific handling */
+@media screen {
+  /* Ultra-aggressive rule for external browsers */
+  body > div:not(#root):last-child, 
+  body > div:not(#root)[style*="position: fixed"],
+  body > div:not(#root)[style*="z-index: 9"],
+  body > div:not([id])[style*="position: fixed"],
+  body > div:not([class])[style*="position: fixed"],
+  div[style*="backdrop-filter"][style*="position: fixed"],
+  div[style*="background-color: rgba(0, 0, 0"][style*="position: fixed"],
+  div[class*="overlay"],
+  div[class*="modal"], 
+  div[class*="dialog"],
+  div[class*="error-container"],
+  div[class*="error-message"],
+  div.modal-backdrop {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    z-index: -9999 !important;
+    pointer-events: none !important;
+    transform: scale(0) !important;
+    width: 0 !important;
+    height: 0 !important;
+    max-width: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    top: -9999px !important;
+    left: -9999px !important;
+  }
+  
+  /* Ensure the body is never locked */
+  body {
+    overflow: auto !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+  }
+  
+  body.overflow-hidden,
+  body.no-scroll,
+  body.modal-open,
+  body.has-dialog {
+    overflow: auto !important;
+  }
 }
