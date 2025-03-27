@@ -46,8 +46,37 @@
 /* Hide Vite runtime error overlays */
 [data-vite-dev-runtime-error],
 [data-plugin-runtime-error-plugin],
+[plugin\:runtime-error-plugin],
 div[data-error-overlay],
-div#vite-error-overlay {
+div#vite-error-overlay,
+.vite-error-overlay,
+.error-overlay,
+.plugin-runtime-error-plugin,
+.runtime-error-modal,
+div[role="dialog"][aria-modal="true"],
+/* Specific selector targeting errors from screenshot */
+div[style*="background-color: rgba(0, 0, 0, 0.66)"][style*="overflow: auto"],
+div[style*="background: rgb(20, 20, 20)"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  z-index: -9999 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+}
+
+/* Additional overlay targeting based on exact error from screenshot */
+div[class^="plugin-runtime-error"],
+div[class*=" plugin-runtime-error"],
+div[class*="unknown runtime error"],
+div[style*="background-color: rgba(0, 0, 0, 0.66)"],
+div[style*="background: rgb(20, 20, 20)"],
+div[style*="position: fixed"][style*="width: 100%"][style*="height: 100%"],
+div[style*="color: rgb(232, 59, 70)"],
+[plugin\:runtime-error-plugin] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
