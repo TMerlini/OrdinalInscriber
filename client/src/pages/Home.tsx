@@ -685,11 +685,43 @@ export default function Home() {
       optimizeImage: !!file.optimizationAvailable,
       includeMetadata: metadataValues.includeMetadata,
       metadataStorage: "on-chain" as const,
-      metadataJson: metadataValues.metadataJson,
       destination: metadataValues.destination,
       parentId: showParentInscription ? parentInscriptionId : undefined,
       batchMode: true
     };
+    
+    // Handle individual metadata per file if in batch mode and metadata is an array
+    if (metadataValues.includeMetadata && metadataValues.metadataJson) {
+      try {
+        // Find the index of this file in the batch files array
+        const fileIndex = batchFiles.findIndex(f => f.id === file.id);
+        
+        // Parse the metadata JSON to check if it's an array
+        const parsedMetadata = JSON.parse(metadataValues.metadataJson);
+        
+        if (Array.isArray(parsedMetadata) && fileIndex >= 0) {
+          if (parsedMetadata.length > fileIndex) {
+            // Extract the specific metadata for this file and use it
+            mergedConfig.metadataJson = JSON.stringify(parsedMetadata[fileIndex]);
+            console.log(`Using metadata at index ${fileIndex} for file ${file.file.name}`);
+          } else {
+            // Not enough metadata entries, use the last one as fallback
+            const lastIndex = parsedMetadata.length - 1;
+            mergedConfig.metadataJson = JSON.stringify(parsedMetadata[lastIndex >= 0 ? lastIndex : 0]);
+            console.warn(`Not enough metadata entries for file ${fileIndex + 1}. Using entry ${lastIndex >= 0 ? lastIndex + 1 : 1}.`);
+          }
+        } else {
+          // If it's not an array, use the metadata as is for all files
+          mergedConfig.metadataJson = metadataValues.metadataJson;
+        }
+      } catch (e) {
+        console.error('Error parsing metadata JSON:', e);
+        // In case of error, use the original metadata
+        mergedConfig.metadataJson = metadataValues.metadataJson;
+      }
+    } else {
+      mergedConfig.metadataJson = metadataValues.metadataJson;
+    }
     
     const formData = new FormData();
     formData.append('file', file.file);
@@ -1004,7 +1036,12 @@ export default function Home() {
                 </div>
                 <Form {...metadataForm}>
                   <form className="space-y-4">
-                    <MetadataInput form={metadataForm} />
+                    <MetadataInput 
+                      form={metadataForm} 
+                      isBatchMode={batchMode}
+                      batchFileCount={batchFiles.length}
+                      batchFileNames={batchFiles.map(file => file.file.name)}
+                    />
                   </form>
                 </Form>
               </section>
