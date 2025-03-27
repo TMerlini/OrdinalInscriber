@@ -18,6 +18,7 @@ import BatchFileManager from "@/components/BatchFileManager";
 import BatchProcessingProgress from "@/components/BatchProcessingProgress";
 import ThemeToggle from "@/components/ThemeToggle";
 import SectionTitle from "@/components/SectionTitle";
+import MetadataInput from "@/components/MetadataInput";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
