@@ -973,17 +973,6 @@ export default function Home() {
                       />
                     </div>
                   )}
-                  
-                  {batchProcessingState.items.length > 0 && (
-                    <div className="mt-6">
-                      <BatchProcessingProgress 
-                        batchState={batchProcessingState}
-                        onStartProcessing={startBatchProcessing}
-                        onStopProcessing={stopBatchProcessing}
-                        onResetProcessing={resetBatchProcessing}
-                      />
-                    </div>
-                  )}
                 </TabsContent>
               </Tabs>
             </section>
@@ -1089,6 +1078,24 @@ export default function Home() {
                   uploadedFile={!batchMode ? uploadedFile : batchFiles.length > 0 ? batchFiles[0] : null}
                   isBatchMode={batchMode}
                   batchFileCount={batchFiles.length}
+                />
+              </section>
+            )}
+            
+            {/* Show batch processing progress only after batch is prepared */}
+            {batchMode && batchProcessingState.items.length > 0 && (
+              <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-white dark:bg-navy-900">
+                <SectionTitle title="Batch Processing" />
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Start processing the batch of files to create inscriptions.
+                  </p>
+                </div>
+                <BatchProcessingProgress 
+                  batchState={batchProcessingState}
+                  onStartProcessing={startBatchProcessing}
+                  onStopProcessing={stopBatchProcessing}
+                  onResetProcessing={resetBatchProcessing}
                 />
               </section>
             )}
