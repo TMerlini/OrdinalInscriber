@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 // Import the logo as a module for proper bundling
 import logoImageSrc from '../assets/logo.png';
 
@@ -10,18 +10,27 @@ interface SectionTitleProps {
 }
 
 export default function SectionTitle({ title, className = '', showLogo = true, isMainTitle = false }: SectionTitleProps) {
-  // Use a simpler approach with direct fallback
+  const [imgSrc, setImgSrc] = useState(logoImageSrc);
+  
+  // Only use fallback if the image actually fails to load
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    console.log("Failed to load logo, using fallback");
-    // Fallback to a data URI if image fails to load
-    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0iI2Y5NzMxNiIvPjx0ZXh0IHg9IjEwIiB5PSIyNSIgZm9udC1zaXplPSIxNiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIj5PPC90ZXh0Pjwvc3ZnPg==';
+    console.warn("Failed to load logo image from", imgSrc);
+    
+    // Only apply fallback if we're not already using it
+    if (imgSrc !== 'fallback') {
+      const fallbackSvg = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0iI2Y5NzMxNiIvPjx0ZXh0IHg9IjEwIiB5PSIyNSIgZm9udC1zaXplPSIxNiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIj5PPC90ZXh0Pjwvc3ZnPg==';
+      setImgSrc('fallback');
+      e.currentTarget.src = fallbackSvg;
+    }
   };
 
   return (
     <div className={`flex items-center mb-4 ${className}`}>
       {showLogo && (
         <img 
-          src={logoImageSrc}
+          src={imgSrc === 'fallback' ? 
+            'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0iI2Y5NzMxNiIvPjx0ZXh0IHg9IjEwIiB5PSIyNSIgZm9udC1zaXplPSIxNiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIj5PPC90ZXh0Pjwvc3ZnPg==' : 
+            logoImageSrc}
           alt="Ordinarinos Logo" 
           className={`${isMainTitle ? 'w-14 h-14' : 'w-10 h-10'} mr-3 inline-block`} 
           onError={handleImageError}

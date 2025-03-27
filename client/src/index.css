@@ -65,7 +65,7 @@
 
   /* Special styling for transaction breakdown lists */
   ul.transaction-breakdown {
-    @apply space-y-1 ml-0 pl-4;
+    @apply space-y-1.5 ml-0 pl-4;
   }
 
   ul.transaction-breakdown li {
@@ -75,6 +75,11 @@
   ul.transaction-breakdown li::before {
     content: '';
     @apply absolute w-1.5 h-1.5 bg-orange-400 dark:bg-orange-500 rounded-full -left-3 top-1.5;
+  }
+  
+  /* Ensure all transaction breakdowns have consistent styling */
+  .transaction-breakdown-section ul li {
+    @apply flex justify-between;
   }
 }
 
@@ -140,9 +145,7 @@ img[src*="assets"] {
   display: inline-block;
 }
 
-img[alt="Ordinarinos Logo"] {
-  content: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIiBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyMCIgZmlsbD0iI2Y5NzMxNiIvPjx0ZXh0IHg9IjEwIiB5PSIyNSIgZm9udC1zaXplPSIxNiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIj5PPC90ZXh0Pjwvc3ZnPg==");
-}
+/* Original logo should be used, fallback handled by onError in components */
 
 /* Error overlay prevention */
 .vite-error-overlay,

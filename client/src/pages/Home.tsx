@@ -20,6 +20,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import SectionTitle from "@/components/SectionTitle";
 import MetadataInput from "@/components/MetadataInput";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import AssetDebugger from "@/components/AssetDebugger";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
@@ -935,6 +936,9 @@ export default function Home() {
             title="Upload, configure, and inscribe images to your Ordinals node" 
             isMainTitle={true} 
           />
+          
+          {/* Temporarily add the asset debugger to diagnose image loading issues */}
+          <AssetDebugger />
         </header>
 
         <Card className="overflow-hidden border border-orange-200 dark:border-navy-700 shadow-lg rounded-xl dark:bg-navy-800">
