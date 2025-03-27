@@ -38,12 +38,12 @@ export async function getCacheInfo(): Promise<CacheInfo> {
     files: []
   };
   
-  // We'll only track image files that our app would have created
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+  // We'll track image and 3D model files that our app would have created
+  const trackedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.glb', '.gltf'];
   
   for (const file of files) {
-    // Only consider files with image extensions
-    if (!imageExtensions.some(ext => file.toLowerCase().endsWith(ext))) {
+    // Only consider files with tracked extensions
+    if (!trackedExtensions.some((ext: string) => file.toLowerCase().endsWith(ext))) {
       continue;
     }
     
@@ -108,9 +108,9 @@ export async function cleanCacheIfNeeded(): Promise<boolean> {
 }
 
 /**
- * Delete all cached image files
+ * Delete all cached files (images and 3D models)
  */
-export async function clearAllCachedImages(): Promise<number> {
+export async function clearAllCachedFiles(): Promise<number> {
   const cacheInfo = await getCacheInfo();
   let deletedCount = 0;
   

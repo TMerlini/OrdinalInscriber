@@ -5,7 +5,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { execCommand, startWebServer, stopWebServer, checkNetworkConnectivity } from "./cmd-executor";
-import { getCacheInfo, clearAllCachedImages, cleanCacheIfNeeded } from "./cache-manager";
+import { getCacheInfo, clearAllCachedFiles, cleanCacheIfNeeded } from "./cache-manager";
 import os from "os";
 import { networkInterfaces } from "os";
 import sharp from "sharp";
@@ -159,14 +159,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Clear all cached images
+  // Clear all cached files (images and 3D models)
   app.post('/api/cache/clear', async (req, res) => {
     try {
-      const deletedCount = await clearAllCachedImages();
+      const deletedCount = await clearAllCachedFiles();
       res.json({
         success: true,
         deletedCount,
-        message: `Successfully cleared ${deletedCount} cached image${deletedCount !== 1 ? 's' : ''}`
+        message: `Successfully cleared ${deletedCount} cached file${deletedCount !== 1 ? 's' : ''}`
       });
     } catch (error) {
       console.error('Error clearing cache:', error);

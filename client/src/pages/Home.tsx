@@ -19,6 +19,7 @@ import BatchProcessingProgress from "@/components/BatchProcessingProgress";
 import ThemeToggle from "@/components/ThemeToggle";
 import SectionTitle from "@/components/SectionTitle";
 import MetadataInput from "@/components/MetadataInput";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
@@ -1059,12 +1060,14 @@ export default function Home() {
                 </div>
                 <Form {...metadataForm}>
                   <form className="space-y-4">
-                    <MetadataInput 
-                      form={metadataForm} 
-                      isBatchMode={batchMode}
-                      batchFileCount={batchFiles.length}
-                      batchFileNames={batchFiles.map(file => file.file.name)}
-                    />
+                    <ErrorBoundary>
+                      <MetadataInput 
+                        form={metadataForm} 
+                        isBatchMode={batchMode}
+                        batchFileCount={batchFiles.length}
+                        batchFileNames={batchFiles.map(file => file.file.name)}
+                      />
+                    </ErrorBoundary>
                   </form>
                 </Form>
               </section>
@@ -1108,10 +1111,12 @@ export default function Home() {
                     Select a rare satoshi from your wallet to use for this inscription.
                   </p>
                 </div>
-                <RareSatSelector 
-                  onSelect={(satoshi) => configForm.setValue("selectedSatoshi", satoshi)}
-                  selectedSatoshi={configForm.watch("selectedSatoshi")}
-                />
+                <ErrorBoundary>
+                  <RareSatSelector 
+                    onSelect={(satoshi) => configForm.setValue("selectedSatoshi", satoshi)}
+                    selectedSatoshi={configForm.watch("selectedSatoshi")}
+                  />
+                </ErrorBoundary>
               </section>
             )}
 
@@ -1154,7 +1159,9 @@ export default function Home() {
                   </CollapsibleTrigger>
                 </div>
                 <CollapsibleContent className="mt-4">
-                  <CacheManager />
+                  <ErrorBoundary>
+                    <CacheManager />
+                  </ErrorBoundary>
                 </CollapsibleContent>
               </Collapsible>
             </section>

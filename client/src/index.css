@@ -42,3 +42,15 @@
     --ring: 215 50% 45%;
   }
 }
+
+/* Hide Vite runtime error overlays */
+[data-vite-dev-runtime-error],
+[data-plugin-runtime-error-plugin],
+div[data-error-overlay],
+div#vite-error-overlay {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  z-index: -9999 !important;
+  pointer-events: none !important;
+}
