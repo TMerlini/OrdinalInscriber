@@ -476,11 +476,43 @@ export default function Home() {
           optimizeImage: file.optimizationAvailable || false,
           includeMetadata: metadataValues.includeMetadata,
           metadataStorage: "on-chain" as const,
-          metadataJson: metadataValues.metadataJson,
           destination: metadataValues.destination,
           parentId: showParentInscription ? parentInscriptionId : undefined,
           batchMode: true
         };
+        
+        // Handle individual metadata per file if in batch mode
+        if (metadataValues.includeMetadata && metadataValues.metadataJson) {
+          try {
+            // Find the index of this file in the selectedFiles array
+            const fileIndex = selectedFiles.findIndex(f => f.id === file.id);
+            
+            // Parse the metadata JSON to check if it's an array
+            const parsedMetadata = JSON.parse(metadataValues.metadataJson);
+            
+            if (Array.isArray(parsedMetadata) && fileIndex >= 0) {
+              if (parsedMetadata.length > fileIndex) {
+                // Extract the specific metadata for this file and use it
+                mergedConfig.metadataJson = JSON.stringify(parsedMetadata[fileIndex]);
+                console.log(`Batch prepare: Using metadata at index ${fileIndex} for file ${file.file.name}`);
+              } else {
+                // Not enough metadata entries, use the last one as fallback
+                const lastIndex = parsedMetadata.length - 1;
+                mergedConfig.metadataJson = JSON.stringify(parsedMetadata[lastIndex >= 0 ? lastIndex : 0]);
+                console.warn(`Batch prepare: Not enough metadata entries for file ${fileIndex + 1}. Using entry ${lastIndex >= 0 ? lastIndex + 1 : 1}.`);
+              }
+            } else {
+              // If it's not an array, use the metadata as is for all files
+              mergedConfig.metadataJson = metadataValues.metadataJson;
+            }
+          } catch (e) {
+            console.error('Error parsing metadata JSON in prepareBatchProcessing:', e);
+            // In case of error, use the original metadata
+            mergedConfig.metadataJson = metadataValues.metadataJson;
+          }
+        } else {
+          mergedConfig.metadataJson = metadataValues.metadataJson;
+        }
         
         try {
           // First upload the file

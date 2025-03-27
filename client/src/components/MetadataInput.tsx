@@ -61,16 +61,33 @@ export default function MetadataInput({
     }
   };
 
+  // Track previous batch mode and count to detect changes
+  const [prevBatchMode, setPrevBatchMode] = React.useState(isBatchMode);
+  const [prevBatchCount, setPrevBatchCount] = React.useState(batchFileCount);
+
   // Update the example metadata when batch mode or file count changes
   useEffect(() => {
-    if (includeMetadata && (!form.getValues("metadataJson") || form.getValues("metadataJson") === "")) {
-      setValue("metadataJson", generateExampleMetadata());
+    // If batch mode changed, regenerate metadata
+    if (prevBatchMode !== isBatchMode) {
+      setPrevBatchMode(isBatchMode);
+      if (includeMetadata) {
+        setValue("metadataJson", generateExampleMetadata());
+      }
+    }
+    
+    // If file count changed in batch mode, regenerate metadata
+    if (isBatchMode && prevBatchCount !== batchFileCount) {
+      setPrevBatchCount(batchFileCount);
+      if (includeMetadata && batchFileCount > 0) {
+        setValue("metadataJson", generateExampleMetadata());
+      }
     }
   }, [isBatchMode, batchFileCount, includeMetadata]);
 
   // Handle the switch toggle effect
   useEffect(() => {
-    if (includeMetadata && (!form.getValues("metadataJson") || form.getValues("metadataJson") === "")) {
+    if (includeMetadata) {
+      // When toggling metadata on, always regenerate example
       setValue("metadataJson", generateExampleMetadata());
     }
   }, [includeMetadata]);
