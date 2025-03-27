@@ -1,23 +1,24 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Form } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm, UseFormReturn } from "react-hook-form";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import FileUploader from "@/components/FileUploader";
 import ImagePreview from "@/components/ImagePreview";
 import ConfigForm from "@/components/ConfigForm";
 import CommandSection from "@/components/CommandSection";
 import ResultSection from "@/components/ResultSection";
 import CacheManager from "@/components/CacheManager";
-import MetadataInput from "@/components/MetadataInput";
 import RareSatSelector from "@/components/RareSatSelector";
 import BatchFileManager from "@/components/BatchFileManager";
 import BatchProcessingProgress from "@/components/BatchProcessingProgress";
 import ThemeToggle from "@/components/ThemeToggle";
 import SectionTitle from "@/components/SectionTitle";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, RefreshCw } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -1068,12 +1069,141 @@ export default function Home() {
                 </div>
                 <Form {...metadataForm}>
                   <form className="space-y-4">
-                    <MetadataInput 
-                      form={metadataForm} 
-                      isBatchMode={batchMode}
-                      batchFileCount={batchFiles.length}
-                      batchFileNames={batchFiles.map(file => file.file.name)}
-                    />
+                    {/* Inline metadata component to avoid hook issues */}
+                    <div className="space-y-4">
+                      <FormField
+                        control={metadataForm.control}
+                        name="includeMetadata"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border border-orange-100 dark:border-navy-700 p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base text-orange-800 dark:text-orange-400">Include Metadata</FormLabel>
+                              <FormDescription>
+                                Store additional information with your {batchMode ? "inscriptions" : "inscription"}
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={(checked) => {
+                                  field.onChange(checked);
+                                  if (checked) {
+                                    // Generate example metadata
+                                    if (batchMode && batchFiles.length > 0) {
+                                      const metadataArray = [];
+                                      for (let i = 0; i < batchFiles.length; i++) {
+                                        metadataArray.push({
+                                          name: `Inscription ${i + 1}`,
+                                          description: `Description for ${batchFiles[i].file.name}`,
+                                          collection: "My Ordinals Collection",
+                                          attributes: [
+                                            {
+                                              trait_type: "Type",
+                                              value: "Image"
+                                            },
+                                            {
+                                              trait_type: "Number",
+                                              value: `${i + 1} of ${batchFiles.length}`
+                                            }
+                                          ]
+                                        });
+                                      }
+                                      metadataForm.setValue("metadataJson", JSON.stringify(metadataArray, null, 2));
+                                    } else {
+                                      metadataForm.setValue("metadataJson", JSON.stringify({
+                                        name: "My Inscription",
+                                        description: "A unique Ordinals inscription",
+                                        collection: "My Ordinals Collection",
+                                        attributes: [
+                                          {
+                                            trait_type: "Type",
+                                            value: "Image"
+                                          }
+                                        ]
+                                      }, null, 2));
+                                    }
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {metadataForm.watch("includeMetadata") && (
+                        <FormField
+                          control={metadataForm.control}
+                          name="metadataJson"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="flex justify-between items-center mb-1">
+                                <FormLabel className="text-orange-800 dark:text-orange-400">Metadata JSON</FormLabel>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => {
+                                    if (batchMode && batchFiles.length > 0) {
+                                      const metadataArray = [];
+                                      for (let i = 0; i < batchFiles.length; i++) {
+                                        metadataArray.push({
+                                          name: `Inscription ${i + 1}`,
+                                          description: `Description for ${batchFiles[i].file.name}`,
+                                          collection: "My Ordinals Collection",
+                                          attributes: [
+                                            {
+                                              trait_type: "Type",
+                                              value: "Image"
+                                            },
+                                            {
+                                              trait_type: "Number",
+                                              value: `${i + 1} of ${batchFiles.length}`
+                                            }
+                                          ]
+                                        });
+                                      }
+                                      metadataForm.setValue("metadataJson", JSON.stringify(metadataArray, null, 2));
+                                    } else {
+                                      metadataForm.setValue("metadataJson", JSON.stringify({
+                                        name: "My Inscription",
+                                        description: "A unique Ordinals inscription",
+                                        collection: "My Ordinals Collection",
+                                        attributes: [
+                                          {
+                                            trait_type: "Type",
+                                            value: "Image"
+                                          }
+                                        ]
+                                      }, null, 2));
+                                    }
+                                  }}
+                                  className="text-xs h-7 px-2"
+                                >
+                                  <RefreshCw className="h-3 w-3 mr-1" />
+                                  Generate Example
+                                </Button>
+                              </div>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Enter JSON metadata"
+                                  className="font-mono text-sm h-48 dark:bg-navy-950"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormDescription>
+                                {batchMode 
+                                  ? "This JSON array will be used for all inscriptions. Each object in the array corresponds to a file."
+                                  : "This JSON will be stored on-chain with your inscription"}
+                                {batchMode && batchFiles.length > 0 && (
+                                  <span className="block mt-1 text-amber-600 dark:text-amber-400">
+                                    Make sure to provide exactly {batchFiles.length} metadata objects for {batchFiles.length} files.
+                                  </span>
+                                )}
+                              </FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
                   </form>
                 </Form>
               </section>
