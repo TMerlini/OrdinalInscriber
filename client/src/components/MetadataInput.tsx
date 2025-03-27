@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
@@ -21,17 +20,16 @@ export default function MetadataInput({
 }: MetadataInputProps) {
   const { watch, setValue } = form;
   const includeMetadata = watch("includeMetadata");
-  const [lastBatchMode, setLastBatchMode] = useState(isBatchMode);
-  const [lastBatchCount, setLastBatchCount] = useState(batchFileCount);
 
-  // Generate example metadata based on batch mode and file count
-  const generateExampleMetadata = () => {
+  // Create example metadata for batch or single mode
+  function handleGenerateExample() {
     if (isBatchMode && batchFileCount > 0) {
-      // For batch mode, generate an array of metadata objects
-      const metadataArray = Array.from({ length: batchFileCount }).map((_, index) => {
-        const fileName = batchFileNames[index] || `file_${index + 1}`;
-        return {
-          name: `Inscription ${index + 1}`,
+      // For batch mode, create an array of metadata objects
+      const metadataArray = [];
+      for (let i = 0; i < batchFileCount; i++) {
+        const fileName = batchFileNames[i] || `file_${i + 1}`;
+        metadataArray.push({
+          name: `Inscription ${i + 1}`,
           description: `Description for ${fileName}`,
           collection: "My Ordinals Collection",
           attributes: [
@@ -41,15 +39,15 @@ export default function MetadataInput({
             },
             {
               trait_type: "Number",
-              value: `${index + 1} of ${batchFileCount}`
+              value: `${i + 1} of ${batchFileCount}`
             }
           ]
-        };
-      });
-      return JSON.stringify(metadataArray, null, 2);
+        });
+      }
+      setValue("metadataJson", JSON.stringify(metadataArray, null, 2));
     } else {
-      // For single mode, generate a single metadata object
-      return JSON.stringify({
+      // For single mode, create a single metadata object
+      setValue("metadataJson", JSON.stringify({
         name: "My Inscription",
         description: "A unique Ordinals inscription",
         collection: "My Ordinals Collection",
@@ -59,36 +57,9 @@ export default function MetadataInput({
             value: "Image"
           }
         ]
-      }, null, 2);
+      }, null, 2));
     }
-  };
-  
-  // Effect for batch mode and file count changes
-  useEffect(() => {
-    const batchModeChanged = lastBatchMode !== isBatchMode;
-    const batchCountChanged = lastBatchCount !== batchFileCount;
-    
-    // Update tracking state
-    if (batchModeChanged) {
-      setLastBatchMode(isBatchMode);
-    }
-    
-    if (batchCountChanged) {
-      setLastBatchCount(batchFileCount);
-    }
-    
-    // If anything important changed and metadata is enabled, update the JSON
-    if (includeMetadata && (batchModeChanged || (isBatchMode && batchCountChanged))) {
-      setValue("metadataJson", generateExampleMetadata());
-    }
-  }, [isBatchMode, batchFileCount, lastBatchMode, lastBatchCount, includeMetadata, setValue]);
-  
-  // Separate effect for metadata toggle to avoid dependency issues
-  useEffect(() => {
-    if (includeMetadata) {
-      setValue("metadataJson", generateExampleMetadata());
-    }
-  }, [includeMetadata, setValue]);
+  }
 
   return (
     <div className="space-y-4">
@@ -106,7 +77,13 @@ export default function MetadataInput({
             <FormControl>
               <Switch
                 checked={field.value}
-                onCheckedChange={field.onChange}
+                onCheckedChange={(checked) => {
+                  field.onChange(checked);
+                  if (checked) {
+                    // Generate example metadata when the switch is turned on
+                    setTimeout(() => handleGenerateExample(), 0);
+                  }
+                }}
               />
             </FormControl>
           </FormItem>
@@ -124,7 +101,7 @@ export default function MetadataInput({
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => setValue("metadataJson", generateExampleMetadata())}
+                  onClick={handleGenerateExample}
                   className="text-xs h-7 px-2"
                 >
                   <RefreshCw className="h-3 w-3 mr-1" />
