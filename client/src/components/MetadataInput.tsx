@@ -3,8 +3,6 @@ import { UseFormReturn } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
 
 interface MetadataInputProps {
   form: UseFormReturn<any>;
@@ -17,57 +15,21 @@ interface MetadataInputProps {
 class MetadataInput extends React.Component<MetadataInputProps> {
   constructor(props: MetadataInputProps) {
     super(props);
-    this.handleGenerateExample = this.handleGenerateExample.bind(this);
     this.handleMetadataToggle = this.handleMetadataToggle.bind(this);
-  }
-
-  // Create example metadata for batch or single mode
-  handleGenerateExample() {
-    const { form, isBatchMode, batchFileCount, batchFileNames } = this.props;
-    
-    if (isBatchMode && batchFileCount && batchFileCount > 0) {
-      // For batch mode, create an array of metadata objects
-      const metadataArray = [];
-      for (let i = 0; i < batchFileCount; i++) {
-        const fileName = batchFileNames && batchFileNames[i] ? batchFileNames[i] : `file_${i + 1}`;
-        metadataArray.push({
-          name: `Inscription ${i + 1}`,
-          description: `Description for ${fileName}`,
-          collection: "My Ordinals Collection",
-          attributes: [
-            {
-              trait_type: "Type",
-              value: "Image"
-            },
-            {
-              trait_type: "Number",
-              value: `${i + 1} of ${batchFileCount}`
-            }
-          ]
-        });
-      }
-      form.setValue("metadataJson", JSON.stringify(metadataArray, null, 2));
-    } else {
-      // For single mode, create a single metadata object
-      form.setValue("metadataJson", JSON.stringify({
-        name: "My Inscription",
-        description: "A unique Ordinals inscription",
-        collection: "My Ordinals Collection",
-        attributes: [
-          {
-            trait_type: "Type",
-            value: "Image"
-          }
-        ]
-      }, null, 2));
-    }
   }
 
   handleMetadataToggle(checked: boolean, onChange: (value: boolean) => void) {
     onChange(checked);
     if (checked) {
-      // Generate example metadata when the switch is turned on
-      setTimeout(() => this.handleGenerateExample(), 0);
+      // Initialize empty metadata structure
+      const { form, isBatchMode, batchFileCount } = this.props;
+      if (isBatchMode && batchFileCount && batchFileCount > 0) {
+        // Empty array of objects for batch mode
+        form.setValue("metadataJson", JSON.stringify(Array(batchFileCount).fill({}), null, 2));
+      } else {
+        // Empty object for single mode
+        form.setValue("metadataJson", JSON.stringify({}, null, 2));
+      }
     }
   }
 
@@ -104,17 +66,8 @@ class MetadataInput extends React.Component<MetadataInputProps> {
             name="metadataJson"
             render={({ field }) => (
               <FormItem>
-                <div className="flex justify-between items-center mb-1">
+                <div className="mb-1">
                   <FormLabel className="text-orange-800 dark:text-orange-400">Metadata JSON</FormLabel>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={this.handleGenerateExample}
-                    className="text-xs h-7 px-2"
-                  >
-                    <RefreshCw className="h-3 w-3 mr-1" />
-                    Generate Example
-                  </Button>
                 </div>
                 <FormControl>
                   <Textarea
