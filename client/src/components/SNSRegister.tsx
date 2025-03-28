@@ -86,16 +86,37 @@ export default function SNSRegister() {
   
   // Connect to Stacks wallet (Hiro, Xverse, etc.)
   const connectToStacksWallet = () => {
+    // First check if Stacks-compatible wallet is available in the browser
+    const hasXverse = typeof window !== 'undefined' && (window as any).XverseProviders !== undefined;
+    const hasHiro = typeof window !== 'undefined' && (window as any).StacksProvider !== undefined;
+    const hasStacks = typeof window !== 'undefined' && (window as any).stacks !== undefined;
+    
+    if (!hasXverse && !hasHiro && !hasStacks) {
+      console.log("No wallet detected in browser");
+      // Provide helpful guidance if wallet isn't detected but might be installed
+      toast({
+        title: "Wallet not detected",
+        description: "If you have Xverse or Hiro wallet installed, please ensure it's unlocked. You may need to restart your browser and try again.",
+        variant: "destructive"
+      });
+      
+      // Still continue to showConnect, which will present QR code option
+    }
+    
     showConnect({
       appDetails: {
         name: 'Ordinarinos Inscription Tool',
         icon: window.location.origin + '/logo.png',
       },
       redirectTo: '/',
+      // Set to true to force selection of wallet even if previously authenticated
+      userSession,
       onFinish: () => {
         if (userSession.isUserSignedIn()) {
           const userData = userSession.loadUserData();
           const address = userData.profile?.stxAddress?.testnet; // Use .mainnet for production
+          
+          console.log("Authenticated with Stacks wallet, address:", address);
           
           if (address) {
             setWalletData({
@@ -113,12 +134,14 @@ export default function SNSRegister() {
               variant: "default"
             });
             
-            // Hide wallet options
+            // Hide wallet options and move to payment tab
             setShowWalletOptions(false);
+            setActiveTab('payment');
           }
         }
       },
       onCancel: () => {
+        console.log("Wallet connection cancelled");
         toast({
           title: "Connection Cancelled",
           description: "Wallet connection was cancelled.",
