@@ -120,75 +120,91 @@ export default function SNSRegister() {
     };
   }, []);
   
-  // Direct function to just open Xverse wallet on mobile
+  // Direct function to just open Xverse wallet on mobile - using universal links approach
   const openXverseWallet = () => {
     toast({
-      title: "Opening Xverse Wallet",
-      description: "Redirecting to Xverse app. Please authenticate and return to this page.",
+      title: "Connecting to Wallet",
+      description: "Opening Xverse app. If you don't have it installed, you'll be prompted to install it.",
       duration: 5000
     });
     
-    // Save current URL to help with redirect back
-    const returnUrl = window.location.href;
+    // Use a direct, simpler approach to launch the wallet
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isAndroid = /Android/i.test(navigator.userAgent);
     
-    // Store more detailed wallet information
-    sessionStorage.setItem('wallet_redirect', 'true');
-    sessionStorage.setItem('wallet_type', 'xverse');
-    sessionStorage.setItem('wallet_return_url', returnUrl);
-    sessionStorage.setItem('wallet_redirect_time', Date.now().toString());
-    
-    // On mobile, we need to use the Xverse deep link
-    // First try with authentication parameters
-    if (typeof window !== 'undefined') {
-      try {
-        const authOptions = {
-          appDetails: {
-            name: 'Ordinarinos SNS',
-            icon: window.location.origin + '/logo.png',
-          },
-          redirectTo: returnUrl,
-          onFinish: () => {
-            console.log("Xverse auth flow finished");
-            // Should automatically return to browser
-          },
-        };
-        
-        // Store auth details for verification
-        sessionStorage.setItem('auth_request_pending', 'true');
-        
-        // Redirect to Xverse wallet with proper authentication parameters
-        showConnect(authOptions)
-          .then(() => {
-            console.log("Connect request sent to Xverse");
-          })
-          .catch(err => {
-            console.error("Error connecting to Xverse:", err);
-            // Fallback to simple deep link if showConnect fails
-            window.location.href = 'xverse://';
-          });
-      } catch (e) {
-        console.error("Error in Xverse connection:", e);
-        // Fallback to simple deep link
-        window.location.href = 'xverse://';
-      }
-    } else {
-      // Simple fallback for mobile direct link
-      try {
-        if (typeof window !== 'undefined') {
-          const location = window.location;
-          if (location) {
-            location.href = 'xverse://';
-          }
+    try {
+      // For mobile devices, use specific universal links that work whether app is installed or not
+      if (isMobile) {
+        if (isIOS) {
+          // iOS approach - open in App Store if not installed
+          window.location.href = 'https://apps.apple.com/app/xverse-wallet/id1633013386';
+        } else if (isAndroid) {
+          // Android approach - open in Play Store if not installed
+          window.location.href = 'https://play.google.com/store/apps/details?id=com.xverse.wallet';
+        } else {
+          // Fallback to direct protocol for other mobile browsers
+          window.location.href = 'xverse://';
         }
-      } catch (err) {
-        console.error('Error opening Xverse app:', err);
+        
+        // Store connection attempt in session storage
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('wallet_connection_attempted', 'true');
+          sessionStorage.setItem('wallet_type', 'xverse');
+          sessionStorage.setItem('connection_timestamp', Date.now().toString());
+        }
+        
+        // Show helpful instructions
+        setTimeout(() => {
+          toast({
+            title: "Wallet Installation",
+            description: "After installing Xverse wallet, please return to this page and try connecting again.",
+            duration: 8000
+          });
+        }, 3000);
+      } else {
+        // For desktop, use the standard Stacks Connect approach
+        connectToStacksWallet();
       }
+    } catch (err) {
+      console.error('Error launching wallet app:', err);
+      
+      toast({
+        title: "Connection Error",
+        description: "Unable to connect to wallet. Please install Xverse wallet and try again.",
+        variant: "destructive"
+      });
     }
   };
   
   // Connect to Stacks wallet (Hiro, Xverse, etc.)
   const connectToStacksWallet = () => {
-    // First check if Stacks-compatible wallet is available in the browser
+    // Check if we're already authenticated (in case returning from wallet app)
+    if (userSession.isUserSignedIn()) {
+      console.log("User is already signed in, proceeding with wallet data");
+      handleSuccessfulWalletConnection();
+      return;
+    }
+    
+    // Detect if running on mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // For mobile devices, we'll use a completely different approach
+    if (isMobile) {
+      // Instead of trying to detect wallets on mobile which is often unreliable,
+      // we'll direct users to install the wallet app if they don't have it
+      toast({
+        title: "Mobile Wallet Connection",
+        description: "For mobile devices, we'll connect you directly with Xverse wallet",
+        duration: 3000
+      });
+      
+      // Show wallet options
+      setShowWalletOptions(true);
+      return;
+    }
+    
+    // For desktop browsers, check if Stacks-compatible wallet is available
     const hasXverse = typeof window !== 'undefined' && (
       (window as any).XverseProviders !== undefined || 
       (window as any).xverse !== undefined
@@ -196,39 +212,19 @@ export default function SNSRegister() {
     const hasHiro = typeof window !== 'undefined' && (window as any).StacksProvider !== undefined;
     const hasStacks = typeof window !== 'undefined' && (window as any).stacks !== undefined;
     
-    console.log("Wallet detection:", {
-      hasXverse, 
-      hasHiro, 
-      hasStacks,
-      isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-    });
-    
-    // Detect if running on mobile
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    
-    // First, check if we're already authenticated (in case returning from wallet app)
-    if (userSession.isUserSignedIn()) {
-      console.log("User is already signed in, proceeding with wallet data");
-      handleSuccessfulWalletConnection();
-      return;
-    }
-    
-    // Special handling for Xverse wallet on mobile
-    if (isMobile) {
-      // For very simple direct link, just open Xverse wallet
-      // without any complicated UI or redirects
-      openXverseWallet();
-      return;
-    }
+    console.log("Desktop wallet detection:", { hasXverse, hasHiro, hasStacks });
     
     if (!hasXverse && !hasHiro && !hasStacks) {
-      console.log("No wallet detected in browser");
-      // Provide helpful guidance if wallet isn't detected but might be installed
+      // Show wallet installation options if no wallet is detected
       toast({
-        title: "Wallet not detected",
-        description: "If you have Xverse or Hiro wallet installed, please ensure it's unlocked. You may need to restart your browser and try again.",
-        variant: "destructive"
+        title: "No Wallet Detected",
+        description: "Please install a Stacks-compatible wallet like Xverse or Hiro to continue.",
+        duration: 5000
       });
+      
+      // Show wallet options screen to guide installation
+      setShowWalletOptions(true);
+      return;
     }
     
     // Create a special redirect URL with a parameter that indicates we're returning from wallet
@@ -237,7 +233,7 @@ export default function SNSRegister() {
     currentUrl.searchParams.set('tab', 'payment');
     const redirectUrl = currentUrl.toString();
     
-    // Use standard Stacks Connect approach
+    // Use standard Stacks Connect approach for desktop
     connectWithShowConnect(redirectUrl);
   };
   
@@ -947,16 +943,53 @@ export default function SNSRegister() {
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {/* Stacks-based wallets with real connection */}
+                        {/* Extra help for mobile users */}
+                        {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
+                          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md mb-4">
+                            <h4 className="font-medium text-blue-800 dark:text-blue-300 flex items-center mb-2">
+                              <AlertCircle className="h-4 w-4 mr-2" /> Mobile Wallet Notice
+                            </h4>
+                            <p className="text-blue-600 dark:text-blue-400 text-sm">
+                              On mobile devices, you'll need to install the wallet app first, then return to this page to connect.
+                            </p>
+                          </div>
+                        )}
+                        
                         <Button
                           variant="outline"
                           className="h-auto py-3 px-4 flex items-center justify-start hover:bg-orange-50 dark:hover:bg-navy-700 border-orange-200 dark:border-navy-600"
                           onClick={() => {
-                            // Special direct connection method for Janeway environment
-                            if (isJanewayURL) {
+                            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                            const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                            
+                            // For mobile devices, directly go to app store
+                            if (isMobile) {
+                              if (isIOS) {
+                                // Send to App Store
+                                window.location.href = 'https://apps.apple.com/app/xverse-wallet/id1633013386';
+                                
+                                // Show toast with instructions
+                                toast({
+                                  title: "Install Xverse Wallet",
+                                  description: "After installing, return to this page to connect your wallet.",
+                                  duration: 7000
+                                });
+                              } else {
+                                // Send to Play Store
+                                window.location.href = 'https://play.google.com/store/apps/details?id=com.xverse.wallet';
+                                
+                                // Show toast with instructions
+                                toast({
+                                  title: "Install Xverse Wallet",
+                                  description: "After installing, return to this page to connect your wallet.",
+                                  duration: 7000
+                                });
+                              }
+                            } else if (isJanewayURL) {
+                              // Special handling for Janeway
                               directConnectForJaneway();
-                            } else if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                              openXverseWallet();
                             } else {
+                              // Standard desktop connection
                               connectToStacksWallet();
                             }
                           }}
@@ -968,10 +1001,14 @@ export default function SNSRegister() {
                                 <p className="font-medium text-left text-gray-900 dark:text-gray-100">
                                   Xverse Wallet 
                                   {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && 
-                                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 rounded-sm">Mobile Direct</span>
+                                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 rounded-sm">
+                                      Install App
+                                    </span>
                                   }
                                   {isJanewayURL && 
-                                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-sm">Stacks Connect</span>
+                                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-sm">
+                                      Stacks Connect
+                                    </span>
                                   }
                                 </p>
                                 <p className="text-xs text-left text-gray-500 dark:text-gray-400">
