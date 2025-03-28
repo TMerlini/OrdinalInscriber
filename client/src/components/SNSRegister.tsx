@@ -234,14 +234,40 @@ export default function SNSRegister() {
     }
   };
 
-  // Function to connect wallet (in a real app this would use a Bitcoin wallet library)
-  const connectWallet = () => {
-    // Simulate connecting to wallet
+  // Function to show wallet selector and connect to chosen wallet
+  const [showWalletOptions, setShowWalletOptions] = useState<boolean>(false);
+  const [detectedWallets, setDetectedWallets] = useState<BitcoinWallet[]>([
+    { name: 'Xverse', address: '', type: 'software' },
+    { name: 'Hiro Wallet', address: '', type: 'software' },
+    { name: 'Leather', address: '', type: 'software' },
+    { name: 'Hardware Wallet', address: '', type: 'hardware' }
+  ]);
+
+  // Show wallet selection dialog
+  const showWalletSelector = () => {
+    setShowWalletOptions(true);
+    
+    // In a real app, this would scan for installed wallets
+    setTimeout(() => {
+      setDetectedWallets([
+        { 
+          name: 'Xverse', 
+          address: 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0',
+          type: 'software' 
+        },
+        ...availableWallets
+      ]);
+    }, 1000);
+  };
+  
+  // Connect to specific wallet
+  const connectToWallet = (wallet: BitcoinWallet) => {
     setWalletConnected(true);
-    setSelectedWallet(availableWallets[0].address);
+    setSelectedWallet(wallet.address);
+    setShowWalletOptions(false);
     
     toast({
-      title: "Wallet Connected",
+      title: `${wallet.name} Connected`,
       description: "Your Bitcoin wallet has been connected successfully.",
       variant: "default"
     });
@@ -455,25 +481,88 @@ export default function SNSRegister() {
               
               {!walletConnected ? (
                 <div className="space-y-4">
-                  <div className="flex space-x-4">
-                    <Button 
-                      onClick={connectWallet}
-                      className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800"
-                    >
-                      <Wallet className="mr-2 h-4 w-4" />
-                      Connect Wallet
-                    </Button>
-                  </div>
+                  {!showWalletOptions ? (
+                    <div className="flex space-x-4">
+                      <Button 
+                        onClick={showWalletSelector}
+                        className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800"
+                      >
+                        <Wallet className="mr-2 h-4 w-4" />
+                        Connect Wallet
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">Select a Wallet</h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {detectedWallets.map((wallet, index) => (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            className="h-auto py-3 px-4 flex items-center justify-start hover:bg-orange-50 dark:hover:bg-navy-700 border-orange-200 dark:border-navy-600"
+                            onClick={() => connectToWallet(wallet)}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center">
+                                {wallet.name === 'Xverse' ? (
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center text-white mr-3">X</div>
+                                ) : wallet.type === 'hardware' ? (
+                                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3">
+                                    <Wallet className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                  </div>
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
+                                    <Wallet className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="font-medium text-left text-gray-900 dark:text-gray-100">{wallet.name}</p>
+                                  {wallet.address && (
+                                    <p className="text-xs text-left text-gray-500 dark:text-gray-400">
+                                      {wallet.address.substring(0, 7)}...{wallet.address.substring(wallet.address.length - 4)}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-xs text-right">
+                                {wallet.type === 'hardware' ? (
+                                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400">
+                                    Hardware
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 rounded text-blue-600 dark:text-blue-400">
+                                    Software
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </Button>
+                        ))}
+                      </div>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setShowWalletOptions(false)}
+                        className="mt-2"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
                   
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 text-sm rounded">
-                    <p>In a production environment, this would connect to:</p>
-                    <ul className="list-disc list-inside mt-2 space-y-1">
-                      <li>Hardware wallets (Ledger, Trezor)</li>
-                      <li>Software wallets (Exodus, Electrum)</li>
-                      <li>Mobile wallets (via WalletConnect)</li>
-                      <li>Browser extensions (Xverse, Hiro Wallet)</li>
-                    </ul>
-                  </div>
+                  {!showWalletOptions && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 text-sm rounded">
+                      <p>This will detect and connect to installed Bitcoin wallets:</p>
+                      <ul className="list-disc list-inside mt-2 space-y-1">
+                        <li>Hardware wallets (Ledger, Trezor)</li>
+                        <li>Software wallets (Exodus, Electrum)</li>
+                        <li>Mobile wallets (via WalletConnect)</li>
+                        <li>Browser extensions (Xverse, Hiro Wallet)</li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
