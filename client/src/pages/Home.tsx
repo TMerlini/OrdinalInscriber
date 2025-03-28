@@ -20,6 +20,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import SectionTitle from "@/components/SectionTitle";
 import MetadataInput from "@/components/MetadataInput";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import SNSRegister from "@/components/SNSRegister";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
@@ -940,7 +941,7 @@ export default function Home() {
         <Card className="overflow-hidden border border-orange-200 dark:border-navy-700 shadow-lg rounded-xl dark:bg-navy-800">
           <CardContent className="p-0">
             <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-              <SectionTitle title="Upload Image" />
+              <SectionTitle title="Inscription Tools" />
               <Tabs defaultValue="single" className="w-full">
                 <TabsList className="mb-4">
                   <TabsTrigger value="single" onClick={() => handleBatchModeToggle(false)}>
@@ -948,6 +949,9 @@ export default function Home() {
                   </TabsTrigger>
                   <TabsTrigger value="batch" onClick={() => handleBatchModeToggle(true)}>
                     Batch Processing
+                  </TabsTrigger>
+                  <TabsTrigger value="sns">
+                    SNS Names
                   </TabsTrigger>
                 </TabsList>
                 
@@ -974,6 +978,12 @@ export default function Home() {
                       />
                     </div>
                   )}
+                </TabsContent>
+                
+                <TabsContent value="sns">
+                  <ErrorBoundary>
+                    <SNSRegister />
+                  </ErrorBoundary>
                 </TabsContent>
               </Tabs>
             </section>

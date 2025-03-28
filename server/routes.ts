@@ -593,6 +593,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SNS (Satoshi Name Service) name check
+  app.get('/api/sns/name/check', async (req, res) => {
+    try {
+      const { name } = req.query;
+      
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ error: 'SNS name is required' });
+      }
+      
+      // In a production environment, this would call the Geniidata API to check name availability
+      // For now, we'll return mock data since the API key would be required for actual integration
+      
+      // Mock logic to simulate name availability
+      const isAvailable = name.length >= 5 && 
+                          !['bitcoin', 'satoshi', 'ordinal', 'ord'].includes(name.toLowerCase());
+      
+      res.json({
+        name,
+        isAvailable,
+        status: isAvailable ? 'available' : 'taken',
+        // If it's taken, provide some owner info (this would come from the actual API)
+        owner: isAvailable ? undefined : '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+        message: isAvailable 
+          ? `The name "${name}" is available for registration` 
+          : `The name "${name}" is already registered`
+      });
+    } catch (error) {
+      console.error('Error checking SNS name:', error);
+      res.status(500).json({ error: 'Failed to check SNS name availability' });
+    }
+  });
+  
+  // SNS name registration endpoint
+  app.post('/api/sns/register', async (req, res) => {
+    try {
+      const { name } = req.body;
+      
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ error: 'SNS name is required' });
+      }
+      
+      // Check if we have an API key for Geniidata in environment variables
+      const apiKey = process.env.GENIIDATA_API_KEY;
+      
+      if (!apiKey) {
+        return res.status(403).json({
+          error: 'Geniidata API key not configured',
+          message: 'Please set the GENIIDATA_API_KEY environment variable to register SNS names'
+        });
+      }
+      
+      // In a production environment, this would call the Geniidata API to register the name
+      // For now, we'll simulate a successful registration
+      
+      res.json({
+        success: true,
+        name,
+        status: 'pending',
+        message: `Registration for "${name}" has been submitted and is pending confirmation`
+      });
+    } catch (error) {
+      console.error('Error registering SNS name:', error);
+      res.status(500).json({ error: 'Failed to register SNS name' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
