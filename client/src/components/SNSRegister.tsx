@@ -87,9 +87,57 @@ export default function SNSRegister() {
   // Connect to Stacks wallet (Hiro, Xverse, etc.)
   const connectToStacksWallet = () => {
     // First check if Stacks-compatible wallet is available in the browser
-    const hasXverse = typeof window !== 'undefined' && (window as any).XverseProviders !== undefined;
+    const hasXverse = typeof window !== 'undefined' && (
+      (window as any).XverseProviders !== undefined || 
+      (window as any).xverse !== undefined
+    );
     const hasHiro = typeof window !== 'undefined' && (window as any).StacksProvider !== undefined;
     const hasStacks = typeof window !== 'undefined' && (window as any).stacks !== undefined;
+    
+    console.log("Wallet detection:", {
+      hasXverse, 
+      hasHiro, 
+      hasStacks,
+      isMobile: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    });
+    
+    // Detect if running on mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    // Special handling for Xverse wallet on mobile
+    if (isMobile) {
+      // Use mobile-specific approach for Xverse
+      toast({
+        title: "Mobile Detected",
+        description: "Attempting to connect with Xverse wallet app...",
+      });
+      
+      // Use direct deep linking as a fallback method
+      try {
+        // Try to directly open Xverse wallet with deep link
+        const xverseDeepLink = `xverse://`;
+        
+        // Create a hidden anchor tag and click it
+        const a = document.createElement('a');
+        a.href = xverseDeepLink;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        
+        // Set a timeout to check if the app opened
+        setTimeout(() => {
+          // If we're still here, the app might not have opened
+          // Use QR code approach via showConnect
+          document.body.removeChild(a);
+          connectWithShowConnect();
+        }, 1000);
+        
+        return;
+      } catch (err) {
+        console.error("Error with direct Xverse connection:", err);
+        // Fall back to showConnect
+      }
+    }
     
     if (!hasXverse && !hasHiro && !hasStacks) {
       console.log("No wallet detected in browser");
@@ -99,10 +147,14 @@ export default function SNSRegister() {
         description: "If you have Xverse or Hiro wallet installed, please ensure it's unlocked. You may need to restart your browser and try again.",
         variant: "destructive"
       });
-      
-      // Still continue to showConnect, which will present QR code option
     }
     
+    // Use standard Stacks Connect approach
+    connectWithShowConnect();
+  };
+  
+  // Extracted showConnect logic to allow for using it as a fallback
+  const connectWithShowConnect = () => {
     showConnect({
       appDetails: {
         name: 'Ordinarinos Inscription Tool',
