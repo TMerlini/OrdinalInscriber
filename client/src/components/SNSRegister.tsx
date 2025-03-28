@@ -962,28 +962,54 @@ export default function SNSRegister() {
                             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                             const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
                             
-                            // For mobile devices, directly go to app store
+                            // For mobile devices, use direct protocol links
                             if (isMobile) {
-                              if (isIOS) {
-                                // Send to App Store
-                                window.location.href = 'https://apps.apple.com/app/xverse-wallet/id1633013386';
+                              // Try direct protocol link first which should open the app if installed
+                              // These are universal links that are registered by the Xverse app
+                              
+                              toast({
+                                title: "Opening Xverse Wallet",
+                                description: "Attempting to open your Xverse wallet...",
+                                duration: 5000
+                              });
+                              
+                              // Save current state so we can recover after return
+                              sessionStorage.setItem('wallet_connection_attempt', 'true');
+                              sessionStorage.setItem('connection_timestamp', Date.now().toString());
+                              
+                              try {
+                                // Use direct protocol links that should open the app if installed
+                                if (isIOS) {
+                                  // iOS direct deep link
+                                  window.location.href = 'xverse://';
+                                  
+                                  // Set a fallback timer in case the app isn't installed
+                                  setTimeout(() => {
+                                    // If we're still here after 1 second, app might not be installed
+                                    window.location.href = 'xverse://connect';
+                                  }, 1000);
+                                } else {
+                                  // Android direct deep link
+                                  window.location.href = 'xverse://';
+                                }
                                 
-                                // Show toast with instructions
-                                toast({
-                                  title: "Install Xverse Wallet",
-                                  description: "After installing, return to this page to connect your wallet.",
-                                  duration: 7000
-                                });
-                              } else {
-                                // Send to Play Store
-                                window.location.href = 'https://play.google.com/store/apps/details?id=com.xverse.wallet';
+                                // Show follow-up instructions after a delay
+                                setTimeout(() => {
+                                  toast({
+                                    title: "Wallet Connection",
+                                    description: "If your wallet didn't open, you may need to install Xverse first.",
+                                    duration: 8000
+                                  });
+                                }, 3000);
+                              } catch (e) {
+                                console.error("Error opening wallet:", e);
                                 
-                                // Show toast with instructions
-                                toast({
-                                  title: "Install Xverse Wallet",
-                                  description: "After installing, return to this page to connect your wallet.",
-                                  duration: 7000
-                                });
+                                // Fallback to store links if direct opening fails
+                                if (isIOS) {
+                                  window.location.href = 'https://apps.apple.com/app/xverse-wallet/id1633013386';
+                                } else {
+                                  window.location.href = 'https://play.google.com/store/apps/details?id=com.xverse.wallet';
+                                }
                               }
                             } else if (isJanewayURL) {
                               // Special handling for Janeway
@@ -1002,7 +1028,7 @@ export default function SNSRegister() {
                                   Xverse Wallet 
                                   {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && 
                                     <span className="ml-2 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 rounded-sm">
-                                      Install App
+                                      Open App
                                     </span>
                                   }
                                   {isJanewayURL && 
