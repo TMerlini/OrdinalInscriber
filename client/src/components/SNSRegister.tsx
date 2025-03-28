@@ -10,6 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+// Import Stacks Connect for wallet integration
+import { 
+  AppConfig, 
+  UserSession, 
+  showConnect, 
+  openSTXTransfer 
+} from '@stacks/connect';
+// Import network constants from @stacks/network
+import { STACKS_TESTNET, STACKS_MAINNET } from '@stacks/network';
 
 interface SNSName {
   id: string;
@@ -39,7 +48,85 @@ export default function SNSRegister() {
   const [selectedWallet, setSelectedWallet] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'onchain' | 'lightning'>('onchain');
   const [registrationFee, setRegistrationFee] = useState<number>(25000); // 25,000 sats per name
+  const [walletData, setWalletData] = useState<{
+    userData: any;
+    address: string;
+    walletType: string;
+  } | null>(null);
   const { toast } = useToast();
+  
+  // Set up wallet config for Stacks Connect (Hiro/Xverse)
+  const appConfig = new AppConfig(['store_write', 'publish_data']);
+  const userSession = new UserSession({ appConfig });
+  
+  // Check for existing session on component mount
+  useEffect(() => {
+    if (userSession.isUserSignedIn()) {
+      const userData = userSession.loadUserData();
+      const address = userData.profile?.stxAddress?.testnet; // Use .mainnet for production
+      
+      if (address) {
+        setWalletData({
+          userData,
+          address,
+          walletType: 'Stacks'
+        });
+        
+        setWalletConnected(true);
+        setSelectedWallet(address);
+        
+        toast({
+          title: "Wallet Connected",
+          description: "Your wallet is already connected.",
+          variant: "default"
+        });
+      }
+    }
+  }, []);
+  
+  // Connect to Stacks wallet (Hiro, Xverse, etc.)
+  const connectToStacksWallet = () => {
+    showConnect({
+      appDetails: {
+        name: 'Ordinarinos Inscription Tool',
+        icon: window.location.origin + '/logo.png',
+      },
+      redirectTo: '/',
+      onFinish: () => {
+        if (userSession.isUserSignedIn()) {
+          const userData = userSession.loadUserData();
+          const address = userData.profile?.stxAddress?.testnet; // Use .mainnet for production
+          
+          if (address) {
+            setWalletData({
+              userData,
+              address,
+              walletType: 'Stacks'
+            });
+            
+            setWalletConnected(true);
+            setSelectedWallet(address);
+            
+            toast({
+              title: "Wallet Connected",
+              description: "Your Stacks-compatible wallet has been connected successfully.",
+              variant: "default"
+            });
+            
+            // Hide wallet options
+            setShowWalletOptions(false);
+          }
+        }
+      },
+      onCancel: () => {
+        toast({
+          title: "Connection Cancelled",
+          description: "Wallet connection was cancelled.",
+          variant: "destructive"
+        });
+      },
+    });
+  };
   
   // Sample wallet list (in production would come from connected wallet)
   const availableWallets: BitcoinWallet[] = [
@@ -288,8 +375,8 @@ export default function SNSRegister() {
     setActiveTab('wallet');
   };
   
-  // Function to complete purchase
-  const completePurchase = () => {
+  // Function to complete purchase with on-chain payment
+  const completePurchase = async () => {
     if (!selectedWallet) {
       toast({
         title: "Wallet required",
@@ -299,8 +386,46 @@ export default function SNSRegister() {
       return;
     }
     
-    // In a real app, this would trigger the blockchain transaction
-    registerSNSNames();
+    if (walletData && paymentMethod === 'onchain') {
+      try {
+        // If connected with Stacks wallet, use it for payment
+        // Convert satoshis to microSTX (1 STX = 100 million microSTX)
+        const microSTXAmount = totalFee * 100; // Simple conversion for demonstration
+        
+        // For a real implementation, you'd want to calculate the exact STX equivalent
+        await openSTXTransfer({
+          recipient: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM', // Example recipient address
+          amount: microSTXAmount.toString(),
+          memo: `SNS Registration: ${selectedNames.join(', ')}`,
+          network: STACKS_TESTNET, // Use STACKS_MAINNET for production
+          appDetails: {
+            name: 'Ordinarinos Inscription Tool',
+            icon: window.location.origin + '/logo.png',
+          },
+          onFinish: () => {
+            // Register names after successful payment
+            registerSNSNames();
+          },
+          onCancel: () => {
+            toast({
+              title: "Payment cancelled",
+              description: "The payment was cancelled. Please try again.",
+              variant: "destructive"
+            });
+          }
+        });
+      } catch (err) {
+        console.error('Error processing payment:', err);
+        toast({
+          title: "Payment failed",
+          description: "There was an error processing your payment. Please try again.",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // Fall back to traditional payment flow
+      registerSNSNames();
+    }
   };
   
   // Calculate the total registration fee
@@ -496,7 +621,57 @@ export default function SNSRegister() {
                       <h4 className="font-medium text-gray-900 dark:text-gray-100">Select a Wallet</h4>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {detectedWallets.map((wallet, index) => (
+                        {/* Stacks-based wallets with real connection */}
+                        <Button
+                          variant="outline"
+                          className="h-auto py-3 px-4 flex items-center justify-start hover:bg-orange-50 dark:hover:bg-navy-700 border-orange-200 dark:border-navy-600"
+                          onClick={connectToStacksWallet}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center text-white mr-3">X</div>
+                              <div>
+                                <p className="font-medium text-left text-gray-900 dark:text-gray-100">Xverse Wallet</p>
+                                <p className="text-xs text-left text-gray-500 dark:text-gray-400">
+                                  Stacks + Bitcoin
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-xs text-right">
+                              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/40 rounded text-green-600 dark:text-green-400">
+                                Recommended
+                              </span>
+                            </div>
+                          </div>
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          className="h-auto py-3 px-4 flex items-center justify-start hover:bg-orange-50 dark:hover:bg-navy-700 border-orange-200 dark:border-navy-600"
+                          onClick={connectToStacksWallet}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
+                                <Wallet className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-left text-gray-900 dark:text-gray-100">Hiro Wallet</p>
+                                <p className="text-xs text-left text-gray-500 dark:text-gray-400">
+                                  Stacks Compatible
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-xs text-right">
+                              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/40 rounded text-green-600 dark:text-green-400">
+                                Software
+                              </span>
+                            </div>
+                          </div>
+                        </Button>
+                        
+                        {/* Other wallet options */}
+                        {detectedWallets.filter(w => w.type === 'hardware').map((wallet, index) => (
                           <Button
                             key={index}
                             variant="outline"
@@ -505,17 +680,9 @@ export default function SNSRegister() {
                           >
                             <div className="flex items-center justify-between w-full">
                               <div className="flex items-center">
-                                {wallet.name === 'Xverse' ? (
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center text-white mr-3">X</div>
-                                ) : wallet.type === 'hardware' ? (
-                                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3">
-                                    <Wallet className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                                  </div>
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
-                                    <Wallet className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                                  </div>
-                                )}
+                                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3">
+                                  <Wallet className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                </div>
                                 <div>
                                   <p className="font-medium text-left text-gray-900 dark:text-gray-100">{wallet.name}</p>
                                   {wallet.address && (
@@ -526,15 +693,9 @@ export default function SNSRegister() {
                                 </div>
                               </div>
                               <div className="text-xs text-right">
-                                {wallet.type === 'hardware' ? (
-                                  <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400">
-                                    Hardware
-                                  </span>
-                                ) : (
-                                  <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 rounded text-blue-600 dark:text-blue-400">
-                                    Software
-                                  </span>
-                                )}
+                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400">
+                                  Hardware
+                                </span>
                               </div>
                             </div>
                           </Button>
@@ -554,13 +715,13 @@ export default function SNSRegister() {
                   
                   {!showWalletOptions && (
                     <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 text-sm rounded">
-                      <p>This will detect and connect to installed Bitcoin wallets:</p>
+                      <p>Connect your wallet using one of the following methods:</p>
                       <ul className="list-disc list-inside mt-2 space-y-1">
+                        <li><strong>Recommended:</strong> Stacks-compatible wallets (Xverse, Hiro)</li>
                         <li>Hardware wallets (Ledger, Trezor)</li>
-                        <li>Software wallets (Exodus, Electrum)</li>
-                        <li>Mobile wallets (via WalletConnect)</li>
-                        <li>Browser extensions (Xverse, Hiro Wallet)</li>
+                        <li>Mobile wallets through WalletConnect</li>
                       </ul>
+                      <p className="mt-2 text-xs">Note: Xverse wallet provides the best support for both Stacks and Bitcoin operations.</p>
                     </div>
                   )}
                 </div>
@@ -569,10 +730,19 @@ export default function SNSRegister() {
                   <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md flex items-start">
                     <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400 mr-2 mt-0.5" />
                     <div>
-                      <p className="font-medium text-green-800 dark:text-green-300">Wallet Connected Successfully</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Your Bitcoin wallet is connected and ready to use.
+                      <p className="font-medium text-green-800 dark:text-green-300">
+                        {walletData?.walletType === 'Stacks' ? 'Stacks Wallet Connected' : 'Wallet Connected Successfully'}
                       </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {walletData?.walletType === 'Stacks' 
+                          ? `Your ${walletData.userData?.profile?.name || 'Stacks'} wallet is connected and ready for transactions.`
+                          : 'Your Bitcoin wallet is connected and ready to use.'}
+                      </p>
+                      {walletData?.address && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Address: {walletData.address.substring(0, 10)}...{walletData.address.substring(walletData.address.length - 4)}
+                        </p>
+                      )}
                     </div>
                   </div>
                   
