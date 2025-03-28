@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,16 +48,109 @@ export default function SNSRegister() {
   const [selectedWallet, setSelectedWallet] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'onchain' | 'lightning'>('onchain');
   const [registrationFee, setRegistrationFee] = useState<number>(25000); // 25,000 sats per name
+  const [showWalletOptions, setShowWalletOptions] = useState<boolean>(false);
+  const [detectedWallets, setDetectedWallets] = useState<BitcoinWallet[]>([
+    { name: 'Xverse', address: '', type: 'software' },
+    { name: 'Hiro Wallet', address: '', type: 'software' },
+    { name: 'Leather', address: '', type: 'software' },
+    { name: 'Hardware Wallet', address: '', type: 'hardware' }
+  ]);
   const [walletData, setWalletData] = useState<{
     userData: any;
     address: string;
     walletType: string;
   } | null>(null);
+  
   const { toast } = useToast();
+  
+  // Calculate total fee
+  const totalFee = selectedNames.length * registrationFee;
+  const formattedFee = totalFee.toLocaleString();
   
   // Set up wallet config for Stacks Connect (Hiro/Xverse)
   const appConfig = new AppConfig(['store_write', 'publish_data']);
   const userSession = new UserSession({ appConfig });
+  
+  // Extracted showConnect logic to allow for using it as a fallback
+  const connectWithShowConnect = (redirectUrl: string = '/') => {
+    console.log("Using redirect URL in showConnect:", redirectUrl);
+    
+    showConnect({
+      appDetails: {
+        name: 'Ordinarinos Inscription Tool',
+        icon: window.location.origin + '/logo.png',
+      },
+      redirectTo: redirectUrl,
+      // Set to true to force selection of wallet even if previously authenticated
+      userSession,
+      onFinish: () => {
+        handleSuccessfulWalletConnection();
+      },
+      onCancel: () => {
+        console.log("Wallet connection cancelled");
+        toast({
+          title: "Connection Cancelled",
+          description: "Wallet connection was cancelled.",
+          variant: "destructive"
+        });
+      },
+    });
+  };
+  
+  // Helper function to handle successful connection
+  const handleSuccessfulWalletConnection = () => {
+    if (userSession.isUserSignedIn()) {
+      const userData = userSession.loadUserData();
+      const address = userData.profile?.stxAddress?.testnet; // Use .mainnet for production
+      
+      console.log("Authenticated with Stacks wallet, address:", address);
+      
+      if (address) {
+        setWalletData({
+          userData,
+          address,
+          walletType: 'Stacks'
+        });
+        
+        // Update wallet state to show connected UI
+        setSelectedWallet(address);
+        
+        // For mobile devices where we need authentication and signature for full functionality
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        if (isMobile) {
+          toast({
+            title: "Wallet Authentication Successful",
+            description: "Authentication completed. Test signature required for full connection...",
+            variant: "default"
+          });
+          
+          // Allow UI to update first
+          setTimeout(() => {
+            // Request a test signature to verify full wallet connection capability
+            testWalletSignature().then(success => {
+              if (success) {
+                setWalletConnected(true);
+              }
+            });
+          }, 1000);
+        } else {
+          // For desktop, we'll set as connected right away
+          setWalletConnected(true);
+          
+          toast({
+            title: "Wallet Connected",
+            description: "Your Stacks-compatible wallet has been connected successfully.",
+            variant: "default"
+          });
+          
+          // Hide wallet options and move to payment tab
+          setShowWalletOptions(false);
+          setActiveTab('payment');
+        }
+      }
+    }
+  };
   
   // Check for existing session on component mount
   useEffect(() => {
@@ -237,70 +330,6 @@ export default function SNSRegister() {
     connectWithShowConnect(redirectUrl);
   };
   
-  // Helper function to handle successful connection
-  const handleSuccessfulWalletConnection = () => {
-    if (userSession.isUserSignedIn()) {
-      const userData = userSession.loadUserData();
-      const address = userData.profile?.stxAddress?.testnet; // Use .mainnet for production
-      
-      console.log("Authenticated with Stacks wallet, address:", address);
-      
-      if (address) {
-        setWalletData({
-          userData,
-          address,
-          walletType: 'Stacks'
-        });
-        
-        setWalletConnected(true);
-        setSelectedWallet(address);
-        
-        toast({
-          title: "Wallet Connected",
-          description: "Your Stacks-compatible wallet has been connected successfully.",
-          variant: "default"
-        });
-        
-        // Hide wallet options and move to payment tab
-        setShowWalletOptions(false);
-        setActiveTab('payment');
-      }
-    }
-  };
-  
-  // Extracted showConnect logic to allow for using it as a fallback
-  const connectWithShowConnect = (redirectUrl: string = '/') => {
-    console.log("Using redirect URL in showConnect:", redirectUrl);
-    
-    showConnect({
-      appDetails: {
-        name: 'Ordinarinos Inscription Tool',
-        icon: window.location.origin + '/logo.png',
-      },
-      redirectTo: redirectUrl,
-      // Set to true to force selection of wallet even if previously authenticated
-      userSession,
-      onFinish: () => {
-        handleSuccessfulWalletConnection();
-      },
-      onCancel: () => {
-        console.log("Wallet connection cancelled");
-        toast({
-          title: "Connection Cancelled",
-          description: "Wallet connection was cancelled.",
-          variant: "destructive"
-        });
-      },
-    });
-  };
-  
-  // Sample wallet list (in production would come from connected wallet)
-  const availableWallets: BitcoinWallet[] = [
-    { name: 'Hardware Wallet', address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', type: 'hardware', balance: 1250000 },
-    { name: 'Mobile Wallet', address: 'bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h', type: 'software', balance: 350000 },
-    { name: 'Exchange Wallet', address: '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy', type: 'exchange', balance: 450000 }
-  ];
-  
   // Check if we're in a Janeway environment to provide special connection options
   const isJanewayURL = typeof window !== 'undefined' && 
     window.location.hostname.includes('janeway.replit.dev');
@@ -342,6 +371,43 @@ export default function SNSRegister() {
           variant: "destructive"
         });
       },
+    });
+  };
+
+  // Sample wallet list (in production would come from connected wallet)
+  const availableWallets: BitcoinWallet[] = [
+    { name: 'Hardware Wallet', address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', type: 'hardware', balance: 1250000 },
+    { name: 'Mobile Wallet', address: 'bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h', type: 'software', balance: 350000 },
+    { name: 'Exchange Wallet', address: '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy', type: 'exchange', balance: 450000 }
+  ];
+  
+  // Show wallet selection dialog
+  const showWalletSelector = () => {
+    setShowWalletOptions(true);
+    
+    // In a real app, this would scan for installed wallets
+    setTimeout(() => {
+      setDetectedWallets([
+        { 
+          name: 'Xverse', 
+          address: 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0',
+          type: 'software' 
+        },
+        ...availableWallets
+      ]);
+    }, 1000);
+  };
+  
+  // Connect to specific wallet
+  const connectToWallet = (wallet: BitcoinWallet) => {
+    setWalletConnected(true);
+    setSelectedWallet(wallet.address);
+    setShowWalletOptions(false);
+    
+    toast({
+      title: `${wallet.name} Connected`,
+      description: "Your Bitcoin wallet has been connected successfully.",
+      variant: "default"
     });
   };
 
@@ -526,45 +592,6 @@ export default function SNSRegister() {
       handleSearch();
     }
   };
-
-  // Function to show wallet selector and connect to chosen wallet
-  const [showWalletOptions, setShowWalletOptions] = useState<boolean>(false);
-  const [detectedWallets, setDetectedWallets] = useState<BitcoinWallet[]>([
-    { name: 'Xverse', address: '', type: 'software' },
-    { name: 'Hiro Wallet', address: '', type: 'software' },
-    { name: 'Leather', address: '', type: 'software' },
-    { name: 'Hardware Wallet', address: '', type: 'hardware' }
-  ]);
-
-  // Show wallet selection dialog
-  const showWalletSelector = () => {
-    setShowWalletOptions(true);
-    
-    // In a real app, this would scan for installed wallets
-    setTimeout(() => {
-      setDetectedWallets([
-        { 
-          name: 'Xverse', 
-          address: 'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0',
-          type: 'software' 
-        },
-        ...availableWallets
-      ]);
-    }, 1000);
-  };
-  
-  // Connect to specific wallet
-  const connectToWallet = (wallet: BitcoinWallet) => {
-    setWalletConnected(true);
-    setSelectedWallet(wallet.address);
-    setShowWalletOptions(false);
-    
-    toast({
-      title: `${wallet.name} Connected`,
-      description: "Your Bitcoin wallet has been connected successfully.",
-      variant: "default"
-    });
-  };
   
   // Function to proceed to checkout
   const proceedToCheckout = () => {
@@ -579,6 +606,97 @@ export default function SNSRegister() {
     
     // Move to wallet tab
     setActiveTab('wallet');
+  };
+  
+  // Test signature function for mobile wallet connection
+  const testWalletSignature = async () => {
+    if (!userSession.isUserSignedIn()) {
+      toast({
+        title: "Authentication Required",
+        description: "Please authenticate with your wallet first.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    try {
+      // Request a simple transfer signature to verify wallet is working correctly
+      // This is more of a test than an actual payment
+      const microSTXAmount = 1; // Minimal amount for testing
+      
+      toast({
+        title: "Requesting Signature",
+        description: "Please approve the signature request in your wallet app.",
+        duration: 10000
+      });
+      
+      // For mobile deep linking with signature request
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const testSignRequest = {
+        recipient: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM', // Example recipient
+        amount: microSTXAmount.toString(),
+        memo: 'Wallet connection test',
+        network: STACKS_TESTNET, // Use STACKS_MAINNET for production
+        appDetails: {
+          name: 'Ordinarinos Inscription Tool',
+          icon: window.location.origin + '/logo.png',
+        },
+        onFinish: (data: any) => {
+          console.log("Signature completed:", data);
+          toast({
+            title: "Signature Successful",
+            description: "Your wallet is now fully connected and authenticated!",
+            variant: "default"
+          });
+          // Show connected state
+          setWalletConnected(true);
+          return true;
+        },
+        onCancel: () => {
+          console.log("Signature cancelled");
+          toast({
+            title: "Signature Cancelled",
+            description: "You cancelled the signature request. Authentication is incomplete.",
+            variant: "destructive"
+          });
+          return false;
+        }
+      };
+      
+      // Special handling for mobile
+      if (isMobile) {
+        // Store data to help with return handling
+        sessionStorage.setItem('signature_request_pending', 'true');
+        sessionStorage.setItem('signature_timestamp', Date.now().toString());
+        
+        // Specify callback URL
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('from_wallet', 'true');
+        currentUrl.searchParams.set('tab', 'payment');
+        currentUrl.searchParams.set('payment_status', 'pending');
+        currentUrl.searchParams.set('ts', Date.now().toString());
+        
+        const signOptions = {
+          ...testSignRequest,
+          redirectTo: currentUrl.toString()
+        };
+        
+        await openSTXTransfer(signOptions);
+      } else {
+        // Desktop flow
+        await openSTXTransfer(testSignRequest);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Signature request error:", error);
+      toast({
+        title: "Signature Failed",
+        description: "There was an error requesting the signature. Please try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
   };
   
   // Function to complete purchase with on-chain payment
@@ -598,8 +716,10 @@ export default function SNSRegister() {
         // Convert satoshis to microSTX (1 STX = 100 million microSTX)
         const microSTXAmount = totalFee * 100; // Simple conversion for demonstration
         
-        // For a real implementation, you'd want to calculate the exact STX equivalent
-        await openSTXTransfer({
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        // Setup for transaction
+        const paymentRequest = {
           recipient: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM', // Example recipient address
           amount: microSTXAmount.toString(),
           memo: `SNS Registration: ${selectedNames.join(', ')}`,
@@ -619,578 +739,363 @@ export default function SNSRegister() {
               variant: "destructive"
             });
           }
-        });
-      } catch (err) {
-        console.error('Error processing payment:', err);
+        };
+        
+        // Special handling for mobile
+        if (isMobile) {
+          // Store payment intent info
+          sessionStorage.setItem('payment_request_pending', 'true');
+          sessionStorage.setItem('payment_timestamp', Date.now().toString());
+          sessionStorage.setItem('payment_names', JSON.stringify(selectedNames));
+          sessionStorage.setItem('payment_amount', totalFee.toString());
+          
+          // Prepare callback URL
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.set('from_wallet', 'true');
+          currentUrl.searchParams.set('tab', 'payment');
+          currentUrl.searchParams.set('payment_status', 'processing');
+          currentUrl.searchParams.set('ts', Date.now().toString());
+          
+          const mobilePaymentRequest = {
+            ...paymentRequest,
+            redirectTo: currentUrl.toString()
+          };
+          
+          await openSTXTransfer(mobilePaymentRequest);
+        } else {
+          // Desktop flow
+          await openSTXTransfer(paymentRequest);
+        }
+        
         toast({
-          title: "Payment failed",
-          description: "There was an error processing your payment. Please try again.",
+          title: "Payment Initiated",
+          description: "Please approve the transaction in your wallet.",
+          duration: 5000
+        });
+        
+      } catch (error) {
+        console.error("Payment error:", error);
+        toast({
+          title: "Payment Error",
+          description: "There was an error initiating the payment. Please try again.",
           variant: "destructive"
         });
       }
     } else {
-      // Fall back to traditional payment flow
-      registerSNSNames();
+      // For Lightning Network payments, we would generate and display a Lightning invoice here
+      toast({
+        title: "Coming Soon",
+        description: "Lightning Network payments will be available in a future update.",
+        duration: 5000
+      });
     }
   };
-  
-  // Calculate the total registration fee
-  const totalFee = registrationFee * selectedNames.length;
-  const formattedFee = totalFee.toLocaleString();
-  
+
   return (
-    <div className="space-y-4">
+    <div className="p-4 bg-white dark:bg-navy-900 rounded-lg border border-orange-100 dark:border-navy-700 shadow-sm">
       <div className="mb-6">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-          Search for and register Satoshi Name Service (SNS) names. SNS provides a human-readable 
-          naming system for Bitcoin addresses on the Bitcoin blockchain.
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">SNS Registration</h2>
+        <p className="text-gray-600 dark:text-gray-400">
+          Search for and register Satoshi Name Service (SNS) names. SNS provides a human-readable naming system for Bitcoin addresses on the blockchain.
         </p>
-        
+      </div>
+      
+      <div className="mb-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-4 grid grid-cols-3">
-            <TabsTrigger value="search">
+          <TabsList className="w-full grid grid-cols-3 rounded-xl">
+            <TabsTrigger 
+              value="search"
+              className="rounded-l-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white dark:data-[state=active]:bg-navy-600"
+            >
               1. Search Names
             </TabsTrigger>
-            <TabsTrigger value="wallet" disabled={selectedNames.length === 0}>
+            <TabsTrigger 
+              value="wallet"
+              className="data-[state=active]:bg-orange-600 data-[state=active]:text-white dark:data-[state=active]:bg-navy-600"
+              disabled={selectedNames.length === 0}
+            >
               2. Connect Wallet
             </TabsTrigger>
-            <TabsTrigger value="payment" disabled={!walletConnected || selectedNames.length === 0}>
+            <TabsTrigger 
+              value="payment"
+              className="rounded-r-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white dark:data-[state=active]:bg-navy-600"
+              disabled={!walletConnected}
+            >
               3. Payment
             </TabsTrigger>
           </TabsList>
           
           {/* Search Tab */}
           <TabsContent value="search">
-            <div className="flex space-x-2 mb-4">
-              <div className="relative flex-grow">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-orange-500 dark:text-orange-400"/>
-                <Input
-                  placeholder="Search for a name (e.g., satoshi, bitcoin)"
-                  className="pl-8 border-orange-200 dark:border-orange-800/40"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyUp={handleKeyPress}
-                  disabled={searching}
-                />
-              </div>
-              <Button 
-                onClick={handleSearch}
-                disabled={searching || !searchQuery.trim()}
-                className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800"
-              >
-                {searching ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Checking
-                  </>
-                ) : (
-                  'Check Availability'
-                )}
-              </Button>
-            </div>
-
-            {error && (
-              <div className="p-3 rounded-md bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm mb-4">
-                <div className="flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  {error}
-                </div>
-              </div>
-            )}
-
-            {selectedNames.length > 0 && (
-              <div className="mb-4 p-3 bg-orange-50 dark:bg-navy-800 rounded-md border border-orange-100 dark:border-navy-700">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Selected Names: {selectedNames.length}
-                    </span>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {selectedNames.map(name => (
-                        <Badge 
-                          key={name} 
-                          variant="outline"
-                          className="bg-white dark:bg-navy-900 cursor-pointer"
-                          onClick={() => toggleNameSelection(name)}
-                        >
-                          {name} ✕
-                        </Badge>
-                      ))}
-                    </div>
+            <div className="p-4 bg-orange-50 dark:bg-navy-800 rounded-lg border border-orange-100 dark:border-navy-700">
+              <div className="mb-4">
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Input
+                      type="text"
+                      placeholder="Enter SNS name to search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={handleKeyPress}
+                      className="border-orange-200 dark:border-navy-600"
+                    />
                   </div>
-                  <Button
-                    onClick={proceedToCheckout}
+                  <Button 
+                    onClick={handleSearch}
+                    disabled={searching || !searchQuery.trim()}
                     className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800"
                   >
-                    Proceed to Checkout
+                    {searching ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Search className="h-4 w-4 mr-2" />
+                    )}
+                    Search
                   </Button>
                 </div>
+                
+                {error && (
+                  <div className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {error}
+                  </div>
+                )}
               </div>
-            )}
-
-            <div className="space-y-3">
-              {searching ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-16 w-full rounded-lg" />
-                  <Skeleton className="h-16 w-full rounded-lg" />
-                </div>
-              ) : names.length > 0 ? (
-                names.map(nameInfo => (
-                  <Card 
-                    key={nameInfo.id}
-                    className={`p-4 flex justify-between items-center ${
-                      nameInfo.status === 'available' 
-                        ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30' 
-                        : nameInfo.status === 'pending'
-                        ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-100 dark:border-yellow-900/30'
-                        : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 dark:text-gray-100">{nameInfo.name}</span>
-                        {nameInfo.status === 'available' ? (
-                          <Badge variant="outline" className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800">
-                            Available
-                          </Badge>
-                        ) : nameInfo.status === 'pending' ? (
-                          <Badge variant="outline" className="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800">
-                            Pending Registration
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800">
-                            Already Registered
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {nameInfo.status === 'taken' && nameInfo.owner && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Owner: {nameInfo.owner.substring(0, 10)}...{nameInfo.owner.substring(nameInfo.owner.length - 4)}
-                        </p>
-                      )}
+              
+              <div className="space-y-3">
+                {names.length > 0 ? (
+                  <div>
+                    <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-gray-100">Results</h3>
+                    
+                    <div className="space-y-2">
+                      {names.map((name) => (
+                        <Card key={name.id} className={`overflow-hidden ${
+                          name.status === 'available' ? 'border-green-300 dark:border-green-700' :
+                          name.status === 'pending' ? 'border-yellow-300 dark:border-yellow-700' :
+                          'border-red-300 dark:border-red-700'
+                        }`}>
+                          <div className="p-3 flex justify-between items-center">
+                            <div>
+                              <div className="flex items-center">
+                                <span className="text-gray-900 dark:text-gray-100 font-medium">{name.name}</span>
+                                <Badge className={`ml-2 ${
+                                  name.status === 'available' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                                  name.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
+                                  'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                                }`}>
+                                  {name.status === 'available' ? 'Available' :
+                                   name.status === 'pending' ? 'Pending' : 'Taken'}
+                                </Badge>
+                              </div>
+                              
+                              {name.status === 'taken' && name.owner && (
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  Owner: {name.owner.substring(0, 8)}...{name.owner.substring(name.owner.length - 8)}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {name.status === 'available' && (
+                              <div className="flex items-center">
+                                <input 
+                                  type="checkbox" 
+                                  id={`select-${name.id}`}
+                                  checked={selectedNames.includes(name.name)}
+                                  onChange={() => toggleNameSelection(name.name)}
+                                  className="rounded text-orange-600 focus:ring-orange-500 h-4 w-4" 
+                                />
+                                <label 
+                                  htmlFor={`select-${name.id}`} 
+                                  className="ml-2 text-sm text-gray-700 dark:text-gray-300"
+                                >
+                                  Select
+                                </label>
+                              </div>
+                            )}
+                            
+                            {name.status === 'pending' && (
+                              <div className="text-sm text-yellow-600 dark:text-yellow-400 flex items-center">
+                                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                Processing
+                              </div>
+                            )}
+                          </div>
+                        </Card>
+                      ))}
                     </div>
                     
-                    {nameInfo.status === 'available' && (
-                      <Button 
-                        size="sm"
-                        variant={selectedNames.includes(nameInfo.name) ? "default" : "outline"}
-                        className={selectedNames.includes(nameInfo.name) 
-                          ? "bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800" 
-                          : ""}
-                        onClick={() => toggleNameSelection(nameInfo.name)}
-                      >
-                        {selectedNames.includes(nameInfo.name) ? (
-                          <>
-                            <CheckCircle className="mr-1 h-4 w-4" />
-                            Selected
-                          </>
-                        ) : (
-                          'Select for Registration'
-                        )}
-                      </Button>
+                    {selectedNames.length > 0 && (
+                      <div className="mt-4 p-3 bg-orange-100 dark:bg-navy-900 rounded-lg border border-orange-200 dark:border-navy-700">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              {selectedNames.length} name{selectedNames.length !== 1 ? 's' : ''} selected
+                            </span>
+                            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                              Registration Fee: {registrationFee.toLocaleString()} sats / name
+                            </div>
+                          </div>
+                          
+                          <Button
+                            onClick={proceedToCheckout}
+                            className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800"
+                          >
+                            Continue
+                          </Button>
+                        </div>
+                      </div>
                     )}
-                  </Card>
-                ))
-              ) : (
-                <div className="p-4 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-navy-800 rounded-lg">
-                  Search for names to check their availability
-                </div>
-              )}
+                  </div>
+                ) : searching ? (
+                  <div className="py-8">
+                    <div className="flex flex-col items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-orange-600 dark:text-orange-400" />
+                      <p className="mt-2 text-gray-600 dark:text-gray-400">Searching for names...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8">
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <Search className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Search for SNS names</h3>
+                      <p className="mt-1 max-w-md text-gray-600 dark:text-gray-400">
+                        Enter a name to check its availability. Names must be at least 3 characters long.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
           
-          {/* Wallet Connection Tab */}
+          {/* Wallet Tab */}
           <TabsContent value="wallet">
             <div className="p-4 bg-orange-50 dark:bg-navy-800 rounded-lg border border-orange-100 dark:border-navy-700">
               <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Connect Your Bitcoin Wallet</h3>
               
-              <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                Connect a Bitcoin wallet to register your selected SNS names. 
-                The wallet address will be associated with your name registrations.
+              <p className="mb-4 text-gray-600 dark:text-gray-400">
+                Connect a Bitcoin wallet to register your selected SNS names. The wallet address will be associated with your name registrations.
               </p>
               
-              {/* Special section that shows after returning from mobile wallet redirect */}
-              {(() => {
-                // Check sessionStorage for redirect flag
-                const fromWallet = typeof window !== 'undefined' && sessionStorage.getItem('wallet_redirect') === 'true';
-                
-                if (fromWallet && !walletConnected && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                  return (
-                    <div className="space-y-4">
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md mb-4">
-                        <h4 className="font-medium text-blue-800 dark:text-blue-300 flex items-center">
-                          <CheckCircle className="h-5 w-5 mr-2 text-blue-500" /> Welcome Back
-                        </h4>
-                        <p className="text-blue-600 dark:text-blue-400 text-sm mt-1">
-                          If you authenticated in your Xverse wallet, tap the Continue button below to complete the connection.
-                        </p>
-                      </div>
-                      
-                      <div className="flex space-x-3">
-                        <Button
-                          className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800"
-                          onClick={() => {
-                            // Clear the session flag
-                            sessionStorage.removeItem('wallet_redirect');
-                            
-                            // Try to force authentication check again with Stacks
-                            try {
-                              // Force a fresh authentication check with the Stacks wallet
-                              const authData = {
-                                appDetails: {
-                                  name: 'Ordinarinos SNS',
-                                  icon: window.location.origin + '/logo.png',
-                                },
-                                redirectTo: window.location.href,
-                                onFinish: () => {
-                                  console.log("Authentication check complete");
-                                  // Will invoke callback after checking
-                                },
-                                userSession,
-                                onCancel: () => {
-                                  console.log("Authentication check cancelled");
-                                },
-                              };
-                              
-                              // First try getting authentication status directly
-                              if (userSession.isUserSignedIn()) {
-                                console.log("User is signed in according to session check");
-                                handleSuccessfulWalletConnection();
-                              } else {
-                                console.log("User not signed in, asking wallet again");
-                                // Create a new user session in case the old one is stale
-                                const newUserSession = new UserSession({ appConfig });
-                                
-                                // Check if there's existing session data
-                                const hasExistingSession = typeof localStorage !== 'undefined' && 
-                                  localStorage.getItem('blockstack-session') !== null;
-                                  
-                                if (hasExistingSession) {
-                                  console.log("Found existing session data, attempting to restore");
-                                  try {
-                                    if (newUserSession.isUserSignedIn()) {
-                                      console.log("New session shows user is signed in");
-                                      // Update the global user session
-                                      Object.assign(userSession, newUserSession);
-                                      handleSuccessfulWalletConnection();
-                                      return;
-                                    }
-                                  } catch (e) {
-                                    console.error("Error checking new session:", e);
-                                  }
-                                }
-                                
-                                // If no session or restoration failed, tell user
-                                toast({
-                                  title: "Authentication Required",
-                                  description: "Please authenticate in your wallet first, then try again.",
-                                  variant: "destructive"
-                                });
-                                
-                                // Offer to try to connect again
-                                setTimeout(() => {
-                                  openXverseWallet();
-                                }, 3000);
-                              }
-                            } catch (error) {
-                              console.error("Authentication check error:", error);
-                              toast({
-                                title: "Authentication Error",
-                                description: "Failed to verify your wallet authentication. Please try connecting again.",
-                                variant: "destructive"
-                              });
-                            }
-                          }}
-                        >
-                          Continue to Payment
-                        </Button>
-                        
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            // Clear the session flag
-                            sessionStorage.removeItem('wallet_redirect');
-                            // Try to open the wallet again
-                            openXverseWallet();
-                          }}
-                        >
-                          Retry Connection
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                }
-                
-                return null;
-              })()}
-              
-              {!walletConnected ? (
+              {showWalletOptions ? (
                 <div className="space-y-4">
-                  {!showWalletOptions ? (
-                    <div className="flex space-x-4">
-                      <Button 
-                        onClick={showWalletSelector}
-                        className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800"
-                      >
-                        <Wallet className="mr-2 h-4 w-4" />
-                        Connect Wallet
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">Select a Wallet</h4>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {/* Stacks-based wallets with real connection */}
-                        {/* Extra help for mobile users */}
-                        {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
-                          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md mb-4">
-                            <h4 className="font-medium text-blue-800 dark:text-blue-300 flex items-center mb-2">
-                              <AlertCircle className="h-4 w-4 mr-2" /> Mobile Wallet Notice
-                            </h4>
-                            <p className="text-blue-600 dark:text-blue-400 text-sm">
-                              On mobile devices, you'll need to install the wallet app first, then return to this page to connect.
-                            </p>
-                          </div>
-                        )}
-                        
-                        <Button
-                          variant="outline"
-                          className="h-auto py-3 px-4 flex items-center justify-start hover:bg-orange-50 dark:hover:bg-navy-700 border-orange-200 dark:border-navy-600"
-                          onClick={() => {
-                            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                            const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-                            
-                            // For mobile devices, use direct protocol links
-                            if (isMobile) {
-                              // Try direct protocol link first which should open the app if installed
-                              // These are universal links that are registered by the Xverse app
-                              
-                              toast({
-                                title: "Opening Xverse Wallet",
-                                description: "Attempting to open your Xverse wallet...",
-                                duration: 5000
-                              });
-                              
-                              // Save current state so we can recover after return
-                              sessionStorage.setItem('wallet_connection_attempt', 'true');
-                              sessionStorage.setItem('connection_timestamp', Date.now().toString());
-                              
-                              try {
-                                // Use specific Stacks authentication links with proper parameters
-                                // Create a callback URL with parameters that will help restore state
-                                const callbackUrl = `${window.location.origin}${window.location.pathname}?from_wallet=true&tab=payment&ts=${Date.now()}`;
-                                
-                                // Set up auth parameters for Stacks Connect
-                                const authOptions = {
-                                  appDetails: {
-                                    name: 'Ordinarinos SNS',
-                                    icon: window.location.origin + '/logo.png',
-                                  },
-                                  redirectTo: callbackUrl,
-                                  onFinish: () => {
-                                    console.log("Auth flow finished");
-                                    // This callback might not execute on mobile
-                                  },
-                                  onCancel: () => {
-                                    console.log("Auth flow cancelled");
-                                  },
-                                  userSession: userSession
-                                };
-                                
-                                // For iOS, we need a special approach with universal links
-                                if (isIOS) {
-                                  // Use Stacks connect API that generates the correct auth request
-                                  // and redirects through universal links
-                                  try {
-                                    // First try direct protocol which should work if app is installed
-                                    showConnect(authOptions);
-                                    
-                                    // Backup approach with timer if showConnect doesn't trigger
-                                    setTimeout(() => {
-                                      // Try a direct auth deep link
-                                      const appUrl = `xverse://connect?callback=${encodeURIComponent(callbackUrl)}`;
-                                      window.location.href = appUrl;
-                                    }, 1000);
-                                  } catch (e) {
-                                    console.error("Error with iOS connect:", e);
-                                    // Last resort deeplink
-                                    window.location.href = 'xverse://connect';
-                                  }
-                                } else {
-                                  // For Android, we use a similar approach but with Android specifics
-                                  try {
-                                    showConnect(authOptions);
-                                    
-                                    // Backup approach with timer
-                                    setTimeout(() => {
-                                      const appUrl = `xverse://connect?callback=${encodeURIComponent(callbackUrl)}`;
-                                      window.location.href = appUrl;
-                                    }, 1000);
-                                  } catch (e) {
-                                    console.error("Error with Android connect:", e);
-                                    window.location.href = 'xverse://connect';
-                                  }
-                                }
-                                
-                                // Show follow-up instructions after a delay
-                                setTimeout(() => {
-                                  toast({
-                                    title: "Wallet Connection",
-                                    description: "If your wallet didn't open, you may need to install Xverse first.",
-                                    duration: 8000
-                                  });
-                                }, 3000);
-                              } catch (e) {
-                                console.error("Error opening wallet:", e);
-                                
-                                // Fallback to store links if direct opening fails
-                                if (isIOS) {
-                                  window.location.href = 'https://apps.apple.com/app/xverse-wallet/id1633013386';
-                                } else {
-                                  window.location.href = 'https://play.google.com/store/apps/details?id=com.xverse.wallet';
-                                }
-                              }
-                            } else if (isJanewayURL) {
-                              // Special handling for Janeway
-                              directConnectForJaneway();
-                            } else {
-                              // Standard desktop connection
-                              connectToStacksWallet();
-                            }
-                          }}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center text-white mr-3">X</div>
-                              <div>
-                                <p className="font-medium text-left text-gray-900 dark:text-gray-100">
-                                  Xverse Wallet 
-                                  {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && 
-                                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 rounded-sm">
-                                      Open App
-                                    </span>
-                                  }
-                                  {isJanewayURL && 
-                                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-sm">
-                                      Stacks Connect
-                                    </span>
-                                  }
-                                </p>
-                                <p className="text-xs text-left text-gray-500 dark:text-gray-400">
-                                  Stacks + Bitcoin
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-xs text-right">
-                              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/40 rounded text-green-600 dark:text-green-400">
-                                Recommended
-                              </span>
-                            </div>
-                          </div>
-                        </Button>
-                        
-                        <Button
-                          variant="outline"
-                          className="h-auto py-3 px-4 flex items-center justify-start hover:bg-orange-50 dark:hover:bg-navy-700 border-orange-200 dark:border-navy-600"
-                          onClick={connectToStacksWallet}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center">
-                              <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
-                                <Wallet className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-                              </div>
-                              <div>
-                                <p className="font-medium text-left text-gray-900 dark:text-gray-100">Hiro Wallet</p>
-                                <p className="text-xs text-left text-gray-500 dark:text-gray-400">
-                                  Stacks Compatible
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-xs text-right">
-                              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/40 rounded text-green-600 dark:text-green-400">
-                                Software
-                              </span>
-                            </div>
-                          </div>
-                        </Button>
-                        
-                        {/* Other wallet options */}
-                        {detectedWallets.filter(w => w.type === 'hardware').map((wallet, index) => (
-                          <Button
-                            key={index}
-                            variant="outline"
-                            className="h-auto py-3 px-4 flex items-center justify-start hover:bg-orange-50 dark:hover:bg-navy-700 border-orange-200 dark:border-navy-600"
-                            onClick={() => connectToWallet(wallet)}
-                          >
-                            <div className="flex items-center justify-between w-full">
-                              <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-3">
-                                  <Wallet className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-left text-gray-900 dark:text-gray-100">{wallet.name}</p>
-                                  {wallet.address && (
-                                    <p className="text-xs text-left text-gray-500 dark:text-gray-400">
-                                      {wallet.address.substring(0, 7)}...{wallet.address.substring(wallet.address.length - 4)}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-xs text-right">
-                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400">
-                                  Hardware
-                                </span>
-                              </div>
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                      
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setShowWalletOptions(false)}
-                        className="mt-2"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
+                  <h4 className="font-medium text-gray-800 dark:text-gray-200">Select a wallet to connect</h4>
                   
-                  {!showWalletOptions && (
-                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 text-sm rounded">
-                      <p>Connect your wallet using one of the following methods:</p>
-                      <ul className="list-disc list-inside mt-2 space-y-1">
-                        <li><strong>Recommended:</strong> Stacks-compatible wallets (Xverse, Hiro)</li>
-                        <li>Hardware wallets (Ledger, Trezor)</li>
-                        <li>Mobile wallets through WalletConnect</li>
-                      </ul>
-                      <p className="mt-2 text-xs">Note: Xverse wallet provides the best support for both Stacks and Bitcoin operations.</p>
-                    </div>
-                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {detectedWallets.map((wallet, index) => (
+                      <Card key={index} className="overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-700 cursor-pointer transition-colors" onClick={() => wallet.name === 'Xverse' ? openXverseWallet() : connectToWallet(wallet)}>
+                        <div className="p-3 flex items-center">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mr-3">
+                            {wallet.name === 'Xverse' && (
+                              <span className="text-lg font-bold text-orange-600 dark:text-orange-400">X</span>
+                            )}
+                            {wallet.name === 'Hiro Wallet' && (
+                              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">H</span>
+                            )}
+                            {wallet.name === 'Hardware Wallet' && (
+                              <span className="text-lg font-bold text-gray-600 dark:text-gray-400">H</span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900 dark:text-gray-100">{wallet.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {wallet.type.charAt(0).toUpperCase() + wallet.type.slice(1)} wallet
+                            </div>
+                          </div>
+                          <Badge className={`${
+                            wallet.type === 'hardware' 
+                              ? 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300' 
+                              : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                          }`}>
+                            {wallet.type === 'hardware' ? 'Hardware' : 'Software'}
+                          </Badge>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                  
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <Button 
+                      variant="outline"
+                      onClick={() => setShowWalletOptions(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400 mr-2 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-green-800 dark:text-green-300">
-                        {walletData?.walletType === 'Stacks' ? 'Stacks Wallet Connected' : 'Wallet Connected Successfully'}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {walletData?.walletType === 'Stacks' 
-                          ? `Your ${walletData.userData?.profile?.name || 'Stacks'} wallet is connected and ready for transactions.`
-                          : 'Your Bitcoin wallet is connected and ready to use.'}
-                      </p>
-                      {walletData?.address && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Address: {walletData.address.substring(0, 10)}...{walletData.address.substring(walletData.address.length - 4)}
-                        </p>
-                      )}
+                  {walletConnected ? (
+                    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                      <div className="flex items-center">
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" />
+                        <h4 className="font-medium text-green-800 dark:text-green-300">Wallet Connected</h4>
+                      </div>
+                      
+                      <div className="mt-3 space-y-3">
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Wallet Address:</span>
+                          <code className="bg-white dark:bg-navy-950 p-2 rounded text-sm text-gray-800 dark:text-gray-200 break-all border border-gray-200 dark:border-gray-700">
+                            {walletData?.address || selectedWallet}
+                          </code>
+                        </div>
+                        
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Wallet Type:</span>
+                          <span className="text-gray-800 dark:text-gray-200">
+                            {walletData?.walletType || "Bitcoin Wallet"}
+                          </span>
+                        </div>
+                        
+                        {!walletData?.userData && walletConnected && (
+                          <div className="mt-2">
+                            <Button 
+                              size="sm"
+                              onClick={testWalletSignature}
+                              className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800"
+                            >
+                              <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                              Verify Signing
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm text-blue-800 dark:text-blue-300 mb-3">
+                        You need to connect a wallet to register names. Choose one of the options below:
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-2">
+                        {isJanewayURL && (
+                          <Button 
+                            onClick={directConnectForJaneway}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            <Wallet className="h-4 w-4 mr-2" />
+                            Connect in Janeway
+                          </Button>
+                        )}
+                        
+                        <Button 
+                          onClick={connectToStacksWallet}
+                          className="bg-orange-600 hover:bg-orange-700 text-white dark:bg-orange-700 dark:hover:bg-orange-800"
+                        >
+                          <Wallet className="h-4 w-4 mr-2" />
+                          Connect Stacks Wallet
+                        </Button>
+                        
+                        <Button 
+                          variant="outline"
+                          onClick={showWalletSelector}
+                          className="border-orange-200 text-orange-700 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-navy-800"
+                        >
+                          Show all wallet options
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="space-y-3">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
