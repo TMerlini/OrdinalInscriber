@@ -173,8 +173,15 @@ export default function SNSRegister() {
       }
     } else {
       // Simple fallback for mobile direct link
-      if (typeof window !== 'undefined' && window.location) {
-        window.location.href = 'xverse://';
+      try {
+        if (typeof window !== 'undefined') {
+          const location = window.location;
+          if (location) {
+            location.href = 'xverse://';
+          }
+        }
+      } catch (err) {
+        console.error('Error opening Xverse app:', err);
       }
     }
   };
@@ -302,48 +309,44 @@ export default function SNSRegister() {
   const isJanewayURL = typeof window !== 'undefined' && 
     window.location.hostname.includes('janeway.replit.dev');
     
-  // Special direct wallet connection method for Janeway environment
+  // Special connection method for Janeway environment
   const directConnectForJaneway = () => {
-    // For Janeway environment, we'll use a more direct approach to connect
+    // For Janeway environment, we'll use a direct Stacks wallet connection
     toast({
       title: "Connecting Wallet",
-      description: "Using fast connect for testing environment...",
+      description: "Initializing wallet connection...",
       duration: 3000
     });
     
-    // Generate a simulated Stacks address for testing
-    const testWalletAddress = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
+    // Use the standard Stacks Connect flow but with environment-specific settings
+    // Create a special redirect URL with parameters for Janeway environment
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('from_wallet', 'true');
+    currentUrl.searchParams.set('tab', 'payment');
+    currentUrl.searchParams.set('janeway', 'true');
+    const redirectUrl = currentUrl.toString();
     
-    // Create wallet data directly (for demo only)
-    const walletDemoData = {
-      userData: {
-        profile: {
-          name: 'Test Wallet',
-          stxAddress: {
-            testnet: testWalletAddress,
-            mainnet: 'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7'
-          }
-        }
+    // Use showConnect to connect to a real wallet
+    showConnect({
+      appDetails: {
+        name: 'Ordinarinos SNS Registration',
+        icon: window.location.origin + '/logo.png',
       },
-      address: testWalletAddress,
-      walletType: 'Stacks'
-    };
-    
-    // Set wallet data
-    setWalletData(walletDemoData);
-    setWalletConnected(true);
-    setSelectedWallet(testWalletAddress);
-    
-    // Show success message
-    toast({
-      title: "Wallet Connected",
-      description: "Fast-connect wallet is ready for testing SNS registration.",
-      variant: "default"
+      redirectTo: redirectUrl,
+      userSession,
+      onFinish: () => {
+        // Process the wallet connection result
+        handleSuccessfulWalletConnection();
+      },
+      onCancel: () => {
+        console.log("Wallet connection cancelled");
+        toast({
+          title: "Connection Cancelled",
+          description: "Wallet connection was cancelled. Please try again.",
+          variant: "destructive"
+        });
+      },
     });
-    
-    // Hide wallet options and move to payment tab
-    setShowWalletOptions(false);
-    setActiveTab('payment');
   };
 
   // Mock SNS name check function (for testing)
@@ -968,7 +971,7 @@ export default function SNSRegister() {
                                     <span className="ml-2 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 rounded-sm">Mobile Direct</span>
                                   }
                                   {isJanewayURL && 
-                                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-sm">Fast Connect</span>
+                                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded-sm">Stacks Connect</span>
                                   }
                                 </p>
                                 <p className="text-xs text-left text-gray-500 dark:text-gray-400">
