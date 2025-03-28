@@ -128,11 +128,55 @@ export default function SNSRegister() {
       duration: 5000
     });
     
-    // Indicate that after returning from wallet, we should show a continue button
-    sessionStorage.setItem('wallet_redirect', 'true');
+    // Save current URL to help with redirect back
+    const returnUrl = window.location.href;
     
-    // Simply redirect to Xverse deep link
-    window.location.href = 'xverse://';
+    // Store more detailed wallet information
+    sessionStorage.setItem('wallet_redirect', 'true');
+    sessionStorage.setItem('wallet_type', 'xverse');
+    sessionStorage.setItem('wallet_return_url', returnUrl);
+    sessionStorage.setItem('wallet_redirect_time', Date.now().toString());
+    
+    // On mobile, we need to use the Xverse deep link
+    // First try with authentication parameters
+    if (typeof window !== 'undefined') {
+      try {
+        const authOptions = {
+          appDetails: {
+            name: 'Ordinarinos SNS',
+            icon: window.location.origin + '/logo.png',
+          },
+          redirectTo: returnUrl,
+          onFinish: () => {
+            console.log("Xverse auth flow finished");
+            // Should automatically return to browser
+          },
+        };
+        
+        // Store auth details for verification
+        sessionStorage.setItem('auth_request_pending', 'true');
+        
+        // Redirect to Xverse wallet with proper authentication parameters
+        showConnect(authOptions)
+          .then(() => {
+            console.log("Connect request sent to Xverse");
+          })
+          .catch(err => {
+            console.error("Error connecting to Xverse:", err);
+            // Fallback to simple deep link if showConnect fails
+            window.location.href = 'xverse://';
+          });
+      } catch (e) {
+        console.error("Error in Xverse connection:", e);
+        // Fallback to simple deep link
+        window.location.href = 'xverse://';
+      }
+    } else {
+      // Simple fallback
+      if (typeof window !== 'undefined') {
+        window.location.href = 'xverse://';
+      }
+    }
   };
   
   // Connect to Stacks wallet (Hiro, Xverse, etc.)
@@ -747,13 +791,70 @@ export default function SNSRegister() {
                             // Clear the session flag
                             sessionStorage.removeItem('wallet_redirect');
                             
-                            // Check if userSession is authenticated
-                            if (userSession.isUserSignedIn()) {
-                              handleSuccessfulWalletConnection();
-                            } else {
+                            // Try to force authentication check again with Stacks
+                            try {
+                              // Force a fresh authentication check with the Stacks wallet
+                              const authData = {
+                                appDetails: {
+                                  name: 'Ordinarinos SNS',
+                                  icon: window.location.origin + '/logo.png',
+                                },
+                                redirectTo: window.location.href,
+                                onFinish: () => {
+                                  console.log("Authentication check complete");
+                                  // Will invoke callback after checking
+                                },
+                                userSession,
+                                onCancel: () => {
+                                  console.log("Authentication check cancelled");
+                                },
+                              };
+                              
+                              // First try getting authentication status directly
+                              if (userSession.isUserSignedIn()) {
+                                console.log("User is signed in according to session check");
+                                handleSuccessfulWalletConnection();
+                              } else {
+                                console.log("User not signed in, asking wallet again");
+                                // Create a new user session in case the old one is stale
+                                const newUserSession = new UserSession({ appConfig });
+                                
+                                // Check if there's existing session data
+                                const hasExistingSession = typeof localStorage !== 'undefined' && 
+                                  localStorage.getItem('blockstack-session') !== null;
+                                  
+                                if (hasExistingSession) {
+                                  console.log("Found existing session data, attempting to restore");
+                                  try {
+                                    if (newUserSession.isUserSignedIn()) {
+                                      console.log("New session shows user is signed in");
+                                      // Update the global user session
+                                      Object.assign(userSession, newUserSession);
+                                      handleSuccessfulWalletConnection();
+                                      return;
+                                    }
+                                  } catch (e) {
+                                    console.error("Error checking new session:", e);
+                                  }
+                                }
+                                
+                                // If no session or restoration failed, tell user
+                                toast({
+                                  title: "Authentication Required",
+                                  description: "Please authenticate in your wallet first, then try again.",
+                                  variant: "destructive"
+                                });
+                                
+                                // Offer to try to connect again
+                                setTimeout(() => {
+                                  openXverseWallet();
+                                }, 3000);
+                              }
+                            } catch (error) {
+                              console.error("Authentication check error:", error);
                               toast({
-                                title: "Not Authenticated",
-                                description: "Please authenticate in your wallet before continuing.",
+                                title: "Authentication Error",
+                                description: "Failed to verify your wallet authentication. Please try connecting again.",
                                 variant: "destructive"
                               });
                             }
