@@ -104,6 +104,13 @@ export default function SNSRegister() {
     // Detect if running on mobile
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     
+    // First, check if we're already authenticated (in case returning from wallet app)
+    if (userSession.isUserSignedIn()) {
+      console.log("User is already signed in, proceeding with wallet data");
+      handleSuccessfulWalletConnection();
+      return;
+    }
+    
     // Special handling for Xverse wallet on mobile
     if (isMobile) {
       // Use mobile-specific approach for Xverse
@@ -132,6 +139,17 @@ export default function SNSRegister() {
           connectWithShowConnect();
         }, 1000);
         
+        // After opening wallet, check periodically if we're signed in
+        const checkInterval = setInterval(() => {
+          if (userSession.isUserSignedIn()) {
+            clearInterval(checkInterval);
+            handleSuccessfulWalletConnection();
+          }
+        }, 2000);
+        
+        // Clear the interval after 30 seconds to prevent memory leaks
+        setTimeout(() => clearInterval(checkInterval), 30000);
+        
         return;
       } catch (err) {
         console.error("Error with direct Xverse connection:", err);
@@ -153,6 +171,37 @@ export default function SNSRegister() {
     connectWithShowConnect();
   };
   
+  // Helper function to handle successful connection
+  const handleSuccessfulWalletConnection = () => {
+    if (userSession.isUserSignedIn()) {
+      const userData = userSession.loadUserData();
+      const address = userData.profile?.stxAddress?.testnet; // Use .mainnet for production
+      
+      console.log("Authenticated with Stacks wallet, address:", address);
+      
+      if (address) {
+        setWalletData({
+          userData,
+          address,
+          walletType: 'Stacks'
+        });
+        
+        setWalletConnected(true);
+        setSelectedWallet(address);
+        
+        toast({
+          title: "Wallet Connected",
+          description: "Your Stacks-compatible wallet has been connected successfully.",
+          variant: "default"
+        });
+        
+        // Hide wallet options and move to payment tab
+        setShowWalletOptions(false);
+        setActiveTab('payment');
+      }
+    }
+  };
+  
   // Extracted showConnect logic to allow for using it as a fallback
   const connectWithShowConnect = () => {
     showConnect({
@@ -164,33 +213,7 @@ export default function SNSRegister() {
       // Set to true to force selection of wallet even if previously authenticated
       userSession,
       onFinish: () => {
-        if (userSession.isUserSignedIn()) {
-          const userData = userSession.loadUserData();
-          const address = userData.profile?.stxAddress?.testnet; // Use .mainnet for production
-          
-          console.log("Authenticated with Stacks wallet, address:", address);
-          
-          if (address) {
-            setWalletData({
-              userData,
-              address,
-              walletType: 'Stacks'
-            });
-            
-            setWalletConnected(true);
-            setSelectedWallet(address);
-            
-            toast({
-              title: "Wallet Connected",
-              description: "Your Stacks-compatible wallet has been connected successfully.",
-              variant: "default"
-            });
-            
-            // Hide wallet options and move to payment tab
-            setShowWalletOptions(false);
-            setActiveTab('payment');
-          }
-        }
+        handleSuccessfulWalletConnection();
       },
       onCancel: () => {
         console.log("Wallet connection cancelled");
