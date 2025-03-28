@@ -61,9 +61,18 @@ export default function SNSRegister() {
   
   // Check for existing session on component mount
   useEffect(() => {
+    // Check URL parameters to see if we're returning from a wallet app
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromWallet = urlParams.get('from_wallet') === 'true';
+    const targetTab = urlParams.get('tab');
+    
+    // If user is authenticated, set up wallet data
     if (userSession.isUserSignedIn()) {
       const userData = userSession.loadUserData();
       const address = userData.profile?.stxAddress?.testnet; // Use .mainnet for production
+      
+      console.log("Found signed in user:", address);
+      console.log("URL params:", { fromWallet, targetTab });
       
       if (address) {
         setWalletData({
@@ -75,6 +84,16 @@ export default function SNSRegister() {
         setWalletConnected(true);
         setSelectedWallet(address);
         
+        // If coming from wallet authentication, go to payment tab
+        if (fromWallet || targetTab === 'payment') {
+          console.log("Redirecting to payment tab from URL parameters");
+          setActiveTab('payment');
+          
+          // Clean up URL
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+        
         toast({
           title: "Wallet Connected",
           description: "Your wallet is already connected.",
@@ -82,6 +101,23 @@ export default function SNSRegister() {
         });
       }
     }
+    
+    // Set up a listener for post-message redirect (for mobile wallets)
+    const messageHandler = (event: MessageEvent) => {
+      if (event.data && event.data.from === 'wallet-connect' && event.data.authenticated) {
+        console.log("Received post-message wallet authentication");
+        // If we get a message indicating successful authentication, check session again
+        if (userSession.isUserSignedIn()) {
+          handleSuccessfulWalletConnection();
+        }
+      }
+    };
+    
+    window.addEventListener('message', messageHandler);
+    
+    return () => {
+      window.removeEventListener('message', messageHandler);
+    };
   }, []);
   
   // Connect to Stacks wallet (Hiro, Xverse, etc.)
@@ -119,6 +155,14 @@ export default function SNSRegister() {
         description: "Attempting to connect with Xverse wallet app...",
       });
       
+      // Create a special redirect URL with a parameter that indicates we're returning from wallet
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('from_wallet', 'true');
+      currentUrl.searchParams.set('tab', 'payment');
+      const redirectUrl = currentUrl.toString();
+      
+      console.log("Setting redirect URL:", redirectUrl);
+      
       // Use direct deep linking as a fallback method
       try {
         // Try to directly open Xverse wallet with deep link
@@ -136,7 +180,7 @@ export default function SNSRegister() {
           // If we're still here, the app might not have opened
           // Use QR code approach via showConnect
           document.body.removeChild(a);
-          connectWithShowConnect();
+          connectWithShowConnect(redirectUrl);
         }, 1000);
         
         // After opening wallet, check periodically if we're signed in
@@ -167,8 +211,14 @@ export default function SNSRegister() {
       });
     }
     
+    // Create a special redirect URL with a parameter that indicates we're returning from wallet
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('from_wallet', 'true');
+    currentUrl.searchParams.set('tab', 'payment');
+    const redirectUrl = currentUrl.toString();
+    
     // Use standard Stacks Connect approach
-    connectWithShowConnect();
+    connectWithShowConnect(redirectUrl);
   };
   
   // Helper function to handle successful connection
@@ -203,13 +253,15 @@ export default function SNSRegister() {
   };
   
   // Extracted showConnect logic to allow for using it as a fallback
-  const connectWithShowConnect = () => {
+  const connectWithShowConnect = (redirectUrl: string = '/') => {
+    console.log("Using redirect URL in showConnect:", redirectUrl);
+    
     showConnect({
       appDetails: {
         name: 'Ordinarinos Inscription Tool',
         icon: window.location.origin + '/logo.png',
       },
-      redirectTo: '/',
+      redirectTo: redirectUrl,
       // Set to true to force selection of wallet even if previously authenticated
       userSession,
       onFinish: () => {
