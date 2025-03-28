@@ -120,6 +120,18 @@ export default function SNSRegister() {
     };
   }, []);
   
+  // Direct function to just open Xverse wallet on mobile
+  const openXverseWallet = () => {
+    toast({
+      title: "Opening Xverse Wallet",
+      description: "Redirecting to Xverse app. Please authenticate and return to this page.",
+      duration: 5000
+    });
+    
+    // Simply redirect to Xverse deep link
+    window.location.href = 'xverse://';
+  };
+  
   // Connect to Stacks wallet (Hiro, Xverse, etc.)
   const connectToStacksWallet = () => {
     // First check if Stacks-compatible wallet is available in the browser
@@ -149,101 +161,9 @@ export default function SNSRegister() {
     
     // Special handling for Xverse wallet on mobile
     if (isMobile) {
-      // For mobile, use a simpler approach that's more reliable
-      toast({
-        title: "Mobile Detected",
-        description: "Launching Xverse wallet - after authenticating, please return to this app.",
-        duration: 5000
-      });
-      
-      // For direct interaction, create a simple button the user can directly click
-      // This is more reliable than automatic approaches on mobile
-      // Create a special dialog to help the user through the process
-      const dialog = document.createElement('div');
-      dialog.style.position = 'fixed';
-      dialog.style.top = '0';
-      dialog.style.left = '0';
-      dialog.style.width = '100%';
-      dialog.style.height = '100%';
-      dialog.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
-      dialog.style.zIndex = '9999';
-      dialog.style.display = 'flex';
-      dialog.style.flexDirection = 'column';
-      dialog.style.alignItems = 'center';
-      dialog.style.justifyContent = 'center';
-      dialog.style.padding = '20px';
-      dialog.style.color = 'white';
-      dialog.style.textAlign = 'center';
-      
-      // Add content to the dialog
-      dialog.innerHTML = `
-        <div style="max-width: 500px; background: #192742; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);">
-          <h3 style="margin-top: 0; color: white; font-size: 20px;">Connect with Xverse Wallet</h3>
-          <p style="margin-bottom: 20px; color: #ccc; font-size: 16px;">
-            For mobile wallet connections:
-            <br>1. Tap the button below to open Xverse
-            <br>2. Authenticate in the Xverse app
-            <br>3. Return to this browser tab
-            <br>4. Tap "Manually Continue" to proceed
-          </p>
-          <button id="xverse-open-btn" style="background: #f97316; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; font-size: 16px; width: 80%; margin-bottom: 15px; cursor: pointer;">
-            Open Xverse Wallet
-          </button>
-          <button id="xverse-continue-btn" style="background: #475569; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; font-size: 16px; width: 80%; margin-bottom: 15px; cursor: pointer;">
-            Manually Continue
-          </button>
-          <button id="xverse-cancel-btn" style="background: transparent; color: #94a3b8; border: 1px solid #64748b; padding: 10px; border-radius: 6px; font-size: 14px; cursor: pointer; width: 80%;">
-            Cancel
-          </button>
-        </div>
-      `;
-      
-      // Add the dialog to the body
-      document.body.appendChild(dialog);
-      
-      // Add event listeners
-      const openBtn = document.getElementById('xverse-open-btn');
-      const continueBtn = document.getElementById('xverse-continue-btn');
-      const cancelBtn = document.getElementById('xverse-cancel-btn');
-      
-      if (openBtn) {
-        openBtn.addEventListener('click', () => {
-          window.location.href = 'xverse://';
-        });
-      }
-      
-      if (continueBtn) {
-        continueBtn.addEventListener('click', () => {
-          // Check if user is signed in again
-          if (userSession.isUserSignedIn()) {
-            // User is now signed in, proceed with connection
-            handleSuccessfulWalletConnection();
-            document.body.removeChild(dialog);
-          } else {
-            // If not signed in, use showConnect as fallback
-            // Create a special redirect URL with a parameter that indicates we're returning from wallet
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('from_wallet', 'true');
-            currentUrl.searchParams.set('tab', 'payment');
-            const redirectUrl = currentUrl.toString();
-            
-            connectWithShowConnect(redirectUrl);
-            document.body.removeChild(dialog);
-          }
-        });
-      }
-      
-      if (cancelBtn) {
-        cancelBtn.addEventListener('click', () => {
-          document.body.removeChild(dialog);
-          toast({
-            title: "Connection Cancelled",
-            description: "Wallet connection was cancelled.",
-            variant: "destructive"
-          });
-        });
-      }
-      
+      // For very simple direct link, just open Xverse wallet
+      // without any complicated UI or redirects
+      openXverseWallet();
       return;
     }
     
@@ -821,13 +741,18 @@ export default function SNSRegister() {
                         <Button
                           variant="outline"
                           className="h-auto py-3 px-4 flex items-center justify-start hover:bg-orange-50 dark:hover:bg-navy-700 border-orange-200 dark:border-navy-600"
-                          onClick={connectToStacksWallet}
+                          onClick={/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? openXverseWallet : connectToStacksWallet}
                         >
                           <div className="flex items-center justify-between w-full">
                             <div className="flex items-center">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center text-white mr-3">X</div>
                               <div>
-                                <p className="font-medium text-left text-gray-900 dark:text-gray-100">Xverse Wallet</p>
+                                <p className="font-medium text-left text-gray-900 dark:text-gray-100">
+                                  Xverse Wallet 
+                                  {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && 
+                                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 rounded-sm">Mobile Direct</span>
+                                  }
+                                </p>
                                 <p className="text-xs text-left text-gray-500 dark:text-gray-400">
                                   Stacks + Bitcoin
                                 </p>
