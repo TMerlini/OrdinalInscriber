@@ -149,56 +149,102 @@ export default function SNSRegister() {
     
     // Special handling for Xverse wallet on mobile
     if (isMobile) {
-      // Use mobile-specific approach for Xverse
+      // For mobile, use a simpler approach that's more reliable
       toast({
         title: "Mobile Detected",
-        description: "Attempting to connect with Xverse wallet app...",
+        description: "Launching Xverse wallet - after authenticating, please return to this app.",
+        duration: 5000
       });
       
-      // Create a special redirect URL with a parameter that indicates we're returning from wallet
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set('from_wallet', 'true');
-      currentUrl.searchParams.set('tab', 'payment');
-      const redirectUrl = currentUrl.toString();
+      // For direct interaction, create a simple button the user can directly click
+      // This is more reliable than automatic approaches on mobile
+      // Create a special dialog to help the user through the process
+      const dialog = document.createElement('div');
+      dialog.style.position = 'fixed';
+      dialog.style.top = '0';
+      dialog.style.left = '0';
+      dialog.style.width = '100%';
+      dialog.style.height = '100%';
+      dialog.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+      dialog.style.zIndex = '9999';
+      dialog.style.display = 'flex';
+      dialog.style.flexDirection = 'column';
+      dialog.style.alignItems = 'center';
+      dialog.style.justifyContent = 'center';
+      dialog.style.padding = '20px';
+      dialog.style.color = 'white';
+      dialog.style.textAlign = 'center';
       
-      console.log("Setting redirect URL:", redirectUrl);
+      // Add content to the dialog
+      dialog.innerHTML = `
+        <div style="max-width: 500px; background: #192742; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);">
+          <h3 style="margin-top: 0; color: white; font-size: 20px;">Connect with Xverse Wallet</h3>
+          <p style="margin-bottom: 20px; color: #ccc; font-size: 16px;">
+            For mobile wallet connections:
+            <br>1. Tap the button below to open Xverse
+            <br>2. Authenticate in the Xverse app
+            <br>3. Return to this browser tab
+            <br>4. Tap "Manually Continue" to proceed
+          </p>
+          <button id="xverse-open-btn" style="background: #f97316; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; font-size: 16px; width: 80%; margin-bottom: 15px; cursor: pointer;">
+            Open Xverse Wallet
+          </button>
+          <button id="xverse-continue-btn" style="background: #475569; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; font-size: 16px; width: 80%; margin-bottom: 15px; cursor: pointer;">
+            Manually Continue
+          </button>
+          <button id="xverse-cancel-btn" style="background: transparent; color: #94a3b8; border: 1px solid #64748b; padding: 10px; border-radius: 6px; font-size: 14px; cursor: pointer; width: 80%;">
+            Cancel
+          </button>
+        </div>
+      `;
       
-      // Use direct deep linking as a fallback method
-      try {
-        // Try to directly open Xverse wallet with deep link
-        const xverseDeepLink = `xverse://`;
-        
-        // Create a hidden anchor tag and click it
-        const a = document.createElement('a');
-        a.href = xverseDeepLink;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        
-        // Set a timeout to check if the app opened
-        setTimeout(() => {
-          // If we're still here, the app might not have opened
-          // Use QR code approach via showConnect
-          document.body.removeChild(a);
-          connectWithShowConnect(redirectUrl);
-        }, 1000);
-        
-        // After opening wallet, check periodically if we're signed in
-        const checkInterval = setInterval(() => {
-          if (userSession.isUserSignedIn()) {
-            clearInterval(checkInterval);
-            handleSuccessfulWalletConnection();
-          }
-        }, 2000);
-        
-        // Clear the interval after 30 seconds to prevent memory leaks
-        setTimeout(() => clearInterval(checkInterval), 30000);
-        
-        return;
-      } catch (err) {
-        console.error("Error with direct Xverse connection:", err);
-        // Fall back to showConnect
+      // Add the dialog to the body
+      document.body.appendChild(dialog);
+      
+      // Add event listeners
+      const openBtn = document.getElementById('xverse-open-btn');
+      const continueBtn = document.getElementById('xverse-continue-btn');
+      const cancelBtn = document.getElementById('xverse-cancel-btn');
+      
+      if (openBtn) {
+        openBtn.addEventListener('click', () => {
+          window.location.href = 'xverse://';
+        });
       }
+      
+      if (continueBtn) {
+        continueBtn.addEventListener('click', () => {
+          // Check if user is signed in again
+          if (userSession.isUserSignedIn()) {
+            // User is now signed in, proceed with connection
+            handleSuccessfulWalletConnection();
+            document.body.removeChild(dialog);
+          } else {
+            // If not signed in, use showConnect as fallback
+            // Create a special redirect URL with a parameter that indicates we're returning from wallet
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('from_wallet', 'true');
+            currentUrl.searchParams.set('tab', 'payment');
+            const redirectUrl = currentUrl.toString();
+            
+            connectWithShowConnect(redirectUrl);
+            document.body.removeChild(dialog);
+          }
+        });
+      }
+      
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          document.body.removeChild(dialog);
+          toast({
+            title: "Connection Cancelled",
+            description: "Wallet connection was cancelled.",
+            variant: "destructive"
+          });
+        });
+      }
+      
+      return;
     }
     
     if (!hasXverse && !hasHiro && !hasStacks) {
