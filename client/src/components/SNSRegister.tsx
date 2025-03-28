@@ -229,15 +229,32 @@ export default function SNSRegister() {
     try {
       // For mobile devices, use specific universal links that work whether app is installed or not
       if (isMobile) {
-        if (isIOS) {
-          // iOS approach - open in App Store if not installed
-          window.location.href = 'https://apps.apple.com/app/xverse-wallet/id1633013386';
-        } else if (isAndroid) {
-          // Android approach - open in Play Store if not installed
-          window.location.href = 'https://play.google.com/store/apps/details?id=com.xverse.wallet';
-        } else {
-          // Fallback to direct protocol for other mobile browsers
+        // Fixed direct protocol approach for mobile browsers 
+        try {
+          // First try direct protocol which will open the app if installed
           window.location.href = 'xverse://';
+          
+          // Set a timeout to check if the app was opened
+          setTimeout(() => {
+            // If we're still here after timeout, app wasn't opened, so redirect to app store
+            if (document.hidden) {
+              return; // User already switched to the app
+            }
+            
+            if (isIOS) {
+              window.location.href = 'https://apps.apple.com/us/app/xverse-wallet/id1633013386';
+            } else if (isAndroid) {
+              window.location.href = 'https://play.google.com/store/apps/details?id=com.xverse.wallet';
+            }
+          }, 2000);
+        } catch (appError) {
+          console.error('Error opening app:', appError);
+          // Fallback to app store links
+          if (isIOS) {
+            window.location.href = 'https://apps.apple.com/us/app/xverse-wallet/id1633013386';
+          } else if (isAndroid) {
+            window.location.href = 'https://play.google.com/store/apps/details?id=com.xverse.wallet';
+          }
         }
         
         // Store connection attempt in session storage
