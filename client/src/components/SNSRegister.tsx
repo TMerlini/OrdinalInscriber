@@ -128,6 +128,9 @@ export default function SNSRegister() {
       duration: 5000
     });
     
+    // Indicate that after returning from wallet, we should show a continue button
+    sessionStorage.setItem('wallet_redirect', 'true');
+    
     // Simply redirect to Xverse deep link
     window.location.href = 'xverse://';
   };
@@ -719,6 +722,64 @@ export default function SNSRegister() {
                 Connect a Bitcoin wallet to register your selected SNS names. 
                 The wallet address will be associated with your name registrations.
               </p>
+              
+              {/* Special section that shows after returning from mobile wallet redirect */}
+              {(() => {
+                // Check sessionStorage for redirect flag
+                const fromWallet = typeof window !== 'undefined' && sessionStorage.getItem('wallet_redirect') === 'true';
+                
+                if (fromWallet && !walletConnected && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                  return (
+                    <div className="space-y-4">
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md mb-4">
+                        <h4 className="font-medium text-blue-800 dark:text-blue-300 flex items-center">
+                          <CheckCircle className="h-5 w-5 mr-2 text-blue-500" /> Welcome Back
+                        </h4>
+                        <p className="text-blue-600 dark:text-blue-400 text-sm mt-1">
+                          If you authenticated in your Xverse wallet, tap the Continue button below to complete the connection.
+                        </p>
+                      </div>
+                      
+                      <div className="flex space-x-3">
+                        <Button
+                          className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800"
+                          onClick={() => {
+                            // Clear the session flag
+                            sessionStorage.removeItem('wallet_redirect');
+                            
+                            // Check if userSession is authenticated
+                            if (userSession.isUserSignedIn()) {
+                              handleSuccessfulWalletConnection();
+                            } else {
+                              toast({
+                                title: "Not Authenticated",
+                                description: "Please authenticate in your wallet before continuing.",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                        >
+                          Continue to Payment
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            // Clear the session flag
+                            sessionStorage.removeItem('wallet_redirect');
+                            // Try to open the wallet again
+                            openXverseWallet();
+                          }}
+                        >
+                          Retry Connection
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                return null;
+              })()}
               
               {!walletConnected ? (
                 <div className="space-y-4">
