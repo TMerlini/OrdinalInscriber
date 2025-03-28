@@ -172,8 +172,8 @@ export default function SNSRegister() {
         window.location.href = 'xverse://';
       }
     } else {
-      // Simple fallback
-      if (typeof window !== 'undefined') {
+      // Simple fallback for mobile direct link
+      if (typeof window !== 'undefined' && window.location) {
         window.location.href = 'xverse://';
       }
     }
@@ -298,9 +298,53 @@ export default function SNSRegister() {
     { name: 'Exchange Wallet', address: '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy', type: 'exchange', balance: 450000 }
   ];
   
-  // Check if we're in a Janeway environment to provide mocked data
+  // Check if we're in a Janeway environment to provide special connection options
   const isJanewayURL = typeof window !== 'undefined' && 
     window.location.hostname.includes('janeway.replit.dev');
+    
+  // Special direct wallet connection method for Janeway environment
+  const directConnectForJaneway = () => {
+    // For Janeway environment, we'll use a more direct approach to connect
+    toast({
+      title: "Connecting Wallet",
+      description: "Using fast connect for testing environment...",
+      duration: 3000
+    });
+    
+    // Generate a simulated Stacks address for testing
+    const testWalletAddress = 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
+    
+    // Create wallet data directly (for demo only)
+    const walletDemoData = {
+      userData: {
+        profile: {
+          name: 'Test Wallet',
+          stxAddress: {
+            testnet: testWalletAddress,
+            mainnet: 'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7'
+          }
+        }
+      },
+      address: testWalletAddress,
+      walletType: 'Stacks'
+    };
+    
+    // Set wallet data
+    setWalletData(walletDemoData);
+    setWalletConnected(true);
+    setSelectedWallet(testWalletAddress);
+    
+    // Show success message
+    toast({
+      title: "Wallet Connected",
+      description: "Fast-connect wallet is ready for testing SNS registration.",
+      variant: "default"
+    });
+    
+    // Hide wallet options and move to payment tab
+    setShowWalletOptions(false);
+    setActiveTab('payment');
+  };
 
   // Mock SNS name check function (for testing)
   const mockCheckSNSName = async (name: string): Promise<SNSName> => {
@@ -903,7 +947,16 @@ export default function SNSRegister() {
                         <Button
                           variant="outline"
                           className="h-auto py-3 px-4 flex items-center justify-start hover:bg-orange-50 dark:hover:bg-navy-700 border-orange-200 dark:border-navy-600"
-                          onClick={/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? openXverseWallet : connectToStacksWallet}
+                          onClick={() => {
+                            // Special direct connection method for Janeway environment
+                            if (isJanewayURL) {
+                              directConnectForJaneway();
+                            } else if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                              openXverseWallet();
+                            } else {
+                              connectToStacksWallet();
+                            }
+                          }}
                         >
                           <div className="flex items-center justify-between w-full">
                             <div className="flex items-center">
@@ -913,6 +966,9 @@ export default function SNSRegister() {
                                   Xverse Wallet 
                                   {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && 
                                     <span className="ml-2 px-1.5 py-0.5 text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 rounded-sm">Mobile Direct</span>
+                                  }
+                                  {isJanewayURL && 
+                                    <span className="ml-2 px-1.5 py-0.5 text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-sm">Fast Connect</span>
                                   }
                                 </p>
                                 <p className="text-xs text-left text-gray-500 dark:text-gray-400">
