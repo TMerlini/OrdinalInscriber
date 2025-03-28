@@ -978,19 +978,60 @@ export default function SNSRegister() {
                               sessionStorage.setItem('connection_timestamp', Date.now().toString());
                               
                               try {
-                                // Use direct protocol links that should open the app if installed
+                                // Use specific Stacks authentication links with proper parameters
+                                // Create a callback URL with parameters that will help restore state
+                                const callbackUrl = `${window.location.origin}${window.location.pathname}?from_wallet=true&tab=payment&ts=${Date.now()}`;
+                                
+                                // Set up auth parameters for Stacks Connect
+                                const authOptions = {
+                                  appDetails: {
+                                    name: 'Ordinarinos SNS',
+                                    icon: window.location.origin + '/logo.png',
+                                  },
+                                  redirectTo: callbackUrl,
+                                  onFinish: () => {
+                                    console.log("Auth flow finished");
+                                    // This callback might not execute on mobile
+                                  },
+                                  onCancel: () => {
+                                    console.log("Auth flow cancelled");
+                                  },
+                                  userSession: userSession
+                                };
+                                
+                                // For iOS, we need a special approach with universal links
                                 if (isIOS) {
-                                  // iOS direct deep link
-                                  window.location.href = 'xverse://';
-                                  
-                                  // Set a fallback timer in case the app isn't installed
-                                  setTimeout(() => {
-                                    // If we're still here after 1 second, app might not be installed
+                                  // Use Stacks connect API that generates the correct auth request
+                                  // and redirects through universal links
+                                  try {
+                                    // First try direct protocol which should work if app is installed
+                                    showConnect(authOptions);
+                                    
+                                    // Backup approach with timer if showConnect doesn't trigger
+                                    setTimeout(() => {
+                                      // Try a direct auth deep link
+                                      const appUrl = `xverse://connect?callback=${encodeURIComponent(callbackUrl)}`;
+                                      window.location.href = appUrl;
+                                    }, 1000);
+                                  } catch (e) {
+                                    console.error("Error with iOS connect:", e);
+                                    // Last resort deeplink
                                     window.location.href = 'xverse://connect';
-                                  }, 1000);
+                                  }
                                 } else {
-                                  // Android direct deep link
-                                  window.location.href = 'xverse://';
+                                  // For Android, we use a similar approach but with Android specifics
+                                  try {
+                                    showConnect(authOptions);
+                                    
+                                    // Backup approach with timer
+                                    setTimeout(() => {
+                                      const appUrl = `xverse://connect?callback=${encodeURIComponent(callbackUrl)}`;
+                                      window.location.href = appUrl;
+                                    }, 1000);
+                                  } catch (e) {
+                                    console.error("Error with Android connect:", e);
+                                    window.location.href = 'xverse://connect';
+                                  }
                                 }
                                 
                                 // Show follow-up instructions after a delay
