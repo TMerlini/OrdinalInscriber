@@ -357,34 +357,40 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
                       type="button"
                       className={`py-2 px-3 rounded-md text-center transition-colors ${
                         Number(field.value) <= 2 
-                          ? 'bg-orange-200 dark:bg-orange-900 text-orange-800 dark:text-orange-100 font-medium' 
-                          : 'bg-gray-100 dark:bg-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-navy-600'
+                          ? 'bg-orange-200 dark:bg-blue-800 border border-orange-400 dark:border-blue-600 text-orange-800 dark:text-blue-100 font-medium' 
+                          : 'bg-white dark:bg-navy-900 border border-gray-200 dark:border-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-navy-800'
                       }`}
                       onClick={() => field.onChange(1)}
                     >
-                      Low (1)
+                      <div className="font-medium text-gray-900 dark:text-gray-100">Economy</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Multiple Days</div>
+                      <div className="text-sm text-gray-900 dark:text-gray-100">1 sat/vB</div>
                     </button>
                     <button
                       type="button"
                       className={`py-2 px-3 rounded-md text-center transition-colors ${
                         Number(field.value) >= 3 && Number(field.value) <= 5
-                          ? 'bg-orange-200 dark:bg-orange-900 text-orange-800 dark:text-orange-100 font-medium' 
-                          : 'bg-gray-100 dark:bg-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-navy-600'
+                          ? 'bg-orange-200 dark:bg-blue-800 border border-orange-400 dark:border-blue-600 text-orange-800 dark:text-blue-100 font-medium' 
+                          : 'bg-white dark:bg-navy-900 border border-gray-200 dark:border-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-navy-800'
                       }`}
                       onClick={() => field.onChange(4)}
                     >
-                      Medium (4)
+                      <div className="font-medium text-gray-900 dark:text-gray-100">Normal</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">~1 hour</div>
+                      <div className="text-sm text-gray-900 dark:text-gray-100">4 sat/vB</div>
                     </button>
                     <button
                       type="button"
                       className={`py-2 px-3 rounded-md text-center transition-colors ${
                         Number(field.value) >= 6 
-                          ? 'bg-orange-200 dark:bg-orange-900 text-orange-800 dark:text-orange-100 font-medium' 
-                          : 'bg-gray-100 dark:bg-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-navy-600'
+                          ? 'bg-orange-200 dark:bg-blue-800 border border-orange-400 dark:border-blue-600 text-orange-800 dark:text-blue-100 font-medium' 
+                          : 'bg-white dark:bg-navy-900 border border-gray-200 dark:border-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-navy-800'
                       }`}
                       onClick={() => field.onChange(8)}
                     >
-                      High (8)
+                      <div className="font-medium text-gray-900 dark:text-gray-100">Custom</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Choose fee</div>
+                      <div className="text-sm text-gray-900 dark:text-gray-100">8 sat/vB</div>
                     </button>
                   </div>
                   <div className="flex items-center">

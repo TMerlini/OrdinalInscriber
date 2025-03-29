@@ -47,10 +47,19 @@ export default function SNSRegister() {
   const [walletConnected, setWalletConnected] = useState<boolean>(false);
   const [selectedWallet, setSelectedWallet] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'onchain' | 'lightning'>('onchain');
+  
+  // Fee-related state
   const [registrationFee, setRegistrationFee] = useState<number>(0); 
   const [platformFee, setPlatformFee] = useState<number>(0);
+  const [networkFee, setNetworkFee] = useState<number>(0);
+  const [sizeFee, setSizeFee] = useState<number>(0);
   const [registryAddress, setRegistryAddress] = useState<string>('');
   const [platformAddress, setPlatformAddress] = useState<string>('');
+  const [selectedFeeTier, setSelectedFeeTier] = useState<'economy' | 'normal' | 'custom'>('normal');
+  const [feeTiers, setFeeTiers] = useState<any>(null);
+  const [processingTime, setProcessingTime] = useState<string>('1 hour');
+  const [usdValues, setUsdValues] = useState<any>(null);
+  
   const [showWalletOptions, setShowWalletOptions] = useState<boolean>(false);
   const [detectedWallets, setDetectedWallets] = useState<BitcoinWallet[]>([
     { name: 'Xverse', address: '', type: 'software' },
@@ -66,11 +75,25 @@ export default function SNSRegister() {
   
   const { toast } = useToast();
   
-  // Calculate total fee
-  const totalRegistrationFee = selectedNames.length * registrationFee;
-  // The platform fee is only charged once per transaction
-  const totalFee = totalRegistrationFee + (selectedNames.length > 0 ? platformFee : 0);
+  // Calculate total fee with all components
+  const totalInscriptionFee = selectedNames.length * registrationFee;
+  const totalNetworkFee = networkFee; // Network fee is only charged once
+  const totalSizeFee = selectedNames.length * sizeFee; // Size fee charged per name
+  // The platform fee (service fee) is only charged once per transaction
+  const totalServiceFee = selectedNames.length > 0 ? platformFee : 0;
+  // Total of all fee components
+  const totalFee = totalInscriptionFee + totalNetworkFee + totalSizeFee + totalServiceFee;
   const formattedFee = totalFee.toLocaleString();
+  
+  // Backwards compatibility with existing code using totalRegistrationFee
+  const totalRegistrationFee = totalInscriptionFee;
+  
+  // USD value calculations - using our retrieved exchange rates from the API
+  const getUsdValue = (sats: number): string => {
+    if (!usdValues || !usdValues.inscriptionFeeUSD) return '$0.00';
+    const exchangeRate = parseFloat(usdValues.inscriptionFeeUSD) / registrationFee;
+    return `$${(sats * exchangeRate).toFixed(2)}`;
+  };
   
   // Set up wallet config for Stacks Connect (Hiro/Xverse)
   const appConfig = new AppConfig(['store_write', 'publish_data']);
@@ -157,10 +180,10 @@ export default function SNSRegister() {
     }
   };
   
-  // Fetch SNS fee information from the server
-  const fetchSNSFees = async () => {
+  // Fetch SNS fee information from the server with tier selection
+  const fetchSNSFees = async (tier: 'economy' | 'normal' | 'custom' = 'normal') => {
     try {
-      const response = await fetch('/api/sns/fees');
+      const response = await fetch(`/api/sns/fees?tier=${tier}`);
       
       if (!response.ok) {
         console.error('Failed to fetch SNS fees');
@@ -168,15 +191,39 @@ export default function SNSRegister() {
       }
       
       const feeData = await response.json();
-      setRegistrationFee(feeData.registrationFee);
-      setPlatformFee(feeData.platformFee);
+      
+      // Update all fee components
+      setRegistrationFee(feeData.inscriptionFee);
+      setPlatformFee(feeData.serviceFee);
+      setNetworkFee(feeData.networkFee);
+      setSizeFee(feeData.sizeFee);
+      
+      // Update address info
       setRegistryAddress(feeData.registryAddress);
       setPlatformAddress(feeData.platformAddress);
+      
+      // Update tier-specific info
+      setProcessingTime(feeData.processingTime);
+      setUsdValues(feeData.usdValues);
+      
+      // Store all tiers information for the tier selector UI
+      if (feeData.tiers) {
+        setFeeTiers(feeData.tiers);
+      }
+      
+      // Update selected tier
+      setSelectedFeeTier(tier);
       
       console.log('SNS fee data loaded:', feeData);
     } catch (error) {
       console.error('Error fetching SNS fees:', error);
     }
+  };
+  
+  // Helper function to switch fee tiers
+  const handleFeeTierChange = (tier: 'economy' | 'normal' | 'custom') => {
+    setSelectedFeeTier(tier);
+    fetchSNSFees(tier);
   };
 
   // Check for existing session on component mount
@@ -760,7 +807,7 @@ export default function SNSRegister() {
       try {
         // If connected with Stacks wallet, use it for payment
         // Convert satoshis to microSTX (1 STX = 100 million microSTX)
-        const registrySTXAmount = totalRegistrationFee * 100; // Simple conversion for demonstration
+        const registrySTXAmount = totalInscriptionFee * 100; // Simple conversion for demonstration
         const platformSTXAmount = platformFee * 100; // Platform fee in microSTX
         
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -1248,6 +1295,55 @@ export default function SNSRegister() {
             <div className="p-4 bg-orange-50 dark:bg-navy-800 rounded-lg border border-orange-100 dark:border-navy-700">
               <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Complete Registration</h3>
               
+              {/* Fee tier selection similar to OrdinalsBot */}
+              <div className="mb-6">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Select Network Fee Option</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => handleFeeTierChange('economy')}
+                    className={`p-3 rounded-md text-center transition-all ${
+                      selectedFeeTier === 'economy' 
+                        ? 'bg-orange-200 dark:bg-blue-800 border border-orange-400 dark:border-blue-600' 
+                        : 'bg-white dark:bg-navy-900 border border-gray-200 dark:border-navy-700 hover:bg-orange-50 dark:hover:bg-navy-800'
+                    }`}
+                  >
+                    <div className="font-medium text-gray-900 dark:text-gray-100">Economy</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Multiple Days</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee - 100} sats</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => handleFeeTierChange('normal')}
+                    className={`p-3 rounded-md text-center transition-all ${
+                      selectedFeeTier === 'normal' 
+                        ? 'bg-orange-200 dark:bg-blue-800 border border-orange-400 dark:border-blue-600' 
+                        : 'bg-white dark:bg-navy-900 border border-gray-200 dark:border-navy-700 hover:bg-orange-50 dark:hover:bg-navy-800'
+                    }`}
+                  >
+                    <div className="font-medium text-gray-900 dark:text-gray-100">Normal</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">~1 hour</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee} sats</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => handleFeeTierChange('custom')}
+                    className={`p-3 rounded-md text-center transition-all ${
+                      selectedFeeTier === 'custom' 
+                        ? 'bg-orange-200 dark:bg-blue-800 border border-orange-400 dark:border-blue-600' 
+                        : 'bg-white dark:bg-navy-900 border border-gray-200 dark:border-navy-700 hover:bg-orange-50 dark:hover:bg-navy-800'
+                    }`}
+                  >
+                    <div className="font-medium text-gray-900 dark:text-gray-100">Custom</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Choose fee</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee + 1500} sats</div>
+                  </button>
+                </div>
+                
+                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  {processingTime ? `Estimated processing time: ${processingTime}` : 'Processing time varies by network conditions'}
+                </div>
+              </div>
+              
               <div className="mb-6 space-y-4">
                 <div className="bg-white dark:bg-navy-900 p-4 rounded-md">
                   <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Order Summary</h4>
@@ -1259,23 +1355,43 @@ export default function SNSRegister() {
                     </div>
                     
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Registration Fee (per name):</span>
-                      <span className="text-gray-900 dark:text-gray-100">{registrationFee.toLocaleString()} sats</span>
+                      <span className="text-gray-600 dark:text-gray-400">Inscription Fee:</span>
+                      <div className="text-right">
+                        <span className="text-gray-900 dark:text-gray-100">{registrationFee.toLocaleString()} sats</span>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{getUsdValue(registrationFee)}</div>
+                      </div>
                     </div>
                     
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Total Registration Fee ({selectedNames.length} names):</span>
-                      <span className="text-gray-900 dark:text-gray-100">{totalRegistrationFee.toLocaleString()} sats</span>
+                      <span className="text-gray-600 dark:text-gray-400">Network Fee:</span>
+                      <div className="text-right">
+                        <span className="text-gray-900 dark:text-gray-100">{networkFee.toLocaleString()} sats</span>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{getUsdValue(networkFee)}</div>
+                      </div>
                     </div>
                     
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Platform Fee (sent to {platformAddress.substring(0, 7)}...):</span>
-                      <span className="text-gray-900 dark:text-gray-100">{platformFee.toLocaleString()} sats</span>
+                      <span className="text-gray-600 dark:text-gray-400">Size Fee:</span>
+                      <div className="text-right">
+                        <span className="text-gray-900 dark:text-gray-100">{sizeFee.toLocaleString()} sats</span>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{getUsdValue(sizeFee)}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Service Fee:</span>
+                      <div className="text-right">
+                        <span className="text-gray-900 dark:text-gray-100">{platformFee.toLocaleString()} sats</span>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{getUsdValue(platformFee)}</div>
+                      </div>
                     </div>
                     
                     <div className="pt-2 border-t border-gray-200 dark:border-navy-700 flex justify-between font-medium">
                       <span className="text-gray-900 dark:text-gray-100">Total:</span>
-                      <span className="text-orange-600 dark:text-orange-400">{formattedFee} sats</span>
+                      <div className="text-right">
+                        <div className="text-orange-600 dark:text-orange-400">{formattedFee} sats</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{getUsdValue(totalFee)}</div>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -125,20 +125,96 @@ export function getLocalIpAddress(): string {
 // SNS configuration
 const SNS_REGISTRY_ADDRESS = "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"; // Official SNS registry address
 const PLATFORM_FEE_ADDRESS = "3GzpE8PyW8XgNnmkxsNLpj2jVKvyxwRYFM"; // Platform fee address
-const PLATFORM_FEE_AMOUNT = 2000; // 2000 satoshis
-const SNS_REGISTRATION_FEE = 25000; // 25000 satoshis per name 
+const PLATFORM_FEE_AMOUNT = 2000; // 2000 satoshis (competitive with OrdinalsBot)
+
+// Fee tiers based on OrdinalsBot approach
+type FeeTier = {
+  inscriptionFee: number;
+  networkFee: number;
+  sizeFee: number;
+  processingTime: string;
+};
+
+type FeeTierType = 'economy' | 'normal' | 'custom';
+
+const FEE_TIERS: Record<FeeTierType, FeeTier> = {
+  economy: {
+    inscriptionFee: 10000,
+    networkFee: 900,
+    sizeFee: 150,
+    processingTime: "Multiple Days"
+  },
+  normal: {
+    inscriptionFee: 10000,
+    networkFee: 1000,
+    sizeFee: 160,
+    processingTime: "1 hour"
+  },
+  custom: {
+    inscriptionFee: 10000,
+    networkFee: 2500,
+    sizeFee: 200,
+    processingTime: "Choose fee"
+  }
+};
+
+// Default to the normal tier pricing
+const SNS_REGISTRATION_FEE = FEE_TIERS.normal.inscriptionFee; // 10000 satoshis per name
+const NETWORK_FEE = FEE_TIERS.normal.networkFee; // Network fee in satoshis
+const SIZE_FEE = FEE_TIERS.normal.sizeFee; // Size-based fee in satoshis
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
   
   // SNS Registration Fee Information
   app.get('/api/sns/fees', (req, res) => {
+    // Get fee tier from query param (default to normal)
+    const tier = (req.query.tier as string) || 'normal';
+    // Cast tier to FeeTierType with a safe fallback to 'normal'
+    const tierType = (tier === 'economy' || tier === 'normal' || tier === 'custom') 
+      ? tier as FeeTierType 
+      : 'normal' as FeeTierType;
+    const feeTier = FEE_TIERS[tierType];
+    
+    // Calculate USD values (example exchange rate: 1 sat = $0.0005)
+    const exchangeRate = 0.0005;
+    const usdValues = {
+      inscriptionFeeUSD: (feeTier.inscriptionFee * exchangeRate).toFixed(2),
+      networkFeeUSD: (feeTier.networkFee * exchangeRate).toFixed(2),
+      sizeFeeUSD: (feeTier.sizeFee * exchangeRate).toFixed(2),
+      platformFeeUSD: (PLATFORM_FEE_AMOUNT * exchangeRate).toFixed(2),
+      totalUSD: ((feeTier.inscriptionFee + feeTier.networkFee + feeTier.sizeFee + PLATFORM_FEE_AMOUNT) * exchangeRate).toFixed(2)
+    };
+    
+    // Calculate total fee
+    const totalFee = feeTier.inscriptionFee + feeTier.networkFee + feeTier.sizeFee + PLATFORM_FEE_AMOUNT;
+    
     res.json({
-      registrationFee: SNS_REGISTRATION_FEE,
-      platformFee: PLATFORM_FEE_AMOUNT,
-      totalFee: SNS_REGISTRATION_FEE + PLATFORM_FEE_AMOUNT,
+      // Fee components
+      inscriptionFee: feeTier.inscriptionFee,
+      networkFee: feeTier.networkFee,  
+      sizeFee: feeTier.sizeFee,
+      serviceFee: PLATFORM_FEE_AMOUNT,
+      
+      // Total fee
+      totalFee: totalFee,
+      
+      // USD values
+      usdValues,
+      
+      // Processing time
+      processingTime: feeTier.processingTime,
+      
+      // Addresses
       registryAddress: SNS_REGISTRY_ADDRESS,
-      platformAddress: PLATFORM_FEE_ADDRESS
+      platformAddress: PLATFORM_FEE_ADDRESS,
+      
+      // Available tiers
+      tiers: {
+        economy: FEE_TIERS.economy,
+        normal: FEE_TIERS.normal,
+        custom: FEE_TIERS.custom
+      }
     });
   });
   
@@ -163,24 +239,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // SNS Name Registration API
   app.post('/api/sns/register', (req, res) => {
-    const { name } = req.body;
+    const { name, tier = 'normal', destinationAddress } = req.body;
     
     if (!name) {
       return res.status(400).json({ error: 'Name parameter is required' });
     }
     
+    // Cast tier to FeeTierType with a safe fallback to 'normal'
+    const tierType: FeeTierType = (['economy', 'normal', 'custom'].includes(tier as string)) 
+        ? tier as FeeTierType 
+        : 'normal';
+    // Get selected fee tier
+    const feeTier = FEE_TIERS[tierType];
+    
+    // Calculate total fee with all components
+    const sizeFee = feeTier.sizeFee; // In production, this would vary based on actual name length
+    const networkFee = feeTier.networkFee;
+    const inscriptionFee = feeTier.inscriptionFee;
+    const serviceFee = PLATFORM_FEE_AMOUNT;
+    const totalFee = inscriptionFee + networkFee + sizeFee + serviceFee;
+    
     // For demonstration purposes, this endpoint would handle the actual registration
     // process, including submitting transactions to both addresses
+    
+    // Calculate USD values (example exchange rate: 1 sat = $0.0005)
+    const exchangeRate = 0.0005;
+    const usdValues = {
+      inscriptionFeeUSD: (inscriptionFee * exchangeRate).toFixed(2),
+      networkFeeUSD: (networkFee * exchangeRate).toFixed(2),
+      sizeFeeUSD: (sizeFee * exchangeRate).toFixed(2),
+      serviceFeeUSD: (serviceFee * exchangeRate).toFixed(2),
+      totalUSD: (totalFee * exchangeRate).toFixed(2)
+    };
     
     res.json({
       success: true,
       name,
-      registrationFee: SNS_REGISTRATION_FEE,
-      platformFee: PLATFORM_FEE_AMOUNT,
-      totalFee: SNS_REGISTRATION_FEE + PLATFORM_FEE_AMOUNT,
+      
+      // Detailed fee breakdown
+      inscriptionFee,
+      networkFee,
+      sizeFee,
+      serviceFee,
+      totalFee,
+      
+      // USD values
+      usdValues,
+      
+      // Processing info
+      processingTime: feeTier.processingTime,
+      tier,
+      
+      // Address info
       registryAddress: SNS_REGISTRY_ADDRESS,
       platformAddress: PLATFORM_FEE_ADDRESS,
-      status: 'pending'
+      destinationAddress: destinationAddress || null,
+      
+      // Status
+      status: 'pending',
+      
+      // Payment links would be generated here in a production system
+      paymentInfo: {
+        btcAddress: SNS_REGISTRY_ADDRESS,
+        platformAddress: PLATFORM_FEE_ADDRESS,
+        // Lightning payment info would go here
+      }
     });
   });
   
