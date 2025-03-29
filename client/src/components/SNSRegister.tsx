@@ -1297,7 +1297,7 @@ export default function SNSRegister() {
               
               {/* Fee tier selection similar to OrdinalsBot */}
               <div className="mb-6">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Select Network Fee Option</h4>
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Select Fee Tier <span className="font-normal text-sm text-gray-500 dark:text-gray-400">(Network Fees - Flat Rate)</span></h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <button
                     onClick={() => handleFeeTierChange('economy')}
@@ -1309,7 +1309,7 @@ export default function SNSRegister() {
                   >
                     <div className="font-medium text-gray-900 dark:text-gray-100">Economy</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Multiple Days</div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee - 100} sats</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee - 100} sats (flat fee)</div>
                   </button>
                   
                   <button
@@ -1322,7 +1322,7 @@ export default function SNSRegister() {
                   >
                     <div className="font-medium text-gray-900 dark:text-gray-100">Normal</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">~1 hour</div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee} sats</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee} sats (flat fee)</div>
                   </button>
                   
                   <button
@@ -1335,7 +1335,7 @@ export default function SNSRegister() {
                   >
                     <div className="font-medium text-gray-900 dark:text-gray-100">Custom</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Choose fee</div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee + 1500} sats</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee + 1500} sats (flat fee)</div>
                   </button>
                 </div>
                 

@@ -351,7 +351,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
               name="feeRate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-orange-800 dark:text-orange-400">Fee Rate (sats/vB)</FormLabel>
+                  <FormLabel className="text-orange-800 dark:text-orange-400">Fee Rate <span className="font-normal text-sm text-gray-500 dark:text-gray-400">(Transaction Fee - sats/vB)</span></FormLabel>
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     <button
                       type="button"
