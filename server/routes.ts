@@ -122,8 +122,67 @@ export function getLocalIpAddress(): string {
   return 'localhost'; // Fallback
 }
 
+// SNS configuration
+const SNS_REGISTRY_ADDRESS = "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"; // Official SNS registry address
+const PLATFORM_FEE_ADDRESS = "3GzpE8PyW8XgNnmkxsNLpj2jVKvyxwRYFM"; // Platform fee address
+const PLATFORM_FEE_AMOUNT = 2000; // 2000 satoshis
+const SNS_REGISTRATION_FEE = 25000; // 25000 satoshis per name 
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // API routes
+  
+  // SNS Registration Fee Information
+  app.get('/api/sns/fees', (req, res) => {
+    res.json({
+      registrationFee: SNS_REGISTRATION_FEE,
+      platformFee: PLATFORM_FEE_AMOUNT,
+      totalFee: SNS_REGISTRATION_FEE + PLATFORM_FEE_AMOUNT,
+      registryAddress: SNS_REGISTRY_ADDRESS,
+      platformAddress: PLATFORM_FEE_ADDRESS
+    });
+  });
+  
+  // SNS Name Check API 
+  app.get('/api/sns/name/check', (req, res) => {
+    const { name } = req.query;
+    
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ error: 'Name parameter is required' });
+    }
+    
+    // For demonstration purposes, check if the name meets basic requirements
+    // In production, this would query the actual SNS registry API 
+    const isAvailable = name.length >= 5 && !['bitcoin', 'satoshi', 'ordinal'].includes(name.toLowerCase());
+    
+    res.json({
+      name,
+      isAvailable,
+      owner: isAvailable ? null : 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu'
+    });
+  });
+  
+  // SNS Name Registration API
+  app.post('/api/sns/register', (req, res) => {
+    const { name } = req.body;
+    
+    if (!name) {
+      return res.status(400).json({ error: 'Name parameter is required' });
+    }
+    
+    // For demonstration purposes, this endpoint would handle the actual registration
+    // process, including submitting transactions to both addresses
+    
+    res.json({
+      success: true,
+      name,
+      registrationFee: SNS_REGISTRATION_FEE,
+      platformFee: PLATFORM_FEE_AMOUNT,
+      totalFee: SNS_REGISTRATION_FEE + PLATFORM_FEE_AMOUNT,
+      registryAddress: SNS_REGISTRY_ADDRESS,
+      platformAddress: PLATFORM_FEE_ADDRESS,
+      status: 'pending'
+    });
+  });
   
   // Get cache information
   app.get('/api/cache/info', async (req, res) => {

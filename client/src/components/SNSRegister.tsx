@@ -47,7 +47,10 @@ export default function SNSRegister() {
   const [walletConnected, setWalletConnected] = useState<boolean>(false);
   const [selectedWallet, setSelectedWallet] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'onchain' | 'lightning'>('onchain');
-  const [registrationFee, setRegistrationFee] = useState<number>(25000); // 25,000 sats per name
+  const [registrationFee, setRegistrationFee] = useState<number>(0); 
+  const [platformFee, setPlatformFee] = useState<number>(0);
+  const [registryAddress, setRegistryAddress] = useState<string>('');
+  const [platformAddress, setPlatformAddress] = useState<string>('');
   const [showWalletOptions, setShowWalletOptions] = useState<boolean>(false);
   const [detectedWallets, setDetectedWallets] = useState<BitcoinWallet[]>([
     { name: 'Xverse', address: '', type: 'software' },
@@ -64,7 +67,9 @@ export default function SNSRegister() {
   const { toast } = useToast();
   
   // Calculate total fee
-  const totalFee = selectedNames.length * registrationFee;
+  const totalRegistrationFee = selectedNames.length * registrationFee;
+  // The platform fee is only charged once per transaction
+  const totalFee = totalRegistrationFee + (selectedNames.length > 0 ? platformFee : 0);
   const formattedFee = totalFee.toLocaleString();
   
   // Set up wallet config for Stacks Connect (Hiro/Xverse)
@@ -152,8 +157,32 @@ export default function SNSRegister() {
     }
   };
   
+  // Fetch SNS fee information from the server
+  const fetchSNSFees = async () => {
+    try {
+      const response = await fetch('/api/sns/fees');
+      
+      if (!response.ok) {
+        console.error('Failed to fetch SNS fees');
+        return;
+      }
+      
+      const feeData = await response.json();
+      setRegistrationFee(feeData.registrationFee);
+      setPlatformFee(feeData.platformFee);
+      setRegistryAddress(feeData.registryAddress);
+      setPlatformAddress(feeData.platformAddress);
+      
+      console.log('SNS fee data loaded:', feeData);
+    } catch (error) {
+      console.error('Error fetching SNS fees:', error);
+    }
+  };
+
   // Check for existing session on component mount
   useEffect(() => {
+    // Load fee information
+    fetchSNSFees();
     // Check URL parameters to see if we're returning from a wallet app
     const urlParams = new URLSearchParams(window.location.search);
     const fromWallet = urlParams.get('from_wallet') === 'true';
@@ -731,32 +760,75 @@ export default function SNSRegister() {
       try {
         // If connected with Stacks wallet, use it for payment
         // Convert satoshis to microSTX (1 STX = 100 million microSTX)
-        const microSTXAmount = totalFee * 100; // Simple conversion for demonstration
+        const registrySTXAmount = totalRegistrationFee * 100; // Simple conversion for demonstration
+        const platformSTXAmount = platformFee * 100; // Platform fee in microSTX
         
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         
-        // Setup for transaction
-        const paymentRequest = {
-          recipient: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM', // Example recipient address
-          amount: microSTXAmount.toString(),
+        // First set up the registry payment
+        const registryPaymentRequest = {
+          recipient: registryAddress, // Official SNS registry address
+          amount: registrySTXAmount.toString(),
           memo: `SNS Registration: ${selectedNames.join(', ')}`,
           network: STACKS_TESTNET, // Use STACKS_MAINNET for production
           appDetails: {
             name: 'Ordinarinos Inscription Tool',
             icon: window.location.origin + '/logo.png',
           },
-          onFinish: () => {
-            // Register names after successful payment
-            registerSNSNames();
+          onFinish: async (data: any) => {
+            console.log("Registry payment successful:", data);
+            toast({
+              title: "Registry Payment Successful",
+              description: "Processing platform fee payment...",
+              duration: 5000
+            });
+            
+            // Now send the platform fee payment
+            await sendPlatformFeePayment();
           },
           onCancel: () => {
             toast({
               title: "Payment cancelled",
-              description: "The payment was cancelled. Please try again.",
+              description: "The registry payment was cancelled. Please try again.",
               variant: "destructive"
             });
           }
         };
+        
+        // Function to handle platform fee payment after registry payment
+        const sendPlatformFeePayment = async () => {
+          const platformPaymentRequest = {
+            recipient: platformAddress, // Platform fee address
+            amount: platformSTXAmount.toString(),
+            memo: `Platform fee for SNS: ${selectedNames.join(', ')}`,
+            network: STACKS_TESTNET, // Use STACKS_MAINNET for production
+            appDetails: {
+              name: 'Ordinarinos Inscription Tool',
+              icon: window.location.origin + '/logo.png',
+            },
+            onFinish: () => {
+              toast({
+                title: "Platform Fee Paid",
+                description: "All payments completed. Processing registration...",
+                duration: 5000
+              });
+              
+              // Register names after successful payments
+              registerSNSNames();
+            },
+            onCancel: () => {
+              toast({
+                title: "Platform Fee Cancelled",
+                description: "The platform fee payment was cancelled. Your registry payment is still processing.",
+                variant: "destructive"
+              });
+            }
+          };
+          
+          await openSTXTransfer(platformPaymentRequest);
+        };
+        
+        // Use main payment request for registry fee
         
         // Special handling for mobile
         if (isMobile) {
@@ -773,15 +845,15 @@ export default function SNSRegister() {
           currentUrl.searchParams.set('payment_status', 'processing');
           currentUrl.searchParams.set('ts', Date.now().toString());
           
-          const mobilePaymentRequest = {
-            ...paymentRequest,
+          const mobileRegistryPaymentRequest = {
+            ...registryPaymentRequest,
             redirectTo: currentUrl.toString()
           };
           
-          await openSTXTransfer(mobilePaymentRequest);
+          await openSTXTransfer(mobileRegistryPaymentRequest);
         } else {
           // Desktop flow
-          await openSTXTransfer(paymentRequest);
+          await openSTXTransfer(registryPaymentRequest);
         }
         
         toast({
@@ -1189,6 +1261,16 @@ export default function SNSRegister() {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Registration Fee (per name):</span>
                       <span className="text-gray-900 dark:text-gray-100">{registrationFee.toLocaleString()} sats</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Total Registration Fee ({selectedNames.length} names):</span>
+                      <span className="text-gray-900 dark:text-gray-100">{totalRegistrationFee.toLocaleString()} sats</span>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Platform Fee (sent to {platformAddress.substring(0, 7)}...):</span>
+                      <span className="text-gray-900 dark:text-gray-100">{platformFee.toLocaleString()} sats</span>
                     </div>
                     
                     <div className="pt-2 border-t border-gray-200 dark:border-navy-700 flex justify-between font-medium">
