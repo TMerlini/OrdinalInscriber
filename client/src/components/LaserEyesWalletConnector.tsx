@@ -158,8 +158,7 @@ function WalletConnector({ onConnected, className }: LaserEyesWalletConnectorPro
         <CardHeader>
           <CardTitle>Wallet Connection Issue</CardTitle>
           <CardDescription>
-            Unable to initialize wallet connection. This may be due to running in a development environment 
-            or because no compatible wallets were detected.
+            Unable to initialize wallet connection. Please ensure you have a supported Bitcoin wallet installed.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -167,10 +166,23 @@ function WalletConnector({ onConnected, className }: LaserEyesWalletConnectorPro
             <div className="flex items-start">
               <AlertCircle className="h-5 w-5 mr-2 mt-0.5" />
               <div>
-                <p>Note: Wallet connections may not work properly in Janeway or other sandboxed environments.</p>
-                <p className="mt-1">This feature will work correctly when deployed or run outside of development environments.</p>
+                <p>Please install one of the supported wallets below and refresh the page:</p>
+                <p className="mt-1">
+                  <a href="https://unisat.io/download" target="_blank" rel="noopener noreferrer" className="underline">Unisat</a>, 
+                  <a href="https://www.xverse.app/download" target="_blank" rel="noopener noreferrer" className="underline ml-1">Xverse</a>, or 
+                  <a href="https://www.okx.com/web3/wallet" target="_blank" rel="noopener noreferrer" className="underline ml-1">OKX Wallet</a>
+                </p>
               </div>
             </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-800"
+            >
+              <Loader2 className="h-4 w-4 mr-2" /> Retry Connection
+            </Button>
           </div>
         </CardContent>
       </Card>
