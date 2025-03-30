@@ -17,8 +17,11 @@ if [ ! -d "/home/umbrel" ]; then
 fi
 
 echo "Checking for Bitcoin Core and Ord..."
-# Check if Docker is available
+# Check if Docker is available and accessible
 if command -v docker >/dev/null 2>&1 && docker ps >/dev/null 2>&1; then
+  # Docker is available and we have permissions
+  echo "Docker is available. Checking for required services..."
+  
   # Check if Bitcoin Core is running
   if ! docker ps | grep -q "bitcoin"; then
     echo "Warning: Bitcoin Core is not running on this Umbrel node."
@@ -29,39 +32,76 @@ if command -v docker >/dev/null 2>&1 && docker ps >/dev/null 2>&1; then
       echo "Installation aborted."
       exit 1
     fi
+  else
+    echo "✓ Bitcoin Core is running."
+  fi
+  
+  # Check if Ord is running
+  if ! docker ps | grep -q "ord"; then
+    echo "Warning: Ord does not appear to be running on this Umbrel node."
+    echo "Ordinarinos requires the Ord node for Bitcoin Ordinals functionality."
+    echo "Would you like to continue anyway? (y/n)"
+    read -r answer
+    if [ "$answer" != "y" ]; then
+      echo "Installation aborted."
+      exit 1
+    fi
+  else
+    echo "✓ Ord node is running."
   fi
 else
-  echo "Warning: Docker not available or not accessible. Skipping container checks."
-  echo "This is a simulation mode for testing the script."
-  echo "In a real Umbrel environment, Bitcoin Core and Ord would be required."
+  # Docker not available or permissions issue
+  echo "======================================================================="
+  echo "WARNING: Docker not available or permission denied."
+  echo "This could be due to:"
+  echo "  - Docker not being installed"
+  echo "  - Current user not having Docker permissions"
+  echo "  - Running in a restricted environment (like Replit)"
+  echo "======================================================================="
+  echo ""
+  echo "Continuing in SIMULATION MODE. In a real Umbrel environment:"
+  echo "  - Bitcoin Core and Ord would be required"
+  echo "  - RPC credentials would be auto-detected"
+  echo ""
   echo "Continue with simulation? (y/n)"
   read -r answer
   if [ "$answer" != "y" ]; then
     echo "Installation aborted."
     exit 1
   fi
+  
+  # Skip Ord check since Docker isn't accessible
+  SIMULATION_MODE=true
 fi
 
-# Check if Ord is running
-if ! docker ps | grep -q "ord"; then
-  echo "Warning: Ord does not appear to be running on this Umbrel node."
-  echo "Ordinarinos requires the Ord node for Bitcoin Ordinals functionality."
-  echo "Would you like to continue anyway? (y/n)"
-  read -r answer
-  if [ "$answer" != "y" ]; then
-    echo "Installation aborted."
-    exit 1
+# Set up RPC credentials
+if [ "$SIMULATION_MODE" = "true" ]; then
+  # Use sample credentials for simulation
+  echo "Using sample credentials for simulation mode"
+  BITCOIN_RPC_USER="umbrel"
+  BITCOIN_RPC_PASS="umbrelpass"
+else
+  # Try to get RPC credentials from Bitcoin Core
+  if [ -f "/home/umbrel/umbrel/app-data/bitcoin/data/bitcoin/bitcoin.conf" ]; then
+    BITCOIN_RPC_USER=$(grep rpcuser /home/umbrel/umbrel/app-data/bitcoin/data/bitcoin/bitcoin.conf | cut -d'=' -f2)
+    BITCOIN_RPC_PASS=$(grep rpcpassword /home/umbrel/umbrel/app-data/bitcoin/data/bitcoin/bitcoin.conf | cut -d'=' -f2)
+    echo "Retrieved RPC credentials from Bitcoin Core configuration"
+  else
+    echo "Bitcoin Core config not found. Using sample credentials"
+    BITCOIN_RPC_USER="umbrel"
+    BITCOIN_RPC_PASS="umbrelpass"
   fi
 fi
 
-# Get RPC credentials from Bitcoin Core
-BITCOIN_RPC_USER=$(grep rpcuser /home/umbrel/umbrel/app-data/bitcoin/data/bitcoin/bitcoin.conf | cut -d'=' -f2)
-BITCOIN_RPC_PASS=$(grep rpcpassword /home/umbrel/umbrel/app-data/bitcoin/data/bitcoin/bitcoin.conf | cut -d'=' -f2)
-
 # Create app directory
 APP_DIR="/home/umbrel/umbrel/app-data/ordinarinos"
-mkdir -p "$APP_DIR"
-mkdir -p "$APP_DIR/data"
+if [ ! -d "$APP_DIR" ]; then
+  echo "Creating app directory: $APP_DIR"
+  mkdir -p "$APP_DIR"
+  mkdir -p "$APP_DIR/data"
+else
+  echo "App directory already exists: $APP_DIR"
+fi
 
 # Create .env file with configuration
 cat > "$APP_DIR/.env" << EOF
