@@ -170,11 +170,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/sns/fees', (req, res) => {
     // Get fee tier from query param (default to normal)
     const tier = (req.query.tier as string) || 'normal';
+    // Get custom fee amount from query param if present
+    const customFeeAmount = req.query.customFee ? parseInt(req.query.customFee as string) : null;
+    
     // Cast tier to FeeTierType with a safe fallback to 'normal'
     const tierType = (tier === 'economy' || tier === 'normal' || tier === 'custom') 
       ? tier as FeeTierType 
       : 'normal' as FeeTierType;
-    const feeTier = FEE_TIERS[tierType];
+    
+    // Get base fee tier
+    let feeTier = { ...FEE_TIERS[tierType] };
+    
+    // Override network fee with custom amount if provided for custom tier
+    if (tierType === 'custom' && customFeeAmount !== null && customFeeAmount >= 500) {
+      feeTier.networkFee = customFeeAmount;
+      feeTier.processingTime = customFeeAmount > 2000 
+        ? "~10-30 minutes" 
+        : (customFeeAmount > 1000 ? "~1-2 hours" : "Variable");
+    }
     
     // Calculate USD values (example exchange rate: 1 sat = $0.0005)
     const exchangeRate = 0.0005;
@@ -239,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // SNS Name Registration API
   app.post('/api/sns/register', (req, res) => {
-    const { name, tier = 'normal', destinationAddress } = req.body;
+    const { name, tier = 'normal', destinationAddress, customFee } = req.body;
     
     if (!name) {
       return res.status(400).json({ error: 'Name parameter is required' });
@@ -249,8 +262,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const tierType: FeeTierType = (['economy', 'normal', 'custom'].includes(tier as string)) 
         ? tier as FeeTierType 
         : 'normal';
-    // Get selected fee tier
-    const feeTier = FEE_TIERS[tierType];
+    
+    // Get base fee tier and create a copy to modify if needed
+    let feeTier = { ...FEE_TIERS[tierType] };
+    
+    // Override network fee with custom amount if provided for custom tier
+    if (tierType === 'custom' && customFee && typeof customFee === 'number' && customFee >= 500) {
+      feeTier.networkFee = customFee;
+      feeTier.processingTime = customFee > 2000 
+        ? "~10-30 minutes" 
+        : (customFee > 1000 ? "~1-2 hours" : "Variable");
+    }
     
     // Calculate total fee with all components
     const sizeFee = feeTier.sizeFee; // In production, this would vary based on actual name length

@@ -56,6 +56,7 @@ export default function SNSRegister() {
   const [registryAddress, setRegistryAddress] = useState<string>('');
   const [platformAddress, setPlatformAddress] = useState<string>('');
   const [selectedFeeTier, setSelectedFeeTier] = useState<'economy' | 'normal' | 'custom'>('normal');
+  const [customFeeAmount, setCustomFeeAmount] = useState<number>(2500); // Default custom fee amount
   const [feeTiers, setFeeTiers] = useState<any>(null);
   const [processingTime, setProcessingTime] = useState<string>('1 hour');
   const [usdValues, setUsdValues] = useState<any>(null);
@@ -183,7 +184,13 @@ export default function SNSRegister() {
   // Fetch SNS fee information from the server with tier selection
   const fetchSNSFees = async (tier: 'economy' | 'normal' | 'custom' = 'normal') => {
     try {
-      const response = await fetch(`/api/sns/fees?tier=${tier}`);
+      // Build URL with custom fee parameter if applicable
+      let url = `/api/sns/fees?tier=${tier}`;
+      if (tier === 'custom' && customFeeAmount) {
+        url += `&customFee=${customFeeAmount}`;
+      }
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         console.error('Failed to fetch SNS fees');
@@ -223,7 +230,21 @@ export default function SNSRegister() {
   // Helper function to switch fee tiers
   const handleFeeTierChange = (tier: 'economy' | 'normal' | 'custom') => {
     setSelectedFeeTier(tier);
-    fetchSNSFees(tier);
+    
+    if (tier === 'custom') {
+      // For custom tier, we'll set network fee directly instead of fetching
+      setNetworkFee(customFeeAmount);
+    } else {
+      fetchSNSFees(tier);
+    }
+  };
+  
+  // Handle custom fee amount change
+  const handleCustomFeeChange = (value: number) => {
+    setCustomFeeAmount(value);
+    if (selectedFeeTier === 'custom') {
+      setNetworkFee(value);
+    }
   };
 
   // Check for existing session on component mount
@@ -609,7 +630,12 @@ export default function SNSRegister() {
               headers: {
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify({ name })
+              body: JSON.stringify({ 
+                name,
+                tier: selectedFeeTier,
+                destinationAddress: selectedWallet,
+                customFee: selectedFeeTier === 'custom' ? customFeeAmount : undefined
+              })
             });
             
             const data = await response.json();
@@ -1297,7 +1323,7 @@ export default function SNSRegister() {
               
               {/* Fee tier selection similar to OrdinalsBot */}
               <div className="mb-6">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Select Fee Tier <span className="font-normal text-sm text-gray-500 dark:text-gray-400">(Network Fees - Flat Rate)</span></h4>
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Select Fee Tier <span className="font-normal text-sm text-gray-500 dark:text-gray-400">(Based on Network Conditions)</span></h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <button
                     onClick={() => handleFeeTierChange('economy')}
@@ -1309,7 +1335,7 @@ export default function SNSRegister() {
                   >
                     <div className="font-medium text-gray-900 dark:text-gray-100">Economy</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Multiple Days</div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee - 100} sats (flat fee)</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee - 100} sats</div>
                   </button>
                   
                   <button
@@ -1322,7 +1348,7 @@ export default function SNSRegister() {
                   >
                     <div className="font-medium text-gray-900 dark:text-gray-100">Normal</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">~1 hour</div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee} sats (flat fee)</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee} sats</div>
                   </button>
                   
                   <button
@@ -1335,9 +1361,29 @@ export default function SNSRegister() {
                   >
                     <div className="font-medium text-gray-900 dark:text-gray-100">Custom</div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Choose fee</div>
-                    <div className="text-sm text-gray-900 dark:text-gray-100">{networkFee + 1500} sats (flat fee)</div>
+                    <div className="text-sm text-gray-900 dark:text-gray-100">Custom rate</div>
                   </button>
                 </div>
+                
+                {selectedFeeTier === 'custom' && (
+                  <div className="mt-3">
+                    <Label htmlFor="custom-fee">Custom Fee Amount (in sats)</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        id="custom-fee"
+                        type="number"
+                        min="500"
+                        value={customFeeAmount}
+                        onChange={(e) => handleCustomFeeChange(parseInt(e.target.value) || 500)}
+                        className="flex-1"
+                      />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">sats</span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Higher fees result in faster processing time.
+                    </p>
+                  </div>
+                )}
                 
                 <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                   {processingTime ? `Estimated processing time: ${processingTime}` : 'Processing time varies by network conditions'}
