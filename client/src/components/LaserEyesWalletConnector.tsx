@@ -44,6 +44,19 @@ function WalletConnector({ onConnected, className }: LaserEyesWalletConnectorPro
   } = useLaserEyes() as unknown as ExtendedLaserEyesContext;
   
   const [connecting, setConnecting] = useState(false);
+  const [initializationTimeoutReached, setInitializationTimeoutReached] = useState(false);
+  
+  // Set a timeout to avoid getting stuck forever in initialization
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (!isInitialized) {
+        console.log("Wallet initialization timed out");
+        setInitializationTimeoutReached(true);
+      }
+    }, 5000); // 5 seconds timeout
+    
+    return () => clearTimeout(timeoutId);
+  }, [isInitialized]);
   
   // Handle successful connection
   useEffect(() => {
@@ -117,7 +130,7 @@ function WalletConnector({ onConnected, className }: LaserEyesWalletConnectorPro
     }
   };
   
-  if (!isInitialized) {
+  if (!isInitialized && !initializationTimeoutReached) {
     return (
       <Card className={`${className} w-full max-w-md mx-auto`}>
         <CardHeader>
@@ -126,6 +139,32 @@ function WalletConnector({ onConnected, className }: LaserEyesWalletConnectorPro
         </CardHeader>
         <CardContent className="flex justify-center py-6">
           <Loader2 className="h-12 w-12 animate-spin text-orange-500 dark:text-navy-400" />
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // Show timeout message if initialization takes too long
+  if (!isInitialized && initializationTimeoutReached) {
+    return (
+      <Card className={`${className} w-full max-w-md mx-auto`}>
+        <CardHeader>
+          <CardTitle>Wallet Connection Issue</CardTitle>
+          <CardDescription>
+            Unable to initialize wallet connection. This may be due to running in a development environment 
+            or because no compatible wallets were detected.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-amber-50 dark:bg-amber-900/30 p-4 rounded-lg border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-sm">
+            <div className="flex items-start">
+              <AlertCircle className="h-5 w-5 mr-2 mt-0.5" />
+              <div>
+                <p>Note: Wallet connections may not work properly in Janeway or other sandboxed environments.</p>
+                <p className="mt-1">This feature will work correctly when deployed or run outside of development environments.</p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
