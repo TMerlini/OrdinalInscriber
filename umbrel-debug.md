@@ -54,6 +54,42 @@ docker network inspect embassy
 - Check for any CORS-related errors in your browser's console
 - Try connecting with a different wallet
 
+### 4. SNS (Sats Names Service) relay issues
+- If the SNS name registration feature shows "Service Degraded" or similar warnings:
+  
+  1. Check the relay service status:
+     ```
+     curl http://localhost:3500/api/sns/status
+     ```
+  
+  2. A degraded status response indicates connectivity issues with the SNS relay:
+     ```json
+     {
+       "status": "degraded",
+       "message": "Relay service is currently unavailable. Some features may be limited.",
+       "fallback": true,
+       "version": "unknown (relay unavailable)",
+       "names_count": 0
+     }
+     ```
+  
+  3. Verify network connectivity to the relay service:
+     ```
+     docker exec -it ordinarinos ping relay.satsnames.network
+     docker exec -it ordinarinos curl -I https://relay.satsnames.network
+     ```
+  
+  4. Common causes of relay connectivity issues:
+     - Temporary relay service outage (try again later)
+     - Firewall blocking WebSocket connections
+     - DNS resolution issues
+     - Internet connectivity problems
+  
+  5. The application is designed to work in degraded mode when the relay is unavailable:
+     - Name availability checks will show approximate results
+     - Registration transactions will not be generated
+     - Fee estimations will still be available
+
 ## Reinstalling
 
 If you need to reinstall the application:

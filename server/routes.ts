@@ -9,6 +9,7 @@ import { getCacheInfo, clearAllCachedFiles, cleanCacheIfNeeded } from "./cache-m
 import os from "os";
 import { networkInterfaces } from "os";
 import sharp from "sharp";
+import snsRoutes from "./routes/sns";
 
 // SNS Registry Address (this would be the official SNS registry address in production)
 const SNS_REGISTRY_ADDRESS = "bc1qe8grz79ej3ywxkfcdchrncfl5antlc9tzmy5c2";
@@ -204,170 +205,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`Bitcoin RPC endpoint: ${getBitcoinRpcUrl().replace(/:[^:]*@/, ':****@')}`);
     console.log(`Ord API endpoint: ${getOrdApiUrl()}`);
   }
+  
+  // Mount the SNS routes
+  app.use('/api/sns', snsRoutes);
+  
   // API routes
-  
-  // SNS Registration Fee Information
-  app.get('/api/sns/fees', (req, res) => {
-    // Get fee tier from query param (default to normal)
-    const tier = (req.query.tier as string) || 'normal';
-    // Get custom fee amount from query param if present
-    const customFeeAmount = req.query.customFee ? parseInt(req.query.customFee as string) : null;
-    
-    // Cast tier to FeeTierType with a safe fallback to 'normal'
-    const tierType = (tier === 'economy' || tier === 'normal' || tier === 'custom') 
-      ? tier as FeeTierType 
-      : 'normal' as FeeTierType;
-    
-    // Get base fee tier
-    let feeTier = { ...FEE_TIERS[tierType] };
-    
-    // Override network fee with custom amount if provided for custom tier
-    if (tierType === 'custom' && customFeeAmount !== null && customFeeAmount >= 500) {
-      feeTier.networkFee = customFeeAmount;
-      feeTier.processingTime = customFeeAmount > 2000 
-        ? "~10-30 minutes" 
-        : (customFeeAmount > 1000 ? "~1-2 hours" : "Variable");
-    }
-    
-    // Calculate USD values (example exchange rate: 1 sat = $0.0005)
-    const exchangeRate = 0.0005;
-    const usdValues = {
-      inscriptionFeeUSD: (feeTier.inscriptionFee * exchangeRate).toFixed(2),
-      networkFeeUSD: (feeTier.networkFee * exchangeRate).toFixed(2),
-      sizeFeeUSD: (feeTier.sizeFee * exchangeRate).toFixed(2),
-      platformFeeUSD: (PLATFORM_FEE_AMOUNT * exchangeRate).toFixed(2),
-      totalUSD: ((feeTier.inscriptionFee + feeTier.networkFee + feeTier.sizeFee + PLATFORM_FEE_AMOUNT) * exchangeRate).toFixed(2)
-    };
-    
-    // Calculate total fee
-    const totalFee = feeTier.inscriptionFee + feeTier.networkFee + feeTier.sizeFee + PLATFORM_FEE_AMOUNT;
-    
-    res.json({
-      // Fee components
-      inscriptionFee: feeTier.inscriptionFee,
-      networkFee: feeTier.networkFee,  
-      sizeFee: feeTier.sizeFee,
-      serviceFee: PLATFORM_FEE_AMOUNT,
-      
-      // Total fee
-      totalFee: totalFee,
-      
-      // USD values
-      usdValues,
-      
-      // Processing time
-      processingTime: feeTier.processingTime,
-      
-      // Addresses
-      registryAddress: SNS_REGISTRY_ADDRESS,
-      platformAddress: PLATFORM_FEE_ADDRESS,
-      
-      // Available tiers
-      tiers: {
-        economy: FEE_TIERS.economy,
-        normal: FEE_TIERS.normal,
-        custom: FEE_TIERS.custom
-      }
-    });
-  });
-  
-  // SNS Name Check API 
-  app.get('/api/sns/name/check', (req, res) => {
-    const { name } = req.query;
-    
-    if (!name || typeof name !== 'string') {
-      return res.status(400).json({ error: 'Name parameter is required' });
-    }
-    
-    // For demonstration purposes, check if the name meets basic requirements
-    // In production, this would query the actual SNS registry API 
-    const isAvailable = name.length >= 5 && !['bitcoin', 'satoshi', 'ordinal'].includes(name.toLowerCase());
-    
-    res.json({
-      name,
-      isAvailable,
-      owner: isAvailable ? null : 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu'
-    });
-  });
-  
-  // SNS Name Registration API
-  app.post('/api/sns/register', (req, res) => {
-    const { name, tier = 'normal', destinationAddress, customFee } = req.body;
-    
-    if (!name) {
-      return res.status(400).json({ error: 'Name parameter is required' });
-    }
-    
-    // Cast tier to FeeTierType with a safe fallback to 'normal'
-    const tierType: FeeTierType = (['economy', 'normal', 'custom'].includes(tier as string)) 
-        ? tier as FeeTierType 
-        : 'normal';
-    
-    // Get base fee tier and create a copy to modify if needed
-    let feeTier = { ...FEE_TIERS[tierType] };
-    
-    // Override network fee with custom amount if provided for custom tier
-    if (tierType === 'custom' && customFee && typeof customFee === 'number' && customFee >= 500) {
-      feeTier.networkFee = customFee;
-      feeTier.processingTime = customFee > 2000 
-        ? "~10-30 minutes" 
-        : (customFee > 1000 ? "~1-2 hours" : "Variable");
-    }
-    
-    // Calculate total fee with all components
-    const sizeFee = feeTier.sizeFee; // In production, this would vary based on actual name length
-    const networkFee = feeTier.networkFee;
-    const inscriptionFee = feeTier.inscriptionFee;
-    const serviceFee = PLATFORM_FEE_AMOUNT;
-    const totalFee = inscriptionFee + networkFee + sizeFee + serviceFee;
-    
-    // For demonstration purposes, this endpoint would handle the actual registration
-    // process, including submitting transactions to both addresses
-    
-    // Calculate USD values (example exchange rate: 1 sat = $0.0005)
-    const exchangeRate = 0.0005;
-    const usdValues = {
-      inscriptionFeeUSD: (inscriptionFee * exchangeRate).toFixed(2),
-      networkFeeUSD: (networkFee * exchangeRate).toFixed(2),
-      sizeFeeUSD: (sizeFee * exchangeRate).toFixed(2),
-      serviceFeeUSD: (serviceFee * exchangeRate).toFixed(2),
-      totalUSD: (totalFee * exchangeRate).toFixed(2)
-    };
-    
-    res.json({
-      success: true,
-      name,
-      
-      // Detailed fee breakdown
-      inscriptionFee,
-      networkFee,
-      sizeFee,
-      serviceFee,
-      totalFee,
-      
-      // USD values
-      usdValues,
-      
-      // Processing info
-      processingTime: feeTier.processingTime,
-      tier,
-      
-      // Address info
-      registryAddress: SNS_REGISTRY_ADDRESS,
-      platformAddress: PLATFORM_FEE_ADDRESS,
-      destinationAddress: destinationAddress || null,
-      
-      // Status
-      status: 'pending',
-      
-      // Payment links would be generated here in a production system
-      paymentInfo: {
-        btcAddress: SNS_REGISTRY_ADDRESS,
-        platformAddress: PLATFORM_FEE_ADDRESS,
-        // Lightning payment info would go here
-      }
-    });
-  });
   
   // Get cache information
   app.get('/api/cache/info', async (req, res) => {

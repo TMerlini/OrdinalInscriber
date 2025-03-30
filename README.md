@@ -12,6 +12,8 @@ A sophisticated web-based Ordinals inscription platform that empowers users to s
 - Add custom metadata with on-chain storage
 - Image optimization to reduce file size
 - Dark and light theme support
+- SNS (Sats Names Service) name registration
+- Batch processing for multiple files
 
 ## Requirements
 
@@ -118,6 +120,31 @@ networks:
 4. Generate commands
 5. Execute commands (step-by-step or all at once)
 6. View the results
+
+## SNS (Sats Names Service) Features
+
+The application includes integration with the Sats Names Service, which allows you to:
+
+- Search for and check availability of SNS names
+- Register names through the official SNS relay
+- View name registration status and details
+- Connect to Bitcoin wallets to authorize and pay for registrations
+
+### Degraded Functionality Mode
+
+The SNS feature is designed with a degraded functionality mode that activates automatically when the SNS relay service is unavailable:
+
+- Name availability checks will continue to work with approximate results
+- Registration transactions will not be generated, but fee estimates are still available
+- Clear status indicators will show when the service is in degraded mode
+- The application will automatically reconnect to the relay when it becomes available again
+
+To check if the SNS service is operating in degraded mode, you can visit:
+```
+http://localhost:3500/api/sns/status
+```
+
+This will show the current status of the SNS relay connection.
 
 ## Development
 
