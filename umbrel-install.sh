@@ -17,11 +17,29 @@ if [ ! -d "/home/umbrel" ]; then
 fi
 
 echo "Checking for Bitcoin Core and Ord..."
-# Check if Bitcoin Core is running
-if ! docker ps | grep -q "bitcoin"; then
-  echo "Error: Bitcoin Core is not running on this Umbrel node."
-  echo "Please install and start Bitcoin Core before installing Ordinarinos."
-  exit 1
+# Check if Docker is available
+if command -v docker >/dev/null 2>&1 && docker ps >/dev/null 2>&1; then
+  # Check if Bitcoin Core is running
+  if ! docker ps | grep -q "bitcoin"; then
+    echo "Warning: Bitcoin Core is not running on this Umbrel node."
+    echo "Please install and start Bitcoin Core before installing Ordinarinos."
+    echo "Continue anyway for testing? (y/n)"
+    read -r answer
+    if [ "$answer" != "y" ]; then
+      echo "Installation aborted."
+      exit 1
+    fi
+  fi
+else
+  echo "Warning: Docker not available or not accessible. Skipping container checks."
+  echo "This is a simulation mode for testing the script."
+  echo "In a real Umbrel environment, Bitcoin Core and Ord would be required."
+  echo "Continue with simulation? (y/n)"
+  read -r answer
+  if [ "$answer" != "y" ]; then
+    echo "Installation aborted."
+    exit 1
+  fi
 fi
 
 # Check if Ord is running
