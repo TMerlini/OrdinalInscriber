@@ -166,7 +166,44 @@ const SNS_REGISTRATION_FEE = FEE_TIERS.normal.inscriptionFee; // 10000 satoshis 
 const NETWORK_FEE = FEE_TIERS.normal.networkFee; // Network fee in satoshis
 const SIZE_FEE = FEE_TIERS.normal.sizeFee; // Size-based fee in satoshis
 
+/**
+ * Check if we're running in Umbrel environment with direct connections to Bitcoin/Ord
+ */
+function isUmbrelEnvironment(): boolean {
+  return process.env.DIRECT_CONNECT === 'true' && 
+         process.env.BTC_SERVER_AVAILABLE === 'true' &&
+         process.env.ORD_SERVER_AVAILABLE === 'true';
+}
+
+/**
+ * Get Bitcoin RPC endpoint URL
+ */
+function getBitcoinRpcUrl(): string {
+  const user = process.env.BTC_RPC_USER || 'umbrel';
+  const pass = process.env.BTC_RPC_PASSWORD || '';
+  const host = process.env.BTC_RPC_HOST || 'bitcoin.embassy';
+  const port = process.env.BTC_RPC_PORT || '8332';
+  
+  return `http://${user}:${pass}@${host}:${port}/`;
+}
+
+/**
+ * Get Ord API endpoint URL
+ */
+function getOrdApiUrl(): string {
+  const host = process.env.ORD_RPC_HOST || 'ord.embassy';
+  const port = process.env.ORD_RPC_PORT || '8080';
+  
+  return `http://${host}:${port}`;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Log Umbrel environment if detected
+  if (isUmbrelEnvironment()) {
+    console.log('Running in Umbrel environment with direct connections to Bitcoin and Ord');
+    console.log(`Bitcoin RPC endpoint: ${getBitcoinRpcUrl().replace(/:[^:]*@/, ':****@')}`);
+    console.log(`Ord API endpoint: ${getOrdApiUrl()}`);
+  }
   // API routes
   
   // SNS Registration Fee Information
@@ -867,5 +904,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+
+  // If we're in Umbrel environment, add a health check endpoint for Bitcoin and Ord services
+  if (isUmbrelEnvironment()) {
+    app.get('/api/umbrel/health', async (req, res) => {
+      try {
+        // Check Bitcoin RPC connection
+        const btcResponse = await fetch(getBitcoinRpcUrl(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            jsonrpc: '1.0',
+            id: 'health-check',
+            method: 'getblockchaininfo',
+            params: []
+          })
+        });
+        
+        const btcStatus = await btcResponse.json();
+        
+        // Check Ord connection
+        const ordResponse = await fetch(`${getOrdApiUrl()}/status`);
+        const ordStatus = await ordResponse.json();
+        
+        res.json({
+          bitcoin: {
+            connected: true,
+            chain: btcStatus.result.chain,
+            blocks: btcStatus.result.blocks,
+            headers: btcStatus.result.headers,
+            verification_progress: btcStatus.result.verificationprogress
+          },
+          ord: {
+            connected: true,
+            version: ordStatus.version,
+            indexHeight: ordStatus.index_height,
+            inscriptions: ordStatus.inscription_count
+          }
+        });
+      } catch (err) {
+        console.error('Health check error:', err);
+        res.status(500).json({
+          bitcoin: { connected: false },
+          ord: { connected: false },
+          error: err instanceof Error ? err.message : 'Unknown error occurred'
+        });
+      }
+    });
+    
+    // Add a direct ord command endpoint for Umbrel users
+    app.post('/api/umbrel/ord/inscribe', async (req, res) => {
+      try {
+        const { 
+          filePath, 
+          destination, 
+          feeRate,
+          metadataFilePath,
+          contentType,
+          satPoint,
+          dryRun
+        } = req.body;
+        
+        if (!filePath) {
+          return res.status(400).json({ error: 'File path is required' });
+        }
+        
+        // Construct the direct command to the Ord service
+        const ordUrl = `${getOrdApiUrl()}/inscribe`;
+        
+        // Build the request body
+        const requestBody: any = {
+          file: filePath,
+          fee_rate: feeRate || 10,
+        };
+        
+        if (destination) requestBody.destination = destination;
+        if (metadataFilePath) requestBody.metadata = metadataFilePath;
+        if (contentType) requestBody.content_type = contentType;
+        if (satPoint) requestBody.sat_point = satPoint;
+        if (dryRun) requestBody.dry_run = true;
+        
+        const response = await fetch(ordUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody)
+        });
+        
+        const result = await response.json();
+        res.json(result);
+        
+      } catch (err) {
+        console.error('Error executing Ord command:', err);
+        res.status(500).json({ 
+          error: err instanceof Error ? err.message : 'Unknown error occurred'
+        });
+      }
+    });
+  }
+
   return httpServer;
 }

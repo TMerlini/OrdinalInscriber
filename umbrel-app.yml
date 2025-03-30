@@ -1,0 +1,49 @@
+manifestVersion: 1
+id: ordinarinos
+category: bitcoin
+name: Ordinarinos
+version: "1.0.0"
+tagline: "Easily inscribe Ordinals on Bitcoin"
+description: >-
+  A sophisticated web-based Ordinals inscription platform that enables you to efficiently manage blockchain image uploads with precise fee calculation and optimization capabilities. Simplifies the process of transferring files to an Ordinals node and executing inscription commands through an intuitive web interface.
+developer: Ordinarinos
+website: https://github.com/ordinarinos
+dependencies:
+  - bitcoin
+  - ord
+repo: https://github.com/ordinarinos/ordinarinos
+support: https://github.com/ordinarinos/ordinarinos/issues
+port: 3500
+icon: https://raw.githubusercontent.com/ordinarinos/ordinarinos/main/generated-icon.png
+platforms:
+  - "linux/amd64"
+  - "linux/arm64"
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: Ordinarinos
+submission: "https://github.com/ordinarinos/ordinarinos"
+donate: bc1qnr5datqu7hw53w8vdvdtkmhr8pmh4sj5a0v0yf
+
+containers:
+  - image: "{APP_ID}"
+    entrypoint: "/usr/local/bin/start-umbrel.sh"
+    environment:
+      DIRECT_CONNECT: true
+      BTC_SERVER_AVAILABLE: true
+      ORD_SERVER_AVAILABLE: true
+      BTC_RPC_USER: "$BITCOIN_RPC_USER"
+      BTC_RPC_PASSWORD: "$BITCOIN_RPC_PASS"
+      BTC_RPC_HOST: "bitcoin.embassy"
+      BTC_RPC_PORT: 8332
+      ORD_RPC_HOST: "ord.embassy"
+      ORD_RPC_PORT: 8080
+      NODE_ENV: "production"
+      PORT: 3500
+    mounts:
+      - source: data
+        target: /ord/data
+    ports:
+      - target: 3500
+        protocol: tcp
+    stop_grace_period: 1m

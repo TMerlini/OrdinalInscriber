@@ -11,12 +11,9 @@
  */
 export function formatAddress(address: string, startChars = 8, endChars = 4): string {
   if (!address) return '';
+  if (address.length <= startChars + endChars) return address;
   
-  if (address.length <= startChars + endChars) {
-    return address;
-  }
-  
-  return `${address.substring(0, startChars)}...${address.substring(address.length - endChars)}`;
+  return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
 }
 
 /**
@@ -24,13 +21,14 @@ export function formatAddress(address: string, startChars = 8, endChars = 4): st
  * Basic check that can be expanded for more specific validation
  */
 export function isValidBitcoinAddress(address: string): boolean {
-  // Simple check for common Bitcoin address formats
-  // P2PKH: starts with 1
-  // P2SH: starts with 3
-  // Bech32: starts with bc1
-  // Segwit: starts with 2
-  const btcRegex = /^(1|3|bc1|2)[a-zA-Z0-9]{25,90}$/;
-  return btcRegex.test(address);
+  if (!address) return false;
+  
+  // Basic length check
+  if (address.length < 26 || address.length > 89) return false;
+  
+  // Check address prefix
+  const validPrefixes = ['1', '3', 'bc1', 'tb1'];
+  return validPrefixes.some(prefix => address.startsWith(prefix));
 }
 
 /**
@@ -39,15 +37,11 @@ export function isValidBitcoinAddress(address: string): boolean {
 export function getBitcoinAddressType(address: string): string {
   if (!address) return 'Unknown';
   
-  if (address.startsWith('1')) {
-    return 'P2PKH';
-  } else if (address.startsWith('3')) {
-    return 'P2SH';
-  } else if (address.startsWith('bc1')) {
-    return 'Bech32';
-  } else if (address.startsWith('2')) {
-    return 'Segwit';
-  }
+  if (address.startsWith('1')) return 'P2PKH (Legacy)';
+  if (address.startsWith('3')) return 'P2SH (Segwit-compatible)';
+  if (address.startsWith('bc1q')) return 'P2WPKH (Native Segwit)';
+  if (address.startsWith('bc1p')) return 'P2TR (Taproot)';
+  if (address.startsWith('tb1')) return 'Testnet';
   
   return 'Unknown';
 }

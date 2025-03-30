@@ -5,7 +5,7 @@ import { LaserEyesProvider, useLaserEyes } from '@omnisat/lasereyes-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Check, AlertCircle, Wallet as WalletIcon, ExternalLink } from 'lucide-react';
-import { formatAddress } from '@/lib/addressUtils';
+import { formatAddress } from '../lib/addressUtils';
 
 // Extended LaserEyes context type with our expected properties
 interface ExtendedLaserEyesContext {

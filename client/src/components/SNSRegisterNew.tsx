@@ -27,7 +27,7 @@ import {
   Wallet as WalletIcon
 } from 'lucide-react';
 import LaserEyesWalletConnector from './LaserEyesWalletConnector';
-import { formatAddress } from '@/lib/addressUtils';
+import { formatAddress } from '../lib/addressUtils';
 
 // SNS Name interface
 interface SNSName {
