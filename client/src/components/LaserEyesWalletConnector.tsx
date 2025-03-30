@@ -48,12 +48,19 @@ function WalletConnector({ onConnected, className }: LaserEyesWalletConnectorPro
   
   // Set a timeout to avoid getting stuck forever in initialization
   useEffect(() => {
+    // Immediately check for environment issues (in Replit, Janeway, or other sandboxed environments)
+    const isReplit = window.location.hostname.includes('replit') || 
+                     window.location.hostname.includes('janeway');
+    
+    // Very short timeout for Replit environments, longer for others
+    const timeoutDuration = isReplit ? 500 : 3000; // 500ms for Replit, 3s for others
+    
     const timeoutId = setTimeout(() => {
       if (!isInitialized) {
-        console.log("Wallet initialization timed out");
+        console.log("Wallet initialization timed out after", timeoutDuration, "ms");
         setInitializationTimeoutReached(true);
       }
-    }, 5000); // 5 seconds timeout
+    }, timeoutDuration);
     
     return () => clearTimeout(timeoutId);
   }, [isInitialized]);
