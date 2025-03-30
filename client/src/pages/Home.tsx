@@ -21,6 +21,7 @@ import SectionTitle from "@/components/SectionTitle";
 import MetadataInput from "@/components/MetadataInput";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SNSRegister from "@/components/SNSRegister";
+import SNSRegisterNew from "@/components/SNSRegisterNew";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
@@ -982,7 +983,7 @@ export default function Home() {
                 
                 <TabsContent value="sns">
                   <ErrorBoundary>
-                    <SNSRegister />
+                    <SNSRegisterNew />
                   </ErrorBoundary>
                 </TabsContent>
               </Tabs>

@@ -10,6 +10,9 @@ import os from "os";
 import { networkInterfaces } from "os";
 import sharp from "sharp";
 
+// SNS Registry Address (this would be the official SNS registry address in production)
+const SNS_REGISTRY_ADDRESS = "bc1qe8grz79ej3ywxkfcdchrncfl5antlc9tzmy5c2";
+
 // Setup multer for file uploads
 const upload = multer({
   storage: multer.diskStorage({
@@ -123,7 +126,6 @@ export function getLocalIpAddress(): string {
 }
 
 // SNS configuration
-const SNS_REGISTRY_ADDRESS = "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"; // Official SNS registry address
 const PLATFORM_FEE_ADDRESS = "3GzpE8PyW8XgNnmkxsNLpj2jVKvyxwRYFM"; // Platform fee address
 const PLATFORM_FEE_AMOUNT = 2000; // 2000 satoshis (competitive with OrdinalsBot)
 
@@ -132,6 +134,7 @@ type FeeTier = {
   inscriptionFee: number;
   networkFee: number;
   sizeFee: number;
+  serviceFee?: number;
   processingTime: string;
 };
 
