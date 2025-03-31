@@ -420,7 +420,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
               </TabsList>
 
               <TabsContent value="all" className="mt-4">
-                <div className="grid gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {Array.isArray(filteredSats) && filteredSats.length > 0 ? (
                     filteredSats.map((sat) => {
                       try {
@@ -440,12 +440,12 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                       }
                     })
                   ) : (
-                    <div className="p-4 text-center text-sm text-gray-500">
+                    <div className="col-span-full p-4 text-center text-sm text-gray-500">
                       No satoshis match your search.
                     </div>
                   )}
                   {Array.isArray(filteredSats) && filteredSats.filter(sat => sat.available).length === 0 && (
-                    <div className="p-4 text-center text-sm text-gray-500">
+                    <div className="col-span-full p-4 text-center text-sm text-gray-500">
                       No rare sats available in your wallet. All types are shown but grayed out.
                     </div>
                   )}
@@ -456,7 +456,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                 try {
                   return (
                     <TabsContent key={index} value={index.toString()} className="mt-4">
-                      <div className="grid gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {Array.isArray(filteredSats) && filteredSats.length > 0 ? (
                           filteredSats.map((sat) => {
                             try {
@@ -476,12 +476,12 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                             }
                           })
                         ) : (
-                          <div className="p-4 text-center text-sm text-gray-500">
+                          <div className="col-span-full p-4 text-center text-sm text-gray-500">
                             No satoshis match your search in this category.
                           </div>
                         )}
                         {Array.isArray(filteredSats) && filteredSats.filter(sat => sat.available).length === 0 && (
-                          <div className="p-4 text-center text-sm text-gray-500">
+                          <div className="col-span-full p-4 text-center text-sm text-gray-500">
                             No rare sats available in your wallet. All types are shown but grayed out.
                           </div>
                         )}
@@ -599,7 +599,11 @@ function SatCard({
   try {
     return (
       <Card
-        className={`cursor-pointer hover:border-orange-300 dark:hover:border-orange-600 transition-colors ${getSelectedClasses()} ${sat.available ? '' : 'opacity-50'}`} // Highlight available sats
+        className={`cursor-pointer hover:border-orange-300 dark:hover:border-orange-600 transition-colors ${getSelectedClasses()} ${
+          sat.available 
+            ? 'border-2 border-green-300 dark:border-green-600' 
+            : 'opacity-50'
+        }`} // Highlight available sats
         onClick={handleClick}
       >
         <CardHeader className="p-3 pb-0">
@@ -620,6 +624,11 @@ function SatCard({
             <span className="text-xs text-gray-500 dark:text-gray-400">
               {selected ? 'Selected for inscription' : 'Click to select'}
             </span>
+            {sat.available && (
+              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs">
+                Available
+              </Badge>
+            )}
             {selected && (
               <Badge variant="outline" className="text-xs border-orange-300 dark:border-orange-700">
                 Selected
