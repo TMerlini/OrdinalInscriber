@@ -95,7 +95,7 @@ function isSequence(satNumber: number): boolean {
   const str = satNumber.toString();
   let isAscending = true;
   let isDescending = true;
-  
+
   for (let i = 1; i < str.length; i++) {
     if (parseInt(str[i]) !== parseInt(str[i-1]) + 1) {
       isAscending = false;
@@ -105,18 +105,18 @@ function isSequence(satNumber: number): boolean {
     }
     if (!isAscending && !isDescending) break;
   }
-  
+
   return isAscending || isDescending;
 }
 
 function isRepeating(satNumber: number): boolean {
   const str = satNumber.toString();
-  
+
   // Check for patterns like 123123, 4545, etc.
   for (let patternLen = 1; patternLen <= str.length / 2; patternLen++) {
     const pattern = str.substr(0, patternLen);
     let isRepeating = true;
-    
+
     for (let i = patternLen; i < str.length; i += patternLen) {
       const segment = str.substr(i, patternLen);
       if (segment !== pattern.substr(0, segment.length)) {
@@ -124,10 +124,10 @@ function isRepeating(satNumber: number): boolean {
         break;
       }
     }
-    
+
     if (isRepeating) return true;
   }
-  
+
   return false;
 }
 
@@ -146,11 +146,11 @@ function isPrime(satNumber: number): boolean {
   if (satNumber <= 1) return false;
   if (satNumber <= 3) return true;
   if (satNumber % 2 === 0 || satNumber % 3 === 0) return false;
-  
+
   for (let i = 5; i * i <= satNumber; i += 6) {
     if (satNumber % i === 0 || satNumber % (i + 2) === 0) return false;
   }
-  
+
   return true;
 }
 
@@ -257,8 +257,161 @@ export function classifySat(satNumber: number): RareSat {
   };
 }
 
-// Function to simulate fetching rare sats from a wallet
-// In a real implementation, this would call the Ord wallet API
+// Get complete list of all possible rare sat types 
+export function getAllRareSatTypes(): RareSat[] {
+  // This function returns examples of all possible rare sat types
+  // in a real implementation, this would come from a predefined list or database
+  return [
+    // Legendary sats (rarity 10)
+    {
+      satoshi: "21",
+      type: RareSatType.FIRST,
+      description: "A satoshi from the genesis block, the very first Bitcoin block.",
+      rarity: 10
+    },
+    {
+      satoshi: "121",
+      type: RareSatType.LEGENDARY,
+      description: "Extremely rare satoshi with unique qualities.",
+      rarity: 10
+    },
+    {
+      satoshi: "7331",
+      type: RareSatType.MYTHIC,
+      description: "Mythical satoshi with historical significance.",
+      rarity: 10
+    },
+
+    // Epic sats (rarity 9)
+    {
+      satoshi: "3939393",
+      type: RareSatType.RODARMOR,
+      description: "A special satoshi named after Casey Rodarmor, creator of Ordinals.",
+      rarity: 9
+    },
+    {
+      satoshi: "460000123",
+      type: RareSatType.BLOCK9,
+      description: "A satoshi from Block 9, the first block that sent Bitcoin to another person.",
+      rarity: 9
+    },
+    {
+      satoshi: "3912345",
+      type: RareSatType.BLOCK78,
+      description: "A satoshi from Block 78, which contained a special message from Satoshi Nakamoto.",
+      rarity: 9
+    },
+    {
+      satoshi: "9999999",
+      type: RareSatType.EPIC,
+      description: "Satoshi with exceptional rarity.",
+      rarity: 9
+    },
+
+    // Very Rare sats (rarity 8)
+    {
+      satoshi: "2854123456789",
+      type: RareSatType.PIZZA,
+      description: "A satoshi from the famous Bitcoin pizza transaction.",
+      rarity: 8
+    },
+    {
+      satoshi: "1000000",
+      type: RareSatType.ALPHA_MEGA,
+      description: "An Alpha or Omega satoshi - the first or last in a significant range.",
+      rarity: 8
+    },
+
+    // Rare sats (rarity 7)
+    {
+      satoshi: "12321",
+      type: RareSatType.PALINDROME,
+      description: "A palindrome satoshi that reads the same forwards and backwards.",
+      rarity: 7
+    },
+    {
+      satoshi: "123456",
+      type: RareSatType.SEQUENCE,
+      description: "A satoshi with sequential digits (ascending or descending).",
+      rarity: 7
+    },
+    {
+      satoshi: "77777",
+      type: RareSatType.RARE,
+      description: "Satoshi with uncommon properties.",
+      rarity: 7
+    },
+
+    // Uncommon sats (rarity 6)
+    {
+      satoshi: "111222",
+      type: RareSatType.REPEATING,
+      description: "A satoshi with repeating digits pattern.",
+      rarity: 6
+    },
+    {
+      satoshi: "10007",
+      type: RareSatType.PRIME,
+      description: "A prime number satoshi - divisible only by 1 and itself.",
+      rarity: 6
+    },
+    {
+      satoshi: "50000",
+      type: RareSatType.BLACK,
+      description: "A 'black' satoshi with special cycle properties.",
+      rarity: 6
+    },
+    {
+      satoshi: "654321",
+      type: RareSatType.UNCOMMON,
+      description: "Satoshi with slightly rare properties.",
+      rarity: 6
+    },
+
+    // Somewhat Uncommon sats (rarity 5)
+    {
+      satoshi: "10100",
+      type: RareSatType.EVIL,
+      description: "An 'evil' satoshi with an even number of 1s in its binary representation.",
+      rarity: 5
+    },
+    {
+      satoshi: "2100",
+      type: RareSatType.WHITE,
+      description: "A 'white' satoshi with special numerical properties.",
+      rarity: 5
+    },
+    {
+      satoshi: "1111",
+      type: RareSatType.BINARY,
+      description: "A satoshi with a special binary pattern.",
+      rarity: 5
+    },
+
+    // Common but interesting sats (rarity 4)
+    {
+      satoshi: "1024",
+      type: RareSatType.VINTAGE,
+      description: "One of the first 100,000 satoshis ever created.",
+      rarity: 4
+    },
+    {
+      satoshi: "65",
+      type: RareSatType.ASCII,
+      description: "A satoshi with an ASCII value (0-127) - represents 'A' in ASCII.",
+      rarity: 4
+    },
+
+    // Common sats (rarity 3)
+    {
+      satoshi: "999999",
+      type: RareSatType.COMMON,
+      description: "One of the first million satoshis.",
+      rarity: 3
+    }
+  ];
+}
+
 export async function fetchRareSatsFromWallet(): Promise<RareSat[]> {
   try {
     // Special handling for Janeway URL to prevent runtime errors
@@ -283,9 +436,9 @@ export async function fetchRareSatsFromWallet(): Promise<RareSat[]> {
         }
       ];
     }
-    
+
     // For non-Janeway environments, proceed with normal logic:
-    
+
     // Simulate a delay for the API call
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -294,15 +447,15 @@ export async function fetchRareSatsFromWallet(): Promise<RareSat[]> {
     // 2. Query available UTXOs to find rare satoshis
     // 3. Run classification on those satoshis
     // 4. Return only the rare ones that are available in the wallet
-    
+
     // Enable mock data for easier testing
     const hasRareSats = true;
-    
+
     if (!hasRareSats) {
       console.log('No rare sats found in wallet');
       return []; // Empty array to simulate wallet with no rare sats
     }
-    
+
     // Mock data for demonstration purposes - would be replaced with actual API call
     const mockRareSats: RareSat[] = [
       // Legendary and Epic sats
@@ -336,7 +489,7 @@ export async function fetchRareSatsFromWallet(): Promise<RareSat[]> {
         description: "A satoshi from Block 78, which contained a special message from Satoshi Nakamoto.",
         rarity: 9
       },
-      
+
       // Very Rare sats
       {
         satoshi: "2854123456789",
@@ -350,7 +503,7 @@ export async function fetchRareSatsFromWallet(): Promise<RareSat[]> {
         description: "An Alpha or Omega satoshi - the first or last in a significant range.",
         rarity: 8
       },
-      
+
       // Rare sats
       {
         satoshi: "12321",
@@ -364,7 +517,7 @@ export async function fetchRareSatsFromWallet(): Promise<RareSat[]> {
         description: "A satoshi with sequential digits (ascending or descending).",
         rarity: 7
       },
-      
+
       // Uncommon sats
       {
         satoshi: "111222",
@@ -384,7 +537,7 @@ export async function fetchRareSatsFromWallet(): Promise<RareSat[]> {
         description: "A 'black' satoshi with special cycle properties.",
         rarity: 6
       },
-      
+
       // Somewhat Uncommon sats
       {
         satoshi: "10100",
@@ -404,7 +557,7 @@ export async function fetchRareSatsFromWallet(): Promise<RareSat[]> {
         description: "A satoshi with a special binary pattern.",
         rarity: 5
       },
-      
+
       // Common but interesting sats
       {
         satoshi: "1024",

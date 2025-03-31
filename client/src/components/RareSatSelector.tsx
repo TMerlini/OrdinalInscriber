@@ -38,44 +38,54 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  // State to track available satoshi numbers
+  const [availableSatoshis, setAvailableSatoshis] = useState<Set<string>>(new Set());
+  const [showOnlyAvailable, setShowOnlyAvailable] = useState<boolean>(false);
+
+
+  // Simulate fetching all rare sat types -  REPLACE THIS WITH ACTUAL IMPLEMENTATION
+  const getAllRareSatTypes = (): RareSat[] => {
+    //Example data - replace with your actual data fetching logic
+    return [
+      { satoshi: "123", type: "TypeA", rarity: 7, description: "Description A", available: true },
+      { satoshi: "456", type: "TypeB", rarity: 9, description: "Description B", available: false },
+      { satoshi: "789", type: "TypeA", rarity: 5, description: "Description C", available: true },
+      { satoshi: "101", type: "TypeC", rarity: 10, description: "Description D", available: false },
+    ];
+  };
 
   // Load rare sats with comprehensive error handling
   const loadRareSats = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      try {
-        const sats = await fetchRareSatsFromWallet();
-        
-        // Validate returned data before setting state
-        if (Array.isArray(sats)) {
-          setRareSats(sats);
-        } else {
-          console.log('Invalid rare sats data returned:', sats);
-          setRareSats([]);
-          setError('Received invalid data from wallet. Please try refreshing.');
-        }
-      } catch (fetchErr) {
-        console.error('Error fetching rare sats:', fetchErr);
-        setError('Failed to load rare sats from wallet. Please ensure your wallet is synced and try again.');
-        setRareSats([]); // Ensure state is consistent even after error
+
+      // Fetch rare sats from wallet (these are the ones user actually owns)
+      const availableResults = await fetchRareSatsFromWallet();
+
+      if (Array.isArray(availableResults)) {
+        // Create a set of available satoshi numbers for quick lookup
+        const availableSet = new Set(availableResults.map(sat => sat.satoshi));
+        setAvailableSatoshis(availableSet);
+
+        // Get all possible rare sat types (from the system, not just wallet)
+        const allRareSatTypes = getAllRareSatTypes();
+
+        // Mark each sat with availability status
+        const satsWithAvailability = allRareSatTypes.map(sat => ({
+          ...sat,
+          available: availableSet.has(sat.satoshi)
+        }));
+        setRareSats(satsWithAvailability);
+      } else {
+        console.error('Invalid response format:', availableResults);
+        setError('Failed to load rare sats. Please try again.');
       }
-    } catch (outerErr) {
-      // Catch any errors in the error handling itself
-      console.error('Fatal error in loadRareSats:', outerErr);
-      try {
-        setError('An unexpected error occurred. Please refresh the page and try again.');
-        setRareSats([]);
-      } catch (stateErr) {
-        console.error('Failed to set error state:', stateErr);
-      }
+    } catch (err) {
+      console.error('Error loading rare sats:', err);
+      setError('Failed to load rare sats. Please try again.');
     } finally {
-      try {
-        setLoading(false);
-      } catch (stateErr) {
-        console.error('Failed to update loading state:', stateErr);
-      }
+      setLoading(false);
     }
   };
 
@@ -103,7 +113,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
     } catch (err) {
       console.error('Error in initial load effect:', err);
     }
-    
+
     // Cleanup function
     return () => {
       // Any cleanup if needed
@@ -138,7 +148,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
     try {
       // Ensure rareSats is an array
       let filtered = Array.isArray(rareSats) ? rareSats : [];
-      
+
       // Apply search filter if query exists
       if (searchQuery && searchQuery.trim()) {
         try {
@@ -160,7 +170,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
           // Fall back to unfiltered array
         }
       }
-      
+
       // Apply tab filter if not "all"
       if (activeTab && activeTab !== 'all') {
         try {
@@ -169,8 +179,8 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
             const group = rarityGroups[groupIndex];
             filtered = filtered.filter(sat => {
               try {
-                return typeof sat?.rarity === 'number' && 
-                  sat.rarity >= group.min && 
+                return typeof sat?.rarity === 'number' &&
+                  sat.rarity >= group.min &&
                   sat.rarity <= group.max;
               } catch (err) {
                 console.log('Error filtering sat by rarity:', err);
@@ -183,26 +193,31 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
           // Fall back to search-filtered array
         }
       }
-      
+
+      // Apply availability filter
+      if (showOnlyAvailable) {
+        filtered = filtered.filter(sat => sat.available);
+      }
+
       return filtered;
     } catch (err) {
       console.log('Fatal error in filteredSats useMemo:', err);
       return []; // Return empty array as last resort
     }
-  }, [rareSats, searchQuery, activeTab]);
-  
+  }, [rareSats, searchQuery, activeTab, showOnlyAvailable]);
+
   // Group counts for the tabs
   const groupCounts = useMemo(() => {
     try {
       // Ensure rareSats is an array
       const sats = Array.isArray(rareSats) ? rareSats : [];
-      
+
       return rarityGroups.map((group, index) => {
         try {
           return sats.filter(sat => {
             try {
-              return typeof sat?.rarity === 'number' && 
-                sat.rarity >= group.min && 
+              return typeof sat?.rarity === 'number' &&
+                sat.rarity >= group.min &&
                 sat.rarity <= group.max;
             } catch (err) {
               console.log('Error counting sats in group:', err);
@@ -220,7 +235,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
       return rarityGroups.map(() => 0);
     }
   }, [rareSats]);
-  
+
   const totalCount = rareSats.length;
 
   try {
@@ -228,32 +243,39 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-medium text-orange-800 dark:text-orange-400">Rare Sats</h3>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={(e) => {
-              try {
-                e.preventDefault();
-                handleRefresh();
-              } catch (err) {
-                console.log('Error in refresh button click:', err);
-              }
-            }} 
-            disabled={loading || refreshing}
-            className="text-xs"
-          >
-            {refreshing ? (
-              <>
-                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                Refreshing
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-3 w-3" />
-                Refresh
-              </>
-            )}
-          </Button>
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                try {
+                  e.preventDefault();
+                  handleRefresh();
+                } catch (err) {
+                  console.log('Error in refresh button click:', err);
+                }
+              }}
+              disabled={loading || refreshing}
+              className="text-xs"
+            >
+              {refreshing ? (
+                <>
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  Refreshing
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-3 w-3" />
+                  Refresh
+                </>
+              )}
+            </Button>
+            <label className="flex items-center space-x-2">
+              <input type="checkbox" checked={showOnlyAvailable} onChange={(e) => setShowOnlyAvailable(e.target.checked)} />
+              Show Only Available
+            </label>
+          </div>
+
         </div>
 
         {loading ? (
@@ -273,7 +295,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
         ) : (
           <div className="space-y-4">
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-orange-500 dark:text-orange-400"/>
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-orange-500 dark:text-orange-400" />
               <Input
                 placeholder="Search by sat number, type, or description..."
                 className="pl-8 text-sm border-orange-200 dark:border-orange-800/40"
@@ -287,10 +309,10 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                 }}
               />
             </div>
-            
-            <Tabs 
-              defaultValue="all" 
-              value={activeTab} 
+
+            <Tabs
+              defaultValue="all"
+              value={activeTab}
               onValueChange={(value) => {
                 try {
                   setActiveTab(value);
@@ -306,8 +328,8 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                 {rarityGroups.map((group, index) => {
                   try {
                     return (
-                      <TabsTrigger 
-                        key={group.label} 
+                      <TabsTrigger
+                        key={group.label}
                         value={index.toString()}
                         className="text-xs py-1"
                         disabled={groupCounts && groupCounts[index] === 0}
@@ -323,7 +345,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                   }
                 })}
               </TabsList>
-              
+
               <TabsContent value="all" className="mt-4">
                 <div className="grid gap-3">
                   {Array.isArray(filteredSats) && filteredSats.length > 0 ? (
@@ -331,7 +353,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                       try {
                         if (!sat || !sat.satoshi) return null;
                         return (
-                          <SatCard 
+                          <SatCard
                             key={sat.satoshi}
                             sat={sat}
                             selected={selectedSatoshi === sat.satoshi}
@@ -351,7 +373,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                   )}
                 </div>
               </TabsContent>
-              
+
               {rarityGroups.map((group, index) => {
                 try {
                   return (
@@ -362,7 +384,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                             try {
                               if (!sat || !sat.satoshi) return null;
                               return (
-                                <SatCard 
+                                <SatCard
                                   key={sat.satoshi}
                                   sat={sat}
                                   selected={selectedSatoshi === sat.satoshi}
@@ -404,8 +426,8 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
         <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 text-sm">
           There was an error loading the rare sats selector. Please refresh the page and try again.
         </div>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={() => window.location.reload()}
           className="w-full"
         >
@@ -417,14 +439,14 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
 }
 
 // Extracted Sat Card component for reuse
-function SatCard({ 
-  sat, 
-  selected, 
-  onSelect, 
-  getRarityLabel 
-}: { 
-  sat: RareSat, 
-  selected: boolean, 
+function SatCard({
+  sat,
+  selected,
+  onSelect,
+  getRarityLabel
+}: {
+  sat: RareSat,
+  selected: boolean,
   onSelect: (satoshi: string) => void,
   getRarityLabel: (rarity: number) => string
 }) {
@@ -442,8 +464,8 @@ function SatCard({
   // Safely get card color classes with fallbacks
   const getSelectedClasses = () => {
     try {
-      return selected 
-        ? 'border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-navy-700/80' 
+      return selected
+        ? 'border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-navy-700/80'
         : '';
     } catch (err) {
       console.log('Error in getSelectedClasses:', err);
@@ -493,8 +515,8 @@ function SatCard({
   // Render with fallbacks for all values
   try {
     return (
-      <Card 
-        className={`cursor-pointer hover:border-orange-300 dark:hover:border-orange-600 transition-colors ${getSelectedClasses()}`}
+      <Card
+        className={`cursor-pointer hover:border-orange-300 dark:hover:border-orange-600 transition-colors ${getSelectedClasses()} ${sat.available ? '' : 'opacity-50'}`} // Highlight available sats
         onClick={handleClick}
       >
         <CardHeader className="p-3 pb-0">
