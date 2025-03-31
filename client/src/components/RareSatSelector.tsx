@@ -43,15 +43,80 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
   const [showOnlyAvailable, setShowOnlyAvailable] = useState<boolean>(false);
 
 
-  // Simulate fetching all rare sat types -  REPLACE THIS WITH ACTUAL IMPLEMENTATION
+  // Get all rare sat types (from the system catalog, not just wallet)
   const getAllRareSatTypes = (): RareSat[] => {
-    //Example data - replace with your actual data fetching logic
-    return [
-      { satoshi: "123", type: "TypeA", rarity: 7, description: "Description A", available: true },
-      { satoshi: "456", type: "TypeB", rarity: 9, description: "Description B", available: false },
-      { satoshi: "789", type: "TypeA", rarity: 5, description: "Description C", available: true },
-      { satoshi: "101", type: "TypeC", rarity: 10, description: "Description D", available: false },
-    ];
+    // Return all possible rare sat types from the RareSatType enum
+    return Object.values(RareSatType).map(type => {
+      // Create a placeholder rare sat for each type
+      return {
+        satoshi: "0", // Placeholder, will be replaced with real values for available sats
+        type: type,
+        rarity: getRarityForType(type),
+        description: getDescriptionForType(type),
+        available: false // Default to not available, will update with actual availability
+      };
+    }).filter(sat => sat.type !== RareSatType.COMMON); // Filter out COMMON as it's not "rare"
+  };
+
+  // Helper to get rarity score based on satoshi type
+  const getRarityForType = (type: RareSatType): number => {
+    // Map each type to its rarity level (1-10)
+    const rarityMap: Record<RareSatType, number> = {
+      [RareSatType.COMMON]: 3,
+      [RareSatType.VINTAGE]: 4,
+      [RareSatType.ASCII]: 4,
+      [RareSatType.EVIL]: 5,
+      [RareSatType.WHITE]: 5,
+      [RareSatType.BINARY]: 5,
+      [RareSatType.UNCOMMON]: 6,
+      [RareSatType.REPEATING]: 6,
+      [RareSatType.PRIME]: 6,
+      [RareSatType.BLACK]: 6,
+      [RareSatType.RARE]: 7,
+      [RareSatType.PALINDROME]: 7,
+      [RareSatType.SEQUENCE]: 7,
+      [RareSatType.PIZZA]: 8,
+      [RareSatType.ALPHA_MEGA]: 8,
+      [RareSatType.RODARMOR]: 9,
+      [RareSatType.BLOCK9]: 9,
+      [RareSatType.BLOCK78]: 9,
+      [RareSatType.EPIC]: 9,
+      [RareSatType.FIRST]: 10,
+      [RareSatType.LEGENDARY]: 10,
+      [RareSatType.MYTHIC]: 10,
+      [RareSatType.OMEGA]: 10
+    };
+    return rarityMap[type] || 3;
+  };
+
+  // Helper to get description for each type
+  const getDescriptionForType = (type: RareSatType): string => {
+    const descriptionMap: Record<RareSatType, string> = {
+      [RareSatType.COMMON]: "Common satoshi",
+      [RareSatType.VINTAGE]: "One of the first 100,000 satoshis ever created",
+      [RareSatType.ASCII]: "A satoshi with an ASCII value (0-127)",
+      [RareSatType.EVIL]: "An 'evil' satoshi with an even number of 1s in its binary representation",
+      [RareSatType.WHITE]: "A 'white' satoshi with special numerical properties",
+      [RareSatType.BINARY]: "A satoshi with a special binary pattern",
+      [RareSatType.UNCOMMON]: "Satoshi with slightly rare properties",
+      [RareSatType.REPEATING]: "A satoshi with repeating digits pattern",
+      [RareSatType.PRIME]: "A prime number satoshi - divisible only by 1 and itself",
+      [RareSatType.BLACK]: "A 'black' satoshi with special cycle properties",
+      [RareSatType.RARE]: "Satoshi with uncommon properties",
+      [RareSatType.PALINDROME]: "A palindrome satoshi that reads the same forwards and backwards",
+      [RareSatType.SEQUENCE]: "A satoshi with sequential digits (ascending or descending)",
+      [RareSatType.PIZZA]: "A satoshi from the famous Bitcoin pizza transaction",
+      [RareSatType.ALPHA_MEGA]: "An Alpha or Omega satoshi - the first or last in a significant range",
+      [RareSatType.RODARMOR]: "A special satoshi named after Casey Rodarmor, creator of Ordinals",
+      [RareSatType.BLOCK9]: "A satoshi from Block 9, the first block that sent Bitcoin to another person",
+      [RareSatType.BLOCK78]: "A satoshi from Block 78, which contained a special message from Satoshi Nakamoto",
+      [RareSatType.EPIC]: "Satoshi with exceptional rarity",
+      [RareSatType.FIRST]: "A satoshi from the genesis block, the very first Bitcoin block",
+      [RareSatType.LEGENDARY]: "Extremely rare satoshi with unique qualities",
+      [RareSatType.MYTHIC]: "Mythical satoshi with historical significance",
+      [RareSatType.OMEGA]: "The last satoshi in a significant range"
+    };
+    return descriptionMap[type] || `${type} satoshi`;
   };
 
   // Load rare sats with comprehensive error handling
@@ -64,12 +129,18 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
       const availableResults = await fetchRareSatsFromWallet();
 
       if (Array.isArray(availableResults)) {
-        // Create a set of available satoshi numbers for quick lookup
-        const availableSet = new Set(availableResults.map(sat => sat.satoshi));
-        setAvailableSatoshis(availableSet);
+        // Create a set of available satoshi types for quick lookup
+        const availableTypes = new Set(availableResults.map(sat => sat.type));
+        setAvailableSatoshis(new Set(availableResults.map(sat => sat.satoshi)));
 
-        // Get all possible rare sat types (from the system, not just wallet)
+        // Get all possible rare sat types 
         const allRareSatTypes = getAllRareSatTypes();
+        
+        // Mark which types are available in the user's wallet
+        const combinedSatTypes = allRareSatTypes.map(sat => ({
+          ...sat,
+          available: availableTypes.has(sat.type)
+        }));
 
         // Mark each sat with availability status
         const satsWithAvailability = allRareSatTypes.map(sat => ({

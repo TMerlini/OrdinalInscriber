@@ -412,7 +412,13 @@ export function getAllRareSatTypes(): RareSat[] {
   ];
 }
 
-export async function fetchRareSatsFromWallet(): Promise<RareSat[]> {
+// Function to get all rare sat types defined in the system
+export function getAllRareSatTypesDefinitions(): RareSatType[] {
+  return Object.values(RareSatType);
+}
+
+// Mock function to fetch rare sats from wallet
+export async function fetchRareSatsFromWallet(hasRareSats = true): Promise<RareSat[]> {
   try {
     // Special handling for Janeway URL to prevent runtime errors
     if (typeof window !== 'undefined' && 

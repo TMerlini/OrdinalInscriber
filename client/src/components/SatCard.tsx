@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { RareSat } from '../lib/rareSats';
+import { cn } from "@/lib/utils";
 
 interface SatCardProps {
   sat: RareSat;
@@ -18,7 +18,7 @@ const SatCard: React.FC<SatCardProps> = ({
   isAvailable = true 
 }) => {
   const rarityLabel = getRarityLabel(sat.rarity);
-  
+
   // Get color based on rarity
   const getRarityColor = (rarity: number): string => {
     switch (rarity) {
@@ -32,17 +32,30 @@ const SatCard: React.FC<SatCardProps> = ({
     }
   };
 
+  // Determine style based on availability
+  const cardStyle = cn(
+    "relative p-3 rounded-lg border transition-all",
+    isAvailable 
+      ? "border-green-500 dark:border-green-600 hover:shadow-lg hover:shadow-green-200 dark:hover:shadow-green-900/30 cursor-pointer" 
+      : "opacity-70 border border-gray-200 dark:border-gray-800 cursor-not-allowed",
+  );
+
+    // Get badge color based on rarity
+  const getRarityBadgeColor = (rarity: number) => {
+    if (rarity >= 10) return "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300";
+    if (rarity >= 9) return "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300";
+    if (rarity >= 8) return "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300";
+    if (rarity >= 7) return "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300";
+    if (rarity >= 6) return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300";
+    if (rarity >= 5) return "bg-lime-100 dark:bg-lime-900/30 text-lime-800 dark:text-lime-300";
+    return "bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300";
+  };
+
+
   return (
     <div 
       onClick={() => isAvailable && onSelect(sat.satoshi)}
-      className={`
-        relative p-3 rounded-lg border transition-all
-        ${selected ? 'border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-orange-900/20' : 'border-gray-200 dark:border-gray-800'}
-        ${isAvailable 
-          ? 'cursor-pointer hover:border-orange-300 dark:hover:border-orange-600 hover:shadow-sm' 
-          : 'opacity-60 cursor-not-allowed'
-        }
-      `}
+      className={cardStyle}
     >
       {!isAvailable && (
         <div className="absolute top-2 right-2 bg-gray-200 dark:bg-gray-700 text-xs px-2 py-0.5 rounded-full">
@@ -56,11 +69,11 @@ const SatCard: React.FC<SatCardProps> = ({
             {sat.type}
           </div>
         </div>
-        <div className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800">
+        <div className={`text-xs font-medium px-2 py-0.5 rounded-full ${getRarityBadgeColor(sat.rarity)}`}>
           {rarityLabel}
         </div>
       </div>
-      <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+      <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
         {sat.description}
       </p>
     </div>
