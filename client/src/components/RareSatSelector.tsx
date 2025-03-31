@@ -444,6 +444,11 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                       No satoshis match your search.
                     </div>
                   )}
+                  {Array.isArray(filteredSats) && filteredSats.filter(sat => sat.available).length === 0 && (
+                    <div className="p-4 text-center text-sm text-gray-500">
+                      No rare sats available in your wallet. All types are shown but grayed out.
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
@@ -473,6 +478,11 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                         ) : (
                           <div className="p-4 text-center text-sm text-gray-500">
                             No satoshis match your search in this category.
+                          </div>
+                        )}
+                        {Array.isArray(filteredSats) && filteredSats.filter(sat => sat.available).length === 0 && (
+                          <div className="p-4 text-center text-sm text-gray-500">
+                            No rare sats available in your wallet. All types are shown but grayed out.
                           </div>
                         )}
                       </div>

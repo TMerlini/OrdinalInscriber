@@ -480,12 +480,10 @@ export async function fetchRareSatsFromWallet(hasRareSats = true): Promise<RareS
     // 4. Return only the rare ones that are available in the wallet
 
     // Enable mock data for easier testing
-    const hasRareSats = true;
+    //const hasRareSats = true;
 
-    if (!hasRareSats) {
-      console.log('No rare sats found in wallet');
-      return []; // Empty array to simulate wallet with no rare sats
-    }
+    // Always return data for development/testing purposes
+    console.log('Simulating rare sats in wallet');
 
     // Mock data for demonstration purposes - would be replaced with actual API call
     const mockRareSats: RareSat[] = [
