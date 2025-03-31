@@ -35,7 +35,7 @@ const SatCard: React.FC<SatCardProps> = ({
   // Determine style based on availability
   const cardStyle = cn(
     "relative p-3 rounded-lg border transition-all",
-    isAvailable 
+    sat.available 
       ? "border-green-500 dark:border-green-600 hover:shadow-lg hover:shadow-green-200 dark:hover:shadow-green-900/30 cursor-pointer" 
       : "opacity-70 border border-gray-200 dark:border-gray-800 cursor-not-allowed",
   );
@@ -54,10 +54,10 @@ const SatCard: React.FC<SatCardProps> = ({
 
   return (
     <div 
-      onClick={() => isAvailable && onSelect(sat.satoshi)}
+      onClick={() => sat.available && onSelect(sat.satoshi)}
       className={cardStyle}
     >
-      {!isAvailable && (
+      {!sat.available && (
         <div className="absolute top-2 right-2 bg-gray-200 dark:bg-gray-700 text-xs px-2 py-0.5 rounded-full">
           Unavailable
         </div>

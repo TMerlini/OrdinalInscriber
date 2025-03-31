@@ -132,24 +132,13 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
 
       if (Array.isArray(availableResults)) {
         // Create a set of available satoshi types for quick lookup
-        const availableTypes = new Set(availableResults.map(sat => sat.type));
-        setAvailableSatoshis(new Set(availableResults.map(sat => sat.satoshi)));
+        const availableTypes = new Set(availableResults.filter(sat => sat.available).map(sat => sat.type));
+        setAvailableSatoshis(new Set(availableResults.filter(sat => sat.available).map(sat => sat.satoshi)));
 
-        // Get all possible rare sat types 
-        const allRareSatTypes = getAllRareSatTypes();
-
-        // Mark which types are available in the user's wallet
-        const combinedSatTypes = allRareSatTypes.map(sat => ({
-          ...sat,
-          available: availableTypes.has(sat.type)
-        }));
-
-        // Mark each sat with availability status
-        const satsWithAvailability = allRareSatTypes.map(sat => ({
-          ...sat,
-          available: availableSatoshis.has(sat.satoshi)
-        }));
-        setRareSats(satsWithAvailability);
+        console.log(`Loaded ${availableResults.length} rare sat types, ${availableTypes.size} available`);
+        
+        // Use the results directly, as they already contain all types with availability markers
+        setRareSats(availableResults);
       } else {
         console.error('Invalid response format:', availableResults);
         setError('Failed to load rare sats. Please try again.');
