@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, RefreshCw, Search, Filter } from "lucide-react";
 import { RareSat, RareSatType, fetchRareSatsFromWallet, getRarityColor, getRarityBadgeColor } from '@/lib/rareSats';
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface RareSatSelectorProps {
   onSelect: (satoshi: string) => void;
@@ -135,7 +137,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
 
         // Get all possible rare sat types 
         const allRareSatTypes = getAllRareSatTypes();
-        
+
         // Mark which types are available in the user's wallet
         const combinedSatTypes = allRareSatTypes.map(sat => ({
           ...sat,
@@ -145,7 +147,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
         // Mark each sat with availability status
         const satsWithAvailability = allRareSatTypes.map(sat => ({
           ...sat,
-          available: availableSet.has(sat.satoshi)
+          available: availableSatoshis.has(sat.satoshi)
         }));
         setRareSats(satsWithAvailability);
       } else {
@@ -314,25 +316,29 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-medium text-orange-800 dark:text-orange-400">Rare Sats</h3>
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center mr-2">
+              <Switch
+                id="show-available-only"
+                checked={showOnlyAvailable}
+                onCheckedChange={setShowOnlyAvailable}
+                className="mr-2"
+              />
+              <Label htmlFor="show-available-only" className="text-xs text-orange-700 dark:text-orange-300">
+                Show Available Only
+              </Label>
+            </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={(e) => {
-                try {
-                  e.preventDefault();
-                  handleRefresh();
-                } catch (err) {
-                  console.log('Error in refresh button click:', err);
-                }
-              }}
+              onClick={handleRefresh}
               disabled={loading || refreshing}
-              className="text-xs"
+              className="text-sm"
             >
               {refreshing ? (
                 <>
                   <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                  Refreshing
+                  Refreshing...
                 </>
               ) : (
                 <>
@@ -341,10 +347,6 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                 </>
               )}
             </Button>
-            <label className="flex items-center space-x-2">
-              <input type="checkbox" checked={showOnlyAvailable} onChange={(e) => setShowOnlyAvailable(e.target.checked)} />
-              Show Only Available
-            </label>
           </div>
 
         </div>
