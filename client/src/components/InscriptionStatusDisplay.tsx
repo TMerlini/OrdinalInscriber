@@ -13,6 +13,7 @@ import { AlertTriangle } from 'lucide-react';
  */
 export default function InscriptionStatusDisplay() {
   const [inscriptions, setInscriptions] = useState<InscriptionStatusItem[]>([]);
+  const [displayLimit, setDisplayLimit] = useState<number>(10);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -96,6 +97,31 @@ export default function InscriptionStatusDisplay() {
       });
     }
   };
+  
+  const deleteInscription = async (id: string) => {
+    try {
+      const response = await apiRequest('DELETE', `/api/inscriptions/${id}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete inscription: ${response.statusText}`);
+      }
+      
+      // Remove the deleted inscription from the state
+      setInscriptions(prev => prev.filter(item => item.id !== id));
+      
+      toast({
+        title: "Inscription Deleted",
+        description: "The inscription record has been removed from history.",
+      });
+    } catch (err) {
+      console.error('Failed to delete inscription:', err);
+      toast({
+        title: "Failed to Delete",
+        description: "Couldn't delete the inscription. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     fetchInscriptions();
@@ -149,32 +175,55 @@ export default function InscriptionStatusDisplay() {
     );
   }
 
+  // Get the limited list based on the display limit
+  const limitedInscriptions = inscriptions.slice(0, displayLimit);
+  
+  // Calculate remaining count
+  const hasMore = inscriptions.length > displayLimit;
+  const remainingCount = inscriptions.length - displayLimit;
+
   return (
     <Card className="bg-white dark:bg-navy-900 border-orange-200 dark:border-navy-700">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
         <div>
           <CardTitle>Inscription History</CardTitle>
           <CardDescription>Track the status of your inscriptions</CardDescription>
         </div>
-        <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={fetchInscriptions}
-            className="flex items-center text-orange-600 dark:text-orange-400"
-          >
-            <RotateCw size={16} className="mr-1" />
-            Refresh
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={clearAllInscriptions}
-            className="flex items-center text-red-600 dark:text-red-400"
-          >
-            <Trash2 size={16} className="mr-1" />
-            Clear All
-          </Button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">Show:</span>
+            <select 
+              value={displayLimit} 
+              onChange={(e) => setDisplayLimit(Number(e.target.value))}
+              className="bg-white dark:bg-navy-900 text-sm border border-orange-200 dark:border-navy-700 rounded px-2 py-1"
+            >
+              <option value={10}>10 items</option>
+              <option value={25}>25 items</option>
+              <option value={50}>50 items</option>
+              <option value={100}>100 items</option>
+              <option value={1000}>All items</option>
+            </select>
+          </div>
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchInscriptions}
+              className="flex items-center text-orange-600 dark:text-orange-400"
+            >
+              <RotateCw size={16} className="mr-1" />
+              Refresh
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={clearAllInscriptions}
+              className="flex items-center text-red-600 dark:text-red-400"
+            >
+              <Trash2 size={16} className="mr-1" />
+              Clear All
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -186,11 +235,19 @@ export default function InscriptionStatusDisplay() {
         )}
         
         <InscriptionStatus 
-          items={inscriptions} 
+          items={limitedInscriptions} 
           onRefresh={fetchInscriptions}
           onRefreshItem={refreshInscriptionStatus}
           onClearAll={clearAllInscriptions}
+          onDeleteItem={deleteInscription}
         />
+        
+        {hasMore && (
+          <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+            <p>Showing {limitedInscriptions.length} of {inscriptions.length} inscriptions.</p>
+            <p>Use the dropdown above to show more inscriptions or clear old history.</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

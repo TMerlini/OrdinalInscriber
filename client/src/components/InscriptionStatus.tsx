@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Check, Clock, AlertTriangle, Copy, ExternalLink, RefreshCw, RotateCw } from "lucide-react";
+import { Check, Clock, AlertTriangle, Copy, ExternalLink, RefreshCw, RotateCw, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export interface InscriptionStatusItem {
@@ -25,13 +25,15 @@ interface InscriptionStatusProps {
   onRefresh?: () => void;
   onRefreshItem?: (id: string) => void;
   onClearAll?: () => void;
+  onDeleteItem?: (id: string) => void;
 }
 
 export default function InscriptionStatus({ 
   items, 
   onRefresh, 
   onRefreshItem,
-  onClearAll
+  onClearAll,
+  onDeleteItem
 }: InscriptionStatusProps) {
   const [activeTab, setActiveTab] = useState<string>('all');
   const { toast } = useToast();
@@ -269,6 +271,30 @@ export default function InscriptionStatus({
                                 </Tooltip>
                               </TooltipProvider>
                             )}
+                            
+                            {onDeleteItem && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => {
+                                        if (confirm('This will only remove the inscription from your local history. The inscription on the blockchain is permanent and cannot be deleted. Continue?')) {
+                                          onDeleteItem(item.id);
+                                        }
+                                      }}
+                                      className="text-red-500 hover:text-red-700"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Remove from history</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                         </div>
                         
@@ -303,10 +329,16 @@ export default function InscriptionStatus({
         </div>
       </CardContent>
       <CardFooter className="border-t p-4">
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          After an inscription is sent to the mempool, it may take some time for miners to include it in a block. 
-          Check the Bitcoin explorer for the latest status.
-        </p>
+        <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
+          <p>
+            After an inscription is sent to the mempool, it may take some time for miners to include it in a block. 
+            Check the Bitcoin explorer for the latest status.
+          </p>
+          <p className="italic">
+            <span className="font-medium">Note:</span> This history is stored locally. Removing items only affects your local tracking, 
+            not the actual inscriptions on the blockchain, which are immutable and permanent.
+          </p>
+        </div>
       </CardFooter>
     </Card>
   );
