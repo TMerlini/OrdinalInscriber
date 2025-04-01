@@ -1,81 +1,73 @@
 export interface UploadedFile {
   file: File;
-  preview: string;
-  dimensions: {
-    width: number;
-    height: number;
-  } | null;
-  fileType: 'image' | 'model';
-  sizeWarning?: {
-    type: 'warning' | 'danger';
-    message: string;
-  };
-  optimizationAvailable?: boolean;
-  id?: string; // Unique ID for tracking in batch processing
-  selected?: boolean; // Whether the file is selected for batch processing
+  id: string;
+  url: string;
+  size: number;
+  type: string;
+  selected?: boolean;
+  optimize?: boolean;
+  formattedSize?: string;
 }
 
-export interface ConfigOptions {
-  containerName: string;
-  feeRate: number;
-  containerPath?: string;
-  port?: number;
-  advancedMode: boolean;
-  noLimitCheck?: boolean;
-  destination?: string;
-  satPoint?: string;
-  selectedSatoshi?: string;
-  useSatRarity?: boolean;
-  parentId?: string;
-  dryRun?: boolean;
-  mimeType?: string;
-  optimizeImage?: boolean;
-  includeMetadata?: boolean;
-  metadataStorage?: 'on-chain';
-  metadataJson?: string;
-  batchMode?: boolean; // Whether this is a batch processing operation
+export enum StepStatus {
+  DEFAULT = 'default',
+  PENDING = 'pending',
+  RUNNING = 'running',
+  SUCCESS = 'success',
+  ERROR = 'error',
+  READY = 'ready',
+  PROGRESS = 'progress'
+}
+
+export interface ExecutionStep {
+  description?: string;
+  command?: string;
+  status: StepStatus;
+  output?: string;
+  error?: string;
 }
 
 export interface CommandsData {
   commands: string[];
-  fileName: string;
-  fileId?: string; // ID of the file for batch processing
-}
-
-export enum StepStatus {
-  DEFAULT = "default",
-  PROGRESS = "progress",
-  SUCCESS = "success",
-  ERROR = "error",
-  READY = "ready"
-}
-
-export interface ExecutionStep {
-  status: StepStatus;
-  output: string;
+  fileId: string;
 }
 
 export interface InscriptionResult {
   success: boolean;
   inscriptionId?: string;
-  transactionId?: string;
-  feePaid?: string;
-  errorMessage?: string;
+  txid?: string;
+  message?: string;
+  error?: string;
+  satPoint?: string;
+  satName?: string;
+}
+
+export interface ConfigOptions {
+  containerPath: string;
+  feeRate: string;
+  metadataJson?: string;
+  parentInscriptionId?: string;
+  destinationAddress?: string;
+  useSatRarity?: boolean;
+  selectedSat?: string;
 }
 
 export interface BatchProcessingItem {
   fileId: string;
   fileName: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  commands?: string[];
+  status: 'pending' | 'processing' | 'complete' | 'failed';
+  progress?: number;
   result?: InscriptionResult;
-  steps: ExecutionStep[];
+  steps?: ExecutionStep[];
+  error?: string;
 }
 
 export interface BatchProcessingState {
-  inProgress: boolean;
-  items: BatchProcessingItem[];
-  currentItemIndex: number;
-  completedCount: number;
-  failedCount: number;
+  isProcessing: boolean;
+  currentItem: BatchProcessingItem | null;
+  progress: number;
+  total: number;
+  startTime: Date | null;
+  errors: string[];
+  items?: BatchProcessingItem[];
 }

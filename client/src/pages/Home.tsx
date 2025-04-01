@@ -23,8 +23,10 @@ import MetadataInput from "@/components/MetadataInput";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SNSRegister from "@/components/SNSRegister";
 import SNSRegisterNew from "@/components/SNSRegisterNew";
+import TextInscriptionSection from "@/components/TextInscriptionSection";
+import MarkdownInscriptionSection from "@/components/MarkdownInscriptionSection";
 import InscriptionStatusDisplay from "@/components/InscriptionStatusDisplay";
-import { ChevronDown, RefreshCw, Info } from "lucide-react";
+import { ChevronDown, RefreshCw, Info, FileText, FileCode, Image } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -977,10 +979,20 @@ export default function Home() {
               <Tabs defaultValue="single" className="w-full">
                 <TabsList className="mb-4">
                   <TabsTrigger value="single" onClick={() => handleBatchModeToggle(false)}>
-                    Single File
+                    <Image className="h-4 w-4 mr-2" />
+                    Image
                   </TabsTrigger>
                   <TabsTrigger value="batch" onClick={() => handleBatchModeToggle(true)}>
-                    Batch Processing
+                    <Image className="h-4 w-4 mr-2" />
+                    Batch Images
+                  </TabsTrigger>
+                  <TabsTrigger value="text">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Text
+                  </TabsTrigger>
+                  <TabsTrigger value="markdown">
+                    <FileCode className="h-4 w-4 mr-2" />
+                    Markdown
                   </TabsTrigger>
                   <TabsTrigger value="sns">
                     SNS Names
@@ -1010,6 +1022,18 @@ export default function Home() {
                       />
                     </div>
                   )}
+                </TabsContent>
+                
+                <TabsContent value="text">
+                  <ErrorBoundary>
+                    <TextInscriptionSection />
+                  </ErrorBoundary>
+                </TabsContent>
+                
+                <TabsContent value="markdown">
+                  <ErrorBoundary>
+                    <MarkdownInscriptionSection />
+                  </ErrorBoundary>
                 </TabsContent>
                 
                 <TabsContent value="sns">
