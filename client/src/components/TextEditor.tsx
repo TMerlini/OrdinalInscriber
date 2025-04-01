@@ -172,16 +172,18 @@ export default function TextEditor({
         
         <div className="w-40">
           <Label htmlFor="encoding">Encoding</Label>
-          <Select value={encoding} onValueChange={setEncoding}>
-            <SelectTrigger className="w-full mt-1">
-              <SelectValue placeholder="Select encoding" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="utf-8">UTF-8</SelectItem>
-              <SelectItem value="ascii">ASCII</SelectItem>
-              <SelectItem value="utf-16">UTF-16</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex mt-1">
+            <select 
+              id="encoding"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              value={encoding}
+              onChange={(e) => setEncoding(e.target.value)}
+            >
+              <option value="utf-8">UTF-8</option>
+              <option value="ascii">ASCII</option>
+              <option value="utf-16">UTF-16</option>
+            </select>
+          </div>
         </div>
         
         <div className="flex items-end space-x-2">
