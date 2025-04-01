@@ -17,6 +17,159 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, AlertTriangle, Save, Copy, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+// Cipher utilities
+const cipherUtils = {
+  // Caesar cipher with shift 3
+  caesar: {
+    encode: (text: string) => {
+      return text.split('').map(char => {
+        const code = char.charCodeAt(0);
+        // Handle uppercase letters
+        if (code >= 65 && code <= 90) {
+          return String.fromCharCode(((code - 65 + 3) % 26) + 65);
+        }
+        // Handle lowercase letters
+        if (code >= 97 && code <= 122) {
+          return String.fromCharCode(((code - 97 + 3) % 26) + 97);
+        }
+        // Return other characters unchanged
+        return char;
+      }).join('');
+    },
+    decode: (text: string) => {
+      return text.split('').map(char => {
+        const code = char.charCodeAt(0);
+        // Handle uppercase letters
+        if (code >= 65 && code <= 90) {
+          return String.fromCharCode(((code - 65 + 23) % 26) + 65); // +23 is the same as -3 mod 26
+        }
+        // Handle lowercase letters
+        if (code >= 97 && code <= 122) {
+          return String.fromCharCode(((code - 97 + 23) % 26) + 97);
+        }
+        // Return other characters unchanged
+        return char;
+      }).join('');
+    }
+  },
+  
+  // ROT13 cipher
+  rot13: {
+    encode: (text: string) => {
+      return text.split('').map(char => {
+        const code = char.charCodeAt(0);
+        // Handle uppercase letters
+        if (code >= 65 && code <= 90) {
+          return String.fromCharCode(((code - 65 + 13) % 26) + 65);
+        }
+        // Handle lowercase letters
+        if (code >= 97 && code <= 122) {
+          return String.fromCharCode(((code - 97 + 13) % 26) + 97);
+        }
+        // Return other characters unchanged
+        return char;
+      }).join('');
+    },
+    decode: (text: string) => {
+      // ROT13 is its own inverse
+      return cipherUtils.rot13.encode(text);
+    }
+  },
+  
+  // Atbash cipher
+  atbash: {
+    encode: (text: string) => {
+      return text.split('').map(char => {
+        const code = char.charCodeAt(0);
+        // Handle uppercase letters
+        if (code >= 65 && code <= 90) {
+          return String.fromCharCode(90 - (code - 65));
+        }
+        // Handle lowercase letters
+        if (code >= 97 && code <= 122) {
+          return String.fromCharCode(122 - (code - 97));
+        }
+        // Return other characters unchanged
+        return char;
+      }).join('');
+    },
+    decode: (text: string) => {
+      // Atbash is its own inverse
+      return cipherUtils.atbash.encode(text);
+    }
+  },
+  
+  // Morse code
+  morse: {
+    encode: (text: string) => {
+      const morseMap: Record<string, string> = {
+        'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.', 'G': '--.', 'H': '....', 'I': '..', 'J': '.---',
+        'K': '-.-', 'L': '.-..', 'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-',
+        'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-', 'Y': '-.--', 'Z': '--..', '0': '-----', '1': '.----', '2': '..---',
+        '3': '...--', '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.', '.': '.-.-.-', 
+        ',': '--..--', '?': '..--..', "'": '.----.', '!': '-.-.--', '/': '-..-.', '(': '-.--.', ')': '-.--.-', '&': '.-...',
+        ':': '---...', ';': '-.-.-.', '=': '-...-', '+': '.-.-.', '-': '-....-', '_': '..--.-', '"': '.-..-.', '$': '...-..-',
+        '@': '.--.-.', ' ': '/'
+      };
+      
+      return text.toUpperCase().split('').map(char => {
+        return morseMap[char] || char;
+      }).join(' ');
+    },
+    decode: (text: string) => {
+      const morseMap: Record<string, string> = {
+        '.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E', '..-.': 'F', '--.': 'G', '....': 'H', '..': 'I', '.---': 'J',
+        '-.-': 'K', '.-..': 'L', '--': 'M', '-.': 'N', '---': 'O', '.--.': 'P', '--.-': 'Q', '.-.': 'R', '...': 'S', '-': 'T',
+        '..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X', '-.--': 'Y', '--..': 'Z', '-----': '0', '.----': '1', '..---': '2',
+        '...--': '3', '....-': '4', '.....': '5', '-....': '6', '--...': '7', '---..': '8', '----.': '9', '.-.-.-': '.',
+        '--..--': ',', '..--..': '?', '.----.': "'", '-.-.--': '!', '-..-.': '/', '-.--.': '(', '-.--.-': ')', '.-...': '&',
+        '---...': ':', '-.-.-.': ';', '-...-': '=', '.-.-.': '+', '-....-': '-', '..--.-': '_', '.-..-.': '"', '...-..-': '$',
+        '.--.-.': '@', '/': ' '
+      };
+      
+      return text.split(' ').map(code => {
+        return morseMap[code] || code;
+      }).join('');
+    }
+  },
+  
+  // Binary
+  binary: {
+    encode: (text: string) => {
+      return text.split('').map(char => {
+        return char.charCodeAt(0).toString(2).padStart(8, '0');
+      }).join(' ');
+    },
+    decode: (text: string) => {
+      try {
+        return text.split(' ').map(bin => {
+          return String.fromCharCode(parseInt(bin, 2));
+        }).join('');
+      } catch (e) {
+        return "Invalid binary encoded text";
+      }
+    }
+  },
+  
+  // Base64
+  base64: {
+    encode: (text: string) => {
+      try {
+        return btoa(text);
+      } catch (e) {
+        return "Encoding error: Text contains characters outside of Latin1 range";
+      }
+    },
+    decode: (text: string) => {
+      try {
+        return atob(text);
+      } catch (e) {
+        return "Invalid Base64 encoded text";
+      }
+    }
+  }
+};
+
 interface TextEditorProps {
   onChange: (text: string) => void;
   initialText?: string;
@@ -43,6 +196,8 @@ export default function TextEditor({
   const [text, setText] = useState(initialText);
   const [editedFileName, setEditedFileName] = useState(fileName);
   const [encoding, setEncoding] = useState<string>("utf-8");
+  const [previousEncoding, setPreviousEncoding] = useState<string>("utf-8");
+  const [originalText, setOriginalText] = useState<string>(initialText);
   const [sizeWarning, setSizeWarning] = useState<string | null>(null);
   const [characterCount, setCharacterCount] = useState(0);
   const [byteSize, setByteSize] = useState(0);
@@ -51,6 +206,53 @@ export default function TextEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
 
+  // Effect for handling initial text
+  useEffect(() => {
+    setText(initialText);
+    setOriginalText(initialText);
+  }, [initialText]);
+
+  // Effect for handling encoding changes
+  useEffect(() => {
+    if (encoding !== previousEncoding) {
+      try {
+        // If the current encoding is a cipher, decode the text first
+        let currentText = text;
+        
+        if (previousEncoding !== 'utf-8' && previousEncoding !== 'ascii' && previousEncoding !== 'utf-16') {
+          if (cipherUtils[previousEncoding as keyof typeof cipherUtils]) {
+            // Decode from the previous encoding
+            currentText = cipherUtils[previousEncoding as keyof typeof cipherUtils].decode(text);
+          }
+        }
+        
+        // Then encode to the new encoding if it's a cipher
+        if (encoding !== 'utf-8' && encoding !== 'ascii' && encoding !== 'utf-16') {
+          if (cipherUtils[encoding as keyof typeof cipherUtils]) {
+            // Apply the new encoding
+            const newText = cipherUtils[encoding as keyof typeof cipherUtils].encode(currentText);
+            setText(newText);
+          }
+        } else {
+          // If we're going back to a standard encoding, use the decoded text
+          setText(currentText);
+        }
+        
+        // Update previous encoding
+        setPreviousEncoding(encoding);
+        
+      } catch (error) {
+        console.error('Error processing encoding change:', error);
+        toast({
+          title: 'Encoding Error',
+          description: 'Failed to apply the selected encoding. Some characters may not be compatible.',
+          variant: 'destructive'
+        });
+      }
+    }
+  }, [encoding, previousEncoding, text]);
+
+  // Calculate statistics and byte size
   useEffect(() => {
     // Calculate statistics
     setCharacterCount(text.length);
@@ -78,7 +280,7 @@ export default function TextEditor({
           bytes[i*2+1] = (code >> 8) & 0xFF;
         }
       } else {
-        // Default to UTF-8
+        // For cipher encodings, use UTF-8 for size calculation
         const encoder = new TextEncoder();
         bytes = encoder.encode(text);
       }
@@ -179,9 +381,19 @@ export default function TextEditor({
               value={encoding}
               onChange={(e) => setEncoding(e.target.value)}
             >
-              <option value="utf-8">UTF-8</option>
-              <option value="ascii">ASCII</option>
-              <option value="utf-16">UTF-16</option>
+              <optgroup label="Standard Encodings">
+                <option value="utf-8">UTF-8</option>
+                <option value="ascii">ASCII</option>
+                <option value="utf-16">UTF-16</option>
+              </optgroup>
+              <optgroup label="Substitution Ciphers">
+                <option value="caesar">Caesar Cipher</option>
+                <option value="atbash">Atbash Cipher</option>
+                <option value="rot13">ROT13</option>
+                <option value="morse">Morse Code</option>
+                <option value="binary">Binary</option>
+                <option value="base64">Base64</option>
+              </optgroup>
             </select>
           </div>
         </div>
