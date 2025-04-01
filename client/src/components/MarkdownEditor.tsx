@@ -11,9 +11,10 @@ import {
   Info, AlertTriangle, Eye, Code, Save, Copy, RefreshCw, 
   Bold, Italic, Underline, Strikethrough, AlignJustify, List, ListOrdered, 
   Quote, WrapText, SquareCode, Table, Scissors, Undo, Redo, 
-  Maximize, Keyboard
+  Maximize, Keyboard, Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { saveTextToCache } from "@/lib/textUtils";
 
 const DEFAULT_MARKDOWN = `# Markdown Title
 
@@ -98,13 +99,34 @@ export default function MarkdownEditor({
     });
   };
 
-  const handleSave = () => {
-    if (onSave) {
-      onSave(markdown, editedFileName);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      
+      // Save to cache first
+      const contentType = 'text/markdown';
+      const savedFile = await saveTextToCache(markdown, editedFileName, contentType);
+      
+      // Then call the onSave callback if provided
+      if (onSave) {
+        onSave(markdown, editedFileName);
+      }
+      
       toast({
         title: "Markdown saved",
-        description: `Saved as ${editedFileName}`,
+        description: `Saved as ${editedFileName} (${savedFile.formattedSize})`,
       });
+    } catch (error) {
+      console.error("Error saving markdown:", error);
+      toast({
+        title: "Save error",
+        description: `Failed to save markdown: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -244,9 +266,18 @@ export default function MarkdownEditor({
             Copy
           </Button>
           {onSave && (
-            <Button variant="default" size="sm" onClick={handleSave}>
-              <Save className="mr-2 h-4 w-4" />
-              Save
+            <Button variant="default" size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save
+                </>
+              )}
             </Button>
           )}
         </div>

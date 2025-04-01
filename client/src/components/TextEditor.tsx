@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, AlertTriangle, Save, Copy, RefreshCw } from "lucide-react";
+import { Info, AlertTriangle, Save, Copy, RefreshCw, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { saveTextToCache } from "@/lib/textUtils";
 
 // Cipher utilities
 const cipherUtils = {
@@ -394,13 +395,34 @@ export default function TextEditor({
     });
   };
 
-  const handleSave = () => {
-    if (onSave) {
-      onSave(text, editedFileName);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      
+      // Save to cache first
+      const contentType = editedFileName.endsWith('.md') ? 'text/markdown' : 'text/plain';
+      const savedFile = await saveTextToCache(text, editedFileName, contentType);
+      
+      // Then call the onSave callback if provided
+      if (onSave) {
+        onSave(text, editedFileName);
+      }
+      
       toast({
         title: "Text saved",
-        description: `Saved as ${editedFileName}`,
+        description: `Saved as ${editedFileName} (${savedFile.formattedSize})`,
       });
+    } catch (error) {
+      console.error("Error saving text:", error);
+      toast({
+        title: "Save error",
+        description: `Failed to save text: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -488,9 +510,18 @@ export default function TextEditor({
             Copy
           </Button>
           {onSave && (
-            <Button variant="default" size="sm" onClick={handleSave}>
-              <Save className="mr-2 h-4 w-4" />
-              Save
+            <Button variant="default" size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save
+                </>
+              )}
             </Button>
           )}
         </div>

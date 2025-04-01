@@ -32,12 +32,14 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // Limit file size to 10MB
   },
   fileFilter: function (req, file, cb) {
-    // Accept image files and 3D model files
+    // Accept image files, 3D model files, and text/markdown files
     if (file.mimetype.match(/^image\/(jpeg|png|webp)$/) || 
-        file.originalname.match(/\.(glb|gltf)$/i)) {
+        file.originalname.match(/\.(glb|gltf)$/i) ||
+        file.mimetype.match(/^text\/(plain|markdown)$/) ||
+        file.originalname.match(/\.(txt|md|text|markdown)$/i)) {
       return cb(null, true);
     }
-    return cb(new Error('Only JPG, PNG, WEBP images and GLB/GLTF models are allowed'));
+    return cb(new Error('Only JPG, PNG, WEBP images, GLB/GLTF models, and text/markdown files are allowed'));
   }
 });
 
@@ -247,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Clear all cached files (images and 3D models)
+  // Clear all cached files (images, 3D models, and text/markdown files)
   app.post('/api/cache/clear', async (req, res) => {
     try {
       const deletedCount = await clearAllCachedFiles();
@@ -259,6 +261,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error clearing cache:', error);
       res.status(500).json({ error: 'Failed to clear cache' });
+    }
+  });
+  
+  // Save text or markdown content directly to the cache
+  app.post('/api/cache/save-text', async (req, res) => {
+    try {
+      const { content, fileName, contentType } = req.body;
+      
+      if (!content || !fileName) {
+        return res.status(400).json({ error: 'Missing required fields: content and fileName' });
+      }
+      
+      // Validate file extension for security
+      const fileExt = path.extname(fileName).toLowerCase();
+      const allowedExtensions = ['.txt', '.md', '.text', '.markdown'];
+      
+      if (!allowedExtensions.includes(fileExt)) {
+        return res.status(400).json({ 
+          error: 'Invalid file extension. Only .txt, .md, .text, and .markdown files are allowed' 
+        });
+      }
+      
+      // Create a safe filename (remove any path-related characters)
+      const safeFileName = path.basename(fileName).replace(/[^a-zA-Z0-9.-]/g, '_');
+      const tmpDir = os.tmpdir();
+      const filePath = path.join(tmpDir, safeFileName);
+      
+      // Write the content to the file
+      await fs.writeFile(filePath, content, 'utf-8');
+      
+      // Get file stats
+      const stats = await fs.stat(filePath);
+      
+      // Check cache limit and clean if needed
+      await cleanCacheIfNeeded();
+      
+      // Return success response with file details
+      res.json({
+        success: true,
+        fileName: safeFileName,
+        path: filePath,
+        size: stats.size,
+        formattedSize: formatByteSize(stats.size),
+        contentType: contentType || 'text/plain',
+        created: new Date()
+      });
+    } catch (error) {
+      console.error('Error saving text content:', error);
+      res.status(500).json({ error: 'Failed to save text content' });
     }
   });
   
