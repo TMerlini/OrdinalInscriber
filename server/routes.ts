@@ -10,6 +10,7 @@ import os from "os";
 import { networkInterfaces } from "os";
 import sharp from "sharp";
 import snsRoutes from "./routes/sns";
+import inscriptionsRoutes from "./routes/inscriptions";
 
 // SNS Registry Address (this would be the official SNS registry address in production)
 const SNS_REGISTRY_ADDRESS = "bc1qe8grz79ej3ywxkfcdchrncfl5antlc9tzmy5c2";
@@ -206,8 +207,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`Ord API endpoint: ${getOrdApiUrl()}`);
   }
   
-  // Mount the SNS routes
+  // Mount the SNS and inscriptions routes
   app.use('/api/sns', snsRoutes);
+  app.use('/api/inscriptions', inscriptionsRoutes);
   
   // API routes
   
@@ -630,22 +632,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Inscribe the file
   app.post('/api/execute/inscribe', async (req, res) => {
     try {
-      const { command } = req.body;
+      const { command, fileName, fileType, satoshiType } = req.body;
+      
+      // Create a new inscription status entry first
+      let inscriptionStatusId = '';
+      try {
+        // Create a new inscription status entry
+        const createResponse = await fetch(`http://localhost:${process.env.PORT || 3000}/api/inscriptions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fileName: fileName || 'Unknown file',
+            fileType: fileType || 'unknown',
+            satoshiType: satoshiType || undefined,
+            command: command,
+          }),
+        });
+        
+        if (createResponse.ok) {
+          const inscriptionStatus = await createResponse.json();
+          inscriptionStatusId = inscriptionStatus.id;
+          console.log('Created inscription status entry:', inscriptionStatusId);
+        }
+      } catch (error) {
+        console.error('Error creating inscription status:', error);
+        // Continue with the inscription even if status creation fails
+      }
       
       // Execute the inscription command
       const result = await execCommand(command);
-      
-      if (result.error) {
-        return res.status(500).json({
-          error: true,
-          output: result.output
-        });
-      }
       
       // Try to parse the output for inscription details
       let inscriptionId = '';
       let transactionId = '';
       let feePaid = '';
+      let success = !result.error;
+      let errorMessage = result.error ? result.output : '';
       
       const outputLines = result.output.split('\n');
       for (const line of outputLines) {
@@ -665,15 +689,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Update the inscription status if we created one
+      if (inscriptionStatusId) {
+        try {
+          const status = success ? (transactionId ? 'pending' : 'success') : 'failed';
+          
+          // Update the inscription status
+          await fetch(`http://localhost:${process.env.PORT || 3000}/api/inscriptions/${inscriptionStatusId}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              status,
+              txid: transactionId || undefined,
+              ordinalId: inscriptionId || undefined,
+              error: errorMessage || undefined,
+            }),
+          });
+        } catch (updateError) {
+          console.error('Error updating inscription status:', updateError);
+          // Continue with the response even if status update fails
+        }
+      }
+      
       // Stop the web server as we're done
       await stopWebServer();
+      
+      if (result.error) {
+        return res.status(500).json({
+          error: true,
+          output: result.output,
+          inscriptionStatusId,
+        });
+      }
       
       res.json({
         error: false,
         output: result.output,
         inscriptionId,
         transactionId,
-        feePaid
+        feePaid,
+        inscriptionStatusId
       });
     } catch (error) {
       console.error('Error inscribing file:', error);

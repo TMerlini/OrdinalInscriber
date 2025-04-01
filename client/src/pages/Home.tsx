@@ -22,6 +22,7 @@ import MetadataInput from "@/components/MetadataInput";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SNSRegister from "@/components/SNSRegister";
 import SNSRegisterNew from "@/components/SNSRegisterNew";
+import InscriptionStatusDisplay from "@/components/InscriptionStatusDisplay";
 import { ChevronDown, RefreshCw, Info } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
@@ -191,7 +192,10 @@ export default function Home() {
       updateStepStatus(2, StepStatus.PROGRESS);
       
       const inscribeRes = await apiRequest('POST', '/api/execute/inscribe', {
-        command: commandsData.commands[2]
+        command: commandsData.commands[2],
+        fileName: uploadedFile.file.name,
+        fileType: uploadedFile.file.type,
+        satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
       });
       const inscribeData = await inscribeRes.json();
       
@@ -302,7 +306,10 @@ export default function Home() {
       } else if (stepIndex === 2) {
         // Execute inscribe step
         response = await apiRequest('POST', '/api/execute/inscribe', {
-          command: commandsData.commands[2]
+          command: commandsData.commands[2],
+          fileName: uploadedFile.file.name,
+          fileType: uploadedFile.file.type,
+          satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
         });
         data = await response.json();
         
@@ -316,6 +323,14 @@ export default function Home() {
         }
         
         updateStepStatus(stepIndex, StepStatus.SUCCESS, data.output);
+        
+        // Check if we have an inscription status ID
+        if (data.inscriptionStatusId) {
+          console.log('Inscription status created with ID:', data.inscriptionStatusId);
+          
+          // Optional: You could manually refresh the inscription status display here
+          // but the component handles polling on its own
+        }
         
         // Parse result and set success
         setResult({
@@ -856,7 +871,10 @@ export default function Home() {
       
       // Execute inscribe step
       const inscribeRes = await apiRequest('POST', '/api/execute/inscribe', {
-        command: item.commands[2]
+        command: item.commands[2],
+        fileName: file.file.name,
+        fileType: file.file.type,
+        satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
       });
       const inscribeData = await inscribeRes.json();
       
@@ -869,6 +887,12 @@ export default function Home() {
       }
       
       updateBatchItemStep(item.fileId, 2, StepStatus.SUCCESS, inscribeData.output);
+      
+      // Check if we have an inscription status ID
+      if (inscribeData.inscriptionStatusId) {
+        console.log('Batch inscription status created with ID:', inscribeData.inscriptionStatusId);
+        // Status tracking will happen automatically via polling
+      }
       
       // Return successful result
       return {
@@ -1160,6 +1184,7 @@ export default function Home() {
                 />
               </section>
             )}
+            
             {/* Collapsible Cache Management Section */}
             <section className="p-6 bg-orange-50 dark:bg-navy-800">
               <Collapsible
@@ -1177,6 +1202,9 @@ export default function Home() {
                 </div>
                 <CollapsibleContent className="mt-4">
                   <ErrorBoundary>
+                    <div className="mb-6">
+                      <InscriptionStatusDisplay />
+                    </div>
                     <CacheManager />
                   </ErrorBoundary>
                 </CollapsibleContent>
