@@ -13,6 +13,10 @@ import { Label } from "@/components/ui/label";
 interface RareSatSelectorProps {
   onSelect: (satoshi: string) => void;
   selectedSatoshi?: string;
+  batchMode?: boolean;
+  batchFileCount?: number;
+  onSelectMultiple?: (satoshis: string[]) => void;
+  selectedSatoshis?: string[];
 }
 
 // Group satoshis by rarity tier
@@ -32,7 +36,14 @@ const rarityGroups: RarityGroup[] = [
   { label: "Common", min: 1, max: 4, color: "text-green-600 dark:text-green-400" },
 ];
 
-export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSelectorProps) {
+export default function RareSatSelector({ 
+  onSelect, 
+  selectedSatoshi,
+  batchMode = false,
+  batchFileCount = 0,
+  onSelectMultiple,
+  selectedSatoshis = []
+}: RareSatSelectorProps) {
   // State with safe defaults
   const [rareSats, setRareSats] = useState<RareSat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +54,7 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
   // State to track available satoshi numbers
   const [availableSatoshis, setAvailableSatoshis] = useState<Set<string>>(new Set());
   const [showOnlyAvailable, setShowOnlyAvailable] = useState<boolean>(false);
+  const [multiSelectMode, setMultiSelectMode] = useState<boolean>(batchMode);
 
 
   // Get all rare sat types (from the system catalog, not just wallet)
@@ -193,9 +205,42 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
     };
   }, []);
 
+  // Add a function to toggle a satoshi in the multi-selection
+  const handleToggleMultiSelect = (satoshi: string, selected: boolean) => {
+    try {
+      if (!onSelectMultiple || !selectedSatoshis) return;
+      
+      let newSelectedSatoshis: string[];
+      if (selected) {
+        // If the number of selected satoshis is already equal to the number of files, 
+        // we need to replace the oldest selection
+        if (selectedSatoshis.length >= batchFileCount) {
+          // Remove the oldest sat and add the new one
+          newSelectedSatoshis = [...selectedSatoshis.slice(1), satoshi];
+        } else {
+          // Add the new sat to the selections
+          newSelectedSatoshis = [...selectedSatoshis, satoshi];
+        }
+      } else {
+        // Remove the sat from selections
+        newSelectedSatoshis = selectedSatoshis.filter(s => s !== satoshi);
+      }
+      
+      onSelectMultiple(newSelectedSatoshis);
+    } catch (err) {
+      console.log('Error in multi sat selection:', err);
+    }
+  };
+
   const handleSelectSat = (satoshi: string) => {
     try {
-      onSelect(satoshi);
+      // If in batch mode with multi-select, handle differently
+      if (multiSelectMode && onSelectMultiple) {
+        const isSelected = selectedSatoshis?.includes(satoshi) || false;
+        handleToggleMultiSelect(satoshi, !isSelected);
+      } else {
+        onSelect(satoshi);
+      }
     } catch (err) {
       console.log('Error in satoshi selection:', err);
     }
@@ -328,6 +373,19 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                 Show Available Only
               </Label>
             </div>
+            {batchMode && (
+              <div className="flex items-center mr-2">
+                <Switch
+                  id="multi-select-mode"
+                  checked={multiSelectMode}
+                  onCheckedChange={setMultiSelectMode}
+                  className="mr-2"
+                />
+                <Label htmlFor="multi-select-mode" className="text-xs text-orange-700 dark:text-orange-300">
+                  Multi-Select Mode {multiSelectMode && selectedSatoshis && `(${selectedSatoshis.length}/${batchFileCount})`}
+                </Label>
+              </div>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -429,9 +487,14 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                           <SatCard
                             key={sat.satoshi}
                             sat={sat}
-                            selected={selectedSatoshi === sat.satoshi}
+                            selected={multiSelectMode ? selectedSatoshis?.includes(sat.satoshi) : selectedSatoshi === sat.satoshi}
                             onSelect={handleSelectSat}
                             getRarityLabel={getRarityLabel}
+                            isAvailable={sat.available}
+                            multiSelectMode={multiSelectMode}
+                            inMultiSelection={selectedSatoshis?.includes(sat.satoshi)}
+                            onToggleMultiSelect={handleToggleMultiSelect}
+                            selectedSatoshis={selectedSatoshis}
                           />
                         );
                       } catch (err) {
@@ -465,9 +528,14 @@ export default function RareSatSelector({ onSelect, selectedSatoshi }: RareSatSe
                                 <SatCard
                                   key={sat.satoshi}
                                   sat={sat}
-                                  selected={selectedSatoshi === sat.satoshi}
+                                  selected={multiSelectMode ? selectedSatoshis?.includes(sat.satoshi) : selectedSatoshi === sat.satoshi}
                                   onSelect={handleSelectSat}
                                   getRarityLabel={getRarityLabel}
+                                  isAvailable={sat.available}
+                                  multiSelectMode={multiSelectMode}
+                                  inMultiSelection={selectedSatoshis?.includes(sat.satoshi)}
+                                  onToggleMultiSelect={handleToggleMultiSelect}
+                                  selectedSatoshis={selectedSatoshis}
                                 />
                               );
                             } catch (err) {
@@ -526,17 +594,31 @@ function SatCard({
   sat,
   selected,
   onSelect,
-  getRarityLabel
+  getRarityLabel,
+  isAvailable = true,
+  multiSelectMode = false,
+  inMultiSelection = false,
+  onToggleMultiSelect,
+  selectedSatoshis = []
 }: {
   sat: RareSat,
   selected: boolean,
   onSelect: (satoshi: string) => void,
-  getRarityLabel: (rarity: number) => string
+  getRarityLabel: (rarity: number) => string,
+  isAvailable?: boolean,
+  multiSelectMode?: boolean,
+  inMultiSelection?: boolean,
+  onToggleMultiSelect?: (satoshi: string, selected: boolean) => void,
+  selectedSatoshis?: string[]
 }) {
   // Safe click handler with error handling
   const handleClick = () => {
     try {
-      if (sat && sat.satoshi) {
+      if (!sat || !sat.satoshi || !isAvailable) return;
+      
+      if (multiSelectMode && onToggleMultiSelect) {
+        onToggleMultiSelect(sat.satoshi, !inMultiSelection);
+      } else {
         onSelect(sat.satoshi);
       }
     } catch (err) {
@@ -599,11 +681,9 @@ function SatCard({
   try {
     return (
       <Card
-        className={`cursor-pointer hover:border-orange-300 dark:hover:border-orange-600 transition-colors ${getSelectedClasses()} ${
-          sat.available 
-            ? 'border-2 border-green-300 dark:border-green-600' 
-            : 'opacity-50'
-        }`} // Highlight available sats
+        className={`cursor-pointer hover:border-orange-300 dark:hover:border-orange-600 transition-colors 
+          ${multiSelectMode && inMultiSelection ? 'bg-green-50 dark:bg-green-900/20 border-green-600 dark:border-green-500 ring-2 ring-green-500 dark:ring-green-600 ring-opacity-50' : getSelectedClasses()} 
+          ${!isAvailable ? 'opacity-50 cursor-not-allowed' : 'border-2 border-green-300 dark:border-green-600'}`}
         onClick={handleClick}
       >
         <CardHeader className="p-3 pb-0">
@@ -622,14 +702,19 @@ function SatCard({
         <CardContent className="p-3 pt-2">
           <div className="flex justify-between items-center">
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {selected ? 'Selected for inscription' : 'Click to select'}
+              {selected || (multiSelectMode && inMultiSelection) ? 'Selected for inscription' : 'Click to select'}
             </span>
-            {sat.available && (
+            {isAvailable && (
               <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 text-xs">
                 Available
               </Badge>
             )}
-            {selected && (
+            {multiSelectMode && inMultiSelection && (
+              <Badge className="bg-green-500 text-white text-xs">
+                Selected #{selectedSatoshis?.indexOf(sat.satoshi) + 1}
+              </Badge>
+            )}
+            {!multiSelectMode && selected && (
               <Badge variant="outline" className="text-xs border-orange-300 dark:border-orange-700">
                 Selected
               </Badge>

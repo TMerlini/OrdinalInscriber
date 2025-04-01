@@ -8,6 +8,9 @@ interface SatCardProps {
   onSelect: (satoshi: string) => void;
   getRarityLabel: (rarity: number) => string;
   isAvailable?: boolean;
+  multiSelectMode?: boolean;
+  inMultiSelection?: boolean;
+  onToggleMultiSelect?: (satoshi: string, selected: boolean) => void;
 }
 
 const SatCard: React.FC<SatCardProps> = ({ 
@@ -15,7 +18,10 @@ const SatCard: React.FC<SatCardProps> = ({
   selected, 
   onSelect, 
   getRarityLabel,
-  isAvailable = true 
+  isAvailable = true,
+  multiSelectMode = false,
+  inMultiSelection = false,
+  onToggleMultiSelect
 }) => {
   const rarityLabel = getRarityLabel(sat.rarity);
 
@@ -32,9 +38,10 @@ const SatCard: React.FC<SatCardProps> = ({
     }
   };
 
-  // Determine style based on availability
+  // Determine style based on availability and selection state
   const cardStyle = cn(
     "relative p-3 rounded-lg border transition-all",
+    selected && "bg-green-50 dark:bg-green-900/20 border-green-600 dark:border-green-500 ring-2 ring-green-500 dark:ring-green-600 ring-opacity-50",
     isAvailable 
       ? "border-green-500 dark:border-green-600 hover:shadow-lg hover:shadow-green-200 dark:hover:shadow-green-900/30 cursor-pointer" 
       : "opacity-70 border border-gray-200 dark:border-gray-800 cursor-not-allowed",
@@ -52,14 +59,32 @@ const SatCard: React.FC<SatCardProps> = ({
   };
 
 
+  // Handle click based on selection mode
+  const handleClick = () => {
+    if (!isAvailable) return;
+    
+    if (multiSelectMode && onToggleMultiSelect) {
+      onToggleMultiSelect(sat.satoshi, !inMultiSelection);
+    } else {
+      onSelect(sat.satoshi);
+    }
+  };
+
   return (
     <div 
-      onClick={() => isAvailable && onSelect(sat.satoshi)}
+      onClick={handleClick}
       className={cardStyle}
     >
       {!isAvailable && (
         <div className="absolute top-2 right-2 bg-gray-200 dark:bg-gray-700 text-xs px-2 py-0.5 rounded-full">
           Unavailable
+        </div>
+      )}
+      {multiSelectMode && inMultiSelection && (
+        <div className="absolute top-2 right-2 bg-green-500 text-white text-xs p-1 rounded-full">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
         </div>
       )}
       <div className="flex items-start justify-between">
