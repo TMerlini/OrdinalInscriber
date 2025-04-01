@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, AlertTriangle, Eye, Code, Save, Copy, RefreshCw } from "lucide-react";
+import { 
+  Info, AlertTriangle, Eye, Code, Save, Copy, RefreshCw, 
+  Bold, Italic, Underline, Strikethrough, AlignJustify, List, ListOrdered, 
+  Quote, WrapText, SquareCode, Table, Scissors, Undo, Redo, 
+  Maximize, Keyboard
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_MARKDOWN = `# Markdown Title
@@ -59,6 +64,7 @@ export default function MarkdownEditor({
   const [activeTab, setActiveTab] = useState<string>("edit");
   const [byteSize, setByteSize] = useState(0);
   const [sizeWarning, setSizeWarning] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -124,6 +130,89 @@ export default function MarkdownEditor({
       description: "Sample Markdown template has been loaded.",
     });
   };
+  
+  // Markdown formatting helpers
+  const insertAtCursor = (prefix: string, suffix: string = '') => {
+    if (!textareaRef.current) return;
+    
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = markdown.substring(start, end);
+    const beforeText = markdown.substring(0, start);
+    const afterText = markdown.substring(end);
+    
+    const newText = beforeText + prefix + selectedText + suffix + afterText;
+    setMarkdown(newText);
+    
+    // Set focus back to textarea and restore cursor position
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, end + prefix.length);
+    }, 0);
+  };
+  
+  // Format buttons handlers
+  const formatBold = () => insertAtCursor('**', '**');
+  const formatItalic = () => insertAtCursor('*', '*');
+  const formatUnderline = () => insertAtCursor('<u>', '</u>');
+  const formatStrikethrough = () => insertAtCursor('~~', '~~');
+  const formatHeading = (level: number) => {
+    // Get current line and prepend with heading
+    if (!textareaRef.current) return;
+    
+    const textarea = textareaRef.current;
+    const cursorPos = textarea.selectionStart;
+    const text = markdown;
+    
+    // Find the start of the current line
+    let startOfLine = cursorPos;
+    while (startOfLine > 0 && text.charAt(startOfLine - 1) !== '\n') {
+      startOfLine--;
+    }
+    
+    // Find the end of the current line
+    let endOfLine = cursorPos;
+    while (endOfLine < text.length && text.charAt(endOfLine) !== '\n') {
+      endOfLine++;
+    }
+    
+    // Get the current line text
+    const currentLine = text.substring(startOfLine, endOfLine);
+    
+    // Remove any existing heading markers
+    const cleanLine = currentLine.replace(/^#+\s*/, '');
+    
+    // Prepend with new heading level
+    const prefix = '#'.repeat(level) + ' ';
+    const newLine = prefix + cleanLine;
+    
+    // Replace the current line
+    const beforeText = text.substring(0, startOfLine);
+    const afterText = text.substring(endOfLine);
+    const newText = beforeText + newLine + afterText;
+    
+    setMarkdown(newText);
+    
+    // Set focus back to textarea
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(startOfLine + prefix.length, startOfLine + newLine.length);
+    }, 0);
+  };
+  
+  const formatBulletList = () => insertAtCursor('- ');
+  const formatNumberedList = () => insertAtCursor('1. ');
+  const formatQuote = () => insertAtCursor('> ');
+  const formatCode = () => insertAtCursor('`', '`');
+  const formatCodeBlock = () => insertAtCursor('```\n', '\n```');
+  const formatLink = () => insertAtCursor('[Link text](', ')');
+  const formatImage = () => insertAtCursor('![Alt text](', ')');
+  const formatTable = () => {
+    const tableTemplate = '\n| Header 1 | Header 2 | Header 3 |\n| -------- | -------- | -------- |\n| Cell 1   | Cell 2   | Cell 3   |\n| Cell 4   | Cell 5   | Cell 6   |\n';
+    insertAtCursor(tableTemplate);
+  };
+  const formatDivider = () => insertAtCursor('\n---\n');
 
   return (
     <div className="space-y-4">
@@ -176,11 +265,155 @@ export default function MarkdownEditor({
         </TabsList>
         <div className="border rounded-md mt-2 min-h-[400px]">
           <TabsContent value="edit" className="m-0">
+            <div className="flex items-center border-b p-1 gap-1 flex-wrap">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => formatHeading(1)} 
+                title="Heading 1"
+                className="h-8 w-8"
+              >
+                <span className="text-xs font-bold">H1</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => formatHeading(2)} 
+                title="Heading 2"
+                className="h-8 w-8"
+              >
+                <span className="text-xs font-bold">H2</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={formatBold} 
+                title="Bold"
+                className="h-8 w-8"
+              >
+                <Bold className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={formatItalic} 
+                title="Italic"
+                className="h-8 w-8"
+              >
+                <Italic className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={formatStrikethrough} 
+                title="Strikethrough"
+                className="h-8 w-8"
+              >
+                <Strikethrough className="h-4 w-4" />
+              </Button>
+              <div className="w-px h-6 bg-border mx-1"></div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={formatBulletList} 
+                title="Bullet List"
+                className="h-8 w-8"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={formatNumberedList} 
+                title="Numbered List"
+                className="h-8 w-8"
+              >
+                <ListOrdered className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={formatQuote} 
+                title="Quote"
+                className="h-8 w-8"
+              >
+                <Quote className="h-4 w-4" />
+              </Button>
+              <div className="w-px h-6 bg-border mx-1"></div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={formatCode} 
+                title="Inline Code"
+                className="h-8 w-8"
+              >
+                <Code className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={formatCodeBlock} 
+                title="Code Block"
+                className="h-8 w-8"
+              >
+                <SquareCode className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={formatTable} 
+                title="Table"
+                className="h-8 w-8"
+              >
+                <Table className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={formatDivider} 
+                title="Horizontal Divider"
+                className="h-8 w-8"
+              >
+                <WrapText className="h-4 w-4" />
+              </Button>
+              <div className="ml-auto flex items-center">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  title="Fullscreen"
+                  className="h-8 w-8"
+                  onClick={() => {
+                    if (document.fullscreenElement) {
+                      document.exitFullscreen();
+                    } else {
+                      document.documentElement.requestFullscreen();
+                    }
+                  }}
+                >
+                  <Maximize className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  title="Keyboard Shortcuts"
+                  className="h-8 w-8"
+                  onClick={() => {
+                    toast({
+                      title: "Keyboard Shortcuts",
+                      description: "Markdown supports various keyboard shortcuts like Ctrl+B for bold, Ctrl+I for italic, etc."
+                    });
+                  }}
+                >
+                  <Keyboard className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
             <textarea
+              ref={textareaRef}
               value={markdown}
               onChange={handleMarkdownChange}
               placeholder="Enter Markdown content here..."
-              className="w-full p-4 font-mono text-sm rounded-md min-h-[400px] focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full p-4 font-mono text-sm rounded-b-md min-h-[400px] focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </TabsContent>
           <TabsContent value="preview" className="m-0">

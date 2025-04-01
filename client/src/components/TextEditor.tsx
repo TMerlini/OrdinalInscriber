@@ -57,23 +57,53 @@ export default function TextEditor({
     setLineCount(text.split('\n').length);
     setWordCount(text.trim() === '' ? 0 : text.trim().split(/\s+/).length);
     
-    // Calculate byte size (approximate for UTF-8)
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(text);
-    setByteSize(bytes.length);
-    
-    // Set size warnings
-    if (bytes.length > 400000) {
-      setSizeWarning("File size exceeds 400KB, which may require miner coordination for inscription.");
-    } else if (bytes.length > 60000) {
-      setSizeWarning("File size exceeds 60KB, which may require higher fees for inscription.");
-    } else {
-      setSizeWarning(null);
+    // Calculate byte size based on selected encoding
+    let bytes: Uint8Array;
+    try {
+      if (encoding === 'utf-8') {
+        const encoder = new TextEncoder(); // This is UTF-8 by default
+        bytes = encoder.encode(text);
+      } else if (encoding === 'ascii') {
+        // Simple ASCII encoding (only keep code points 0-127)
+        bytes = new Uint8Array(text.length);
+        for (let i = 0; i < text.length; i++) {
+          bytes[i] = text.charCodeAt(i) & 0x7F; // Mask to 7 bits for ASCII
+        }
+      } else if (encoding === 'utf-16') {
+        // UTF-16 encoding (approximation)
+        bytes = new Uint8Array(text.length * 2);
+        for (let i = 0; i < text.length; i++) {
+          const code = text.charCodeAt(i);
+          bytes[i*2] = code & 0xFF;
+          bytes[i*2+1] = (code >> 8) & 0xFF;
+        }
+      } else {
+        // Default to UTF-8
+        const encoder = new TextEncoder();
+        bytes = encoder.encode(text);
+      }
+      setByteSize(bytes.length);
+      
+      // Set size warnings
+      if (bytes.length > 400000) {
+        setSizeWarning("File size exceeds 400KB, which may require miner coordination for inscription.");
+      } else if (bytes.length > 60000) {
+        setSizeWarning("File size exceeds 60KB, which may require higher fees for inscription.");
+      } else {
+        setSizeWarning(null);
+      }
+    } catch (error) {
+      console.error("Error encoding text:", error);
+      toast({
+        title: "Encoding error",
+        description: "An error occurred while encoding the text.",
+        variant: "destructive"
+      });
     }
     
     // Call onChange callback
     onChange(text);
-  }, [text, onChange]);
+  }, [text, encoding, onChange, toast]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
