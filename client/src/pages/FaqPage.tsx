@@ -84,6 +84,211 @@ export default function FaqPage() {
         ]
       },
       {
+        title: "Rare Satoshis Explained",
+        id: "rare-sats",
+        questions: [
+          {
+            question: "What are rare satoshis?",
+            answer: (
+              <div>
+                <p>Rare satoshis are specific satoshis (the smallest units of bitcoin) that have unique properties based on their position in the Bitcoin blockchain. These satoshis are considered rare due to their historical significance, mathematical properties, or relationship to important Bitcoin events.</p>
+                <p className="mt-2">They are identified by their absolute sat number (position in the Bitcoin supply) and are categorized into different types of rarity.</p>
+              </div>
+            ),
+            id: "what-are-rare-sats"
+          },
+          {
+            question: "What types of rare satoshis exist?",
+            answer: (
+              <div>
+                <p>Bitcoin has several categories of rare satoshis:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-3">
+                  <li>
+                    <span className="font-semibold">Block Header Sats (Uncommon)</span>
+                    <p className="mt-1">These are the very first satoshi of each block. They represent the beginning of a new block in the blockchain.</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Example: Sat #52,500,000,000 (first sat of block #105)</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Decade Sats (Uncommon)</span>
+                    <p className="mt-1">Satoshis that mark the beginning of a new "decade" in the Bitcoin supply (each 5,250,000,000 sats).</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Example: Sat #5,250,000,000 (first decade)</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Pizza Sats (Uncommon)</span>
+                    <p className="mt-1">Satoshis from the famous Bitcoin pizza transaction when Laszlo Hanyecz paid 10,000 BTC for two pizzas on May 22, 2010.</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Example: Sats from block #57043</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Palindrome Sats (Rare)</span>
+                    <p className="mt-1">Satoshis whose number reads the same backward as forward.</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Example: Sat #1,001, #12,321, #12,344,321</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Alpha Sats (Rare)</span>
+                    <p className="mt-1">The first 256 satoshis in the Bitcoin supply, which come from the genesis block mined by Satoshi Nakamoto.</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Example: Sat #0 through #255</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Vintage Sats (Rare)</span>
+                    <p className="mt-1">Satoshis from the first Bitcoin halving period (blocks 0-209,999).</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Example: Any sat below #10,500,000,000</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Nakamoto Sats (Very Rare)</span>
+                    <p className="mt-1">Satoshis presumed to have been mined by Satoshi Nakamoto in the early days of Bitcoin.</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Example: Sats from blocks believed to be mined by Satoshi</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Black Sats (Ultra Rare)</span>
+                    <p className="mt-1">Satoshis from blocks that contained critical Bitcoin updates or historic events.</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Example: Sats from key upgrade blocks</p>
+                  </li>
+                </ul>
+              </div>
+            ),
+            id: "rare-sat-types"
+          },
+          {
+            question: "How are satoshi numbers calculated?",
+            answer: (
+              <div>
+                <p>The absolute satoshi number is calculated using this formula:</p>
+                <div className="bg-gray-100 dark:bg-gray-800 rounded p-3 my-2 font-mono text-sm">
+                  satoshi_number = (block_height × 50 × 100,000,000) - reward_satoshis + offset
+                </div>
+                <p>Where:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">block_height</span>: The block number in the blockchain</li>
+                  <li><span className="font-semibold">reward_satoshis</span>: The mining reward for that block in satoshis</li>
+                  <li><span className="font-semibold">offset</span>: The position of the satoshi within the transaction</li>
+                </ul>
+                <p className="mt-2">As Bitcoin undergoes halvings, the calculation must account for the reduced block rewards:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Blocks 0-209,999: 50 BTC reward (5,000,000,000 sats)</li>
+                  <li>Blocks 210,000-419,999: 25 BTC reward (2,500,000,000 sats)</li>
+                  <li>Blocks 420,000-629,999: 12.5 BTC reward (1,250,000,000 sats)</li>
+                  <li>Blocks 630,000-839,999: 6.25 BTC reward (625,000,000 sats)</li>
+                </ul>
+              </div>
+            ),
+            id: "sat-number-calculation"
+          },
+          {
+            question: "Why would I want to inscribe on a rare satoshi?",
+            answer: (
+              <div>
+                <p>Inscribing on rare satoshis provides several benefits:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Additional value</span>: Inscriptions on rare sats often command higher market values</li>
+                  <li><span className="font-semibold">Historical significance</span>: Connecting your inscription to an important part of Bitcoin history</li>
+                  <li><span className="font-semibold">Scarcity</span>: There are limited numbers of each rare sat type, making your inscription more unique</li>
+                  <li><span className="font-semibold">Collectibility</span>: Rare sat inscriptions are sought after by collectors in the Ordinals ecosystem</li>
+                </ul>
+                <p className="mt-2">However, rare sats can be more expensive to obtain and inscribe, as they require the wallet to specifically target these satoshis during the inscription process.</p>
+              </div>
+            ),
+            id: "why-rare-sats"
+          },
+          {
+            question: "How does Ordinarinos select rare satoshis?",
+            answer: (
+              <div>
+                <p>Ordinarinos provides a specialized Rare Sat Selector that:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>Queries your Ordinals wallet to identify available UTXOs (unspent transaction outputs)</li>
+                  <li>Analyzes these UTXOs to find which ones contain rare satoshis</li>
+                  <li>Displays available rare sats categorized by type with visual indicators</li>
+                  <li>Allows you to select specific rare sats for your inscriptions</li>
+                  <li>In batch mode, enables selecting multiple rare sats or reusing the same rare sat for multiple inscriptions</li>
+                </ol>
+                <p className="mt-2">The selector visually indicates available sats with green borders, while unavailable sats have gray borders. In batch mode, selected sats are highlighted with yellow badges showing their selection count.</p>
+              </div>
+            ),
+            id: "ordinarinos-rare-sat-selection"
+          }
+        ]
+      },
+      {
+        title: "Parent Inscriptions",
+        id: "parent-inscriptions",
+        questions: [
+          {
+            question: "What are parent inscriptions?",
+            answer: (
+              <div>
+                <p>Parent inscriptions are a feature of the Ordinals protocol that enables hierarchical relationships between inscriptions. A parent inscription can have multiple child inscriptions linked to it, creating a parent-child relationship on the blockchain.</p>
+                <p className="mt-2">This is particularly useful for collections, series, or any content that has a logical grouping or relationship.</p>
+              </div>
+            ),
+            id: "what-are-parent-inscriptions"
+          },
+          {
+            question: "How do parent inscriptions work?",
+            answer: (
+              <div>
+                <p>When you create an inscription with a parent:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>The parent inscription must already exist on the blockchain with a valid inscription ID</li>
+                  <li>During the inscription process, you specify the parent's inscription ID</li>
+                  <li>The Ordinals protocol creates a reference from your new inscription to the parent</li>
+                  <li>This relationship is permanently recorded on the blockchain</li>
+                  <li>Explorers and indexers can then display these relationships, showing a parent with all its children</li>
+                </ol>
+              </div>
+            ),
+            id: "parent-inscriptions-work"
+          },
+          {
+            question: "How to use parent inscriptions in Ordinarinos?",
+            answer: (
+              <div>
+                <p>To create a child inscription with a parent in Ordinarinos:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-2">
+                  <li>
+                    <span className="font-semibold">Enable Parent Inscription:</span>
+                    <p className="mt-1">In the configuration form, look for the "Advanced Options" section and enable the toggle for "Use Parent Inscription".</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Enter Parent ID:</span>
+                    <p className="mt-1">Provide the full inscription ID of the parent (e.g., "1234567890abcdef1234567890abcdef12345678i0"). This ID must be for an existing inscription.</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Configure Other Settings:</span>
+                    <p className="mt-1">Complete the rest of your inscription settings as normal (fee rate, destination address, etc.).</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Generate and Execute Commands:</span>
+                    <p className="mt-1">Generate the inscription commands and execute them. The system will automatically include the parent reference in the inscription command.</p>
+                  </li>
+                </ol>
+                <p className="mt-3 bg-orange-50 dark:bg-gray-800 p-3 rounded-md text-sm">
+                  <span className="font-bold">Note:</span> You can only set a parent for inscriptions you create. You cannot change the parent of an existing inscription as inscriptions are immutable once created.
+                </p>
+              </div>
+            ),
+            id: "using-parent-inscriptions"
+          },
+          {
+            question: "What are the use cases for parent inscriptions?",
+            answer: (
+              <div>
+                <p>Parent inscriptions are valuable for various applications:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Collections</span>: Creating a series of related NFTs with a common parent</li>
+                  <li><span className="font-semibold">Series</span>: Establishing editions or volumes in a content series</li>
+                  <li><span className="font-semibold">Metadata</span>: The parent can contain metadata that applies to all children</li>
+                  <li><span className="font-semibold">Upgradeability</span>: While inscriptions themselves can't be modified, children can be added to extend functionality</li>
+                  <li><span className="font-semibold">Organizational Structure</span>: Creating hierarchical relationships between content</li>
+                  <li><span className="font-semibold">Recursive Inscriptions</span>: Advanced use cases where inscriptions reference each other</li>
+                </ul>
+                <p className="mt-2">For example, you might create a parent inscription as the cover or identity of a collection, then create child inscriptions for each item in the collection.</p>
+              </div>
+            ),
+            id: "parent-inscription-use-cases"
+          }
+        ]
+      },
+      {
         title: "Technical Questions",
         id: "technical",
         questions: [
