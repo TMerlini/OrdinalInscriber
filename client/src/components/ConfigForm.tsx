@@ -344,6 +344,19 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
                   </p>
                 </div>
               )}
+              
+              {/* Rare Sats Selector - only show when toggle is on and sats are available or status is unknown */}
+              {showRareSats && rareSatsAvailability !== 'unavailable' && (
+                <div className="mt-4 p-4 border border-orange-200 dark:border-navy-600 rounded-md bg-white dark:bg-navy-900">
+                  <h4 className="text-sm font-medium mb-2 text-orange-800 dark:text-orange-400">Select a Rare Satoshi</h4>
+                  <RareSatSelector
+                    onSelect={(satoshi) => {
+                      form.setValue("selectedSatoshi", satoshi);
+                    }}
+                    selectedSatoshi={form.watch("selectedSatoshi")}
+                  />
+                </div>
+              )}
             </div>
           
             <FormField
