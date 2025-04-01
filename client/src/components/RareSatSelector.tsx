@@ -19,6 +19,12 @@ interface RareSatSelectorProps {
   selectedSatoshis?: string[];
 }
 
+// Type to track sats with counts for duplicate selection
+interface SatCount {
+  satoshi: string;
+  count: number;
+}
+
 // Group satoshis by rarity tier
 type RarityGroup = {
   label: string;
@@ -205,7 +211,13 @@ export default function RareSatSelector({
     };
   }, []);
 
-  // Add a function to toggle a satoshi in the multi-selection
+  // Helper to count satoshi occurrences in the selected array
+  const getSatoshiCount = (satoshi: string): number => {
+    if (!selectedSatoshis || !Array.isArray(selectedSatoshis)) return 0;
+    return selectedSatoshis.filter(s => s === satoshi).length;
+  };
+
+  // Add a function to toggle a satoshi in the multi-selection with support for duplicates
   const handleToggleMultiSelect = (satoshi: string, selected: boolean) => {
     try {
       if (!onSelectMultiple || !selectedSatoshis) return;
@@ -218,12 +230,20 @@ export default function RareSatSelector({
           // Remove the oldest sat and add the new one
           newSelectedSatoshis = [...selectedSatoshis.slice(1), satoshi];
         } else {
-          // Add the new sat to the selections
+          // Simply add the sat to the array (this allows duplicates)
           newSelectedSatoshis = [...selectedSatoshis, satoshi];
         }
       } else {
-        // Remove the sat from selections
-        newSelectedSatoshis = selectedSatoshis.filter(s => s !== satoshi);
+        // Remove only one instance of the sat from selections
+        const index = selectedSatoshis.indexOf(satoshi);
+        if (index !== -1) {
+          newSelectedSatoshis = [
+            ...selectedSatoshis.slice(0, index),
+            ...selectedSatoshis.slice(index + 1)
+          ];
+        } else {
+          newSelectedSatoshis = [...selectedSatoshis];
+        }
       }
       
       onSelectMultiple(newSelectedSatoshis);
@@ -236,8 +256,9 @@ export default function RareSatSelector({
     try {
       // If in batch mode with multi-select, handle differently
       if (multiSelectMode && onSelectMultiple) {
-        const isSelected = selectedSatoshis?.includes(satoshi) || false;
-        handleToggleMultiSelect(satoshi, !isSelected);
+        // Always allow adding duplicate selections - this allows the same 
+        // satoshi (like Pizza sats) to be used multiple times
+        handleToggleMultiSelect(satoshi, true);
       } else {
         onSelect(satoshi);
       }
@@ -611,13 +632,17 @@ function SatCard({
   onToggleMultiSelect?: (satoshi: string, selected: boolean) => void,
   selectedSatoshis?: string[]
 }) {
+  // Calculate selection count for this satoshi (how many times it appears in the selection array)
+  const selectionCount = selectedSatoshis.filter(s => s === sat.satoshi).length;
   // Safe click handler with error handling
   const handleClick = () => {
     try {
       if (!sat || !sat.satoshi || !isAvailable) return;
       
       if (multiSelectMode && onToggleMultiSelect) {
-        onToggleMultiSelect(sat.satoshi, !inMultiSelection);
+        // In multi-select mode, always add to selection when clicked
+        // The parent will handle managing whether to replace oldest selection
+        onSelect(sat.satoshi);
       } else {
         onSelect(sat.satoshi);
       }
@@ -682,7 +707,11 @@ function SatCard({
     return (
       <Card
         className={`cursor-pointer hover:border-orange-300 dark:hover:border-orange-600 transition-colors 
-          ${multiSelectMode && inMultiSelection ? 'bg-green-50 dark:bg-green-900/20 border-green-600 dark:border-green-500 ring-2 ring-green-500 dark:ring-green-600 ring-opacity-50' : getSelectedClasses()} 
+          ${multiSelectMode && inMultiSelection ? 
+            `bg-green-50 dark:bg-green-900/20 border-green-600 dark:border-green-500 ring-2 
+             ${selectionCount > 1 ? 'ring-yellow-500 dark:ring-yellow-600' : 'ring-green-500 dark:ring-green-600'} 
+             ring-opacity-50` 
+            : getSelectedClasses()} 
           ${!isAvailable ? 'opacity-50 cursor-not-allowed' : 'border-2 border-green-300 dark:border-green-600'}`}
         onClick={handleClick}
       >
@@ -710,8 +739,10 @@ function SatCard({
               </Badge>
             )}
             {multiSelectMode && inMultiSelection && (
-              <Badge className="bg-green-500 text-white text-xs">
-                Selected #{selectedSatoshis?.indexOf(sat.satoshi) + 1}
+              <Badge className={`${selectionCount > 1 ? 'bg-yellow-500' : 'bg-green-500'} text-white text-xs`}>
+                {selectionCount > 1 ? 
+                  `Selected x${selectionCount}` : 
+                  `Selected #${selectedSatoshis?.indexOf(sat.satoshi) + 1}`}
               </Badge>
             )}
             {!multiSelectMode && selected && (
