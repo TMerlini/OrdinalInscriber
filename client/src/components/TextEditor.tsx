@@ -167,6 +167,50 @@ const cipherUtils = {
         return "Invalid Base64 encoded text";
       }
     }
+  },
+  
+  // Egyptian Hieroglyphics (simplified - using emoji symbols)
+  hieroglyphics: {
+    encode: (text: string) => {
+      const hieroglyphMap: Record<string, string> = {
+        'A': '𓀀', 'B': '𓃀', 'C': '𓎡', 'D': '𓂧', 'E': '𓇋', 'F': '𓆑', 'G': '𓎼', 'H': '𓉔', 'I': '𓇋', 'J': '𓆓',
+        'K': '𓎡', 'L': '𓃭', 'M': '𓅓', 'N': '𓈖', 'O': '𓅱', 'P': '𓊪', 'Q': '𓏘', 'R': '𓂋', 'S': '𓋴', 'T': '𓏏',
+        'U': '𓅱', 'V': '𓆑', 'W': '𓅱', 'X': '𓏴', 'Y': '𓇋', 'Z': '𓊃', '0': '𓎤', '1': '𓏺', '2': '𓏻', '3': '𓏼',
+        '4': '𓏽', '5': '𓏾', '6': '𓏿', '7': '𓐀', '8': '𓐁', '9': '𓐂', '.': '𓐍', ',': '𓐍', '?': '𓀀', '!': '𓀁',
+        ' ': ' '
+      };
+      
+      return text.toUpperCase().split('').map(char => {
+        return hieroglyphMap[char] || char;
+      }).join('');
+    },
+    decode: (text: string) => {
+      // Since hieroglyphs are complex and many-to-one mapping, 
+      // properly decoding would require a different approach
+      // For now, we'll return a message explaining the limitation
+      return "[Translation from hieroglyphics is approximate. Original intended for one-way conversion.]";
+    }
+  },
+  
+  // Sumerian Cuneiform (simplified - using Unicode cuneiform symbols)
+  sumerian: {
+    encode: (text: string) => {
+      const sumerianMap: Record<string, string> = {
+        'A': '𒀀', 'B': '𒁀', 'C': '𒋧', 'D': '𒁺', 'E': '𒂊', 'F': '𒊬', 'G': '𒄀', 'H': '𒄩', 'I': '𒄿', 'J': '𒅆',
+        'K': '𒆠', 'L': '𒇴', 'M': '𒈨', 'N': '𒉡', 'O': '𒁄', 'P': '𒅤', 'Q': '𒆥', 'R': '𒊏', 'S': '𒋛', 'T': '𒋰',
+        'U': '𒌋', 'V': '𒍇', 'W': '𒉿', 'X': '𒊕', 'Y': '𒐊', 'Z': '𒍣', '0': '𒐼', '1': '𒐻', '2': '𒑐', '3': '𒑁',
+        '4': '𒑂', '5': '𒑃', '6': '𒑄', '7': '𒑅', '8': '𒑆', '9': '𒑇', '.': '𒑰', ',': '𒑱', '?': '𒑲', '!': '𒑳',
+        ' ': ' '
+      };
+      
+      return text.toUpperCase().split('').map(char => {
+        return sumerianMap[char] || char;
+      }).join('');
+    },
+    decode: (text: string) => {
+      // Similar to hieroglyphics, cuneiform is complex for reverse mapping
+      return "[Translation from cuneiform is approximate. Original intended for one-way conversion.]";
+    }
   }
 };
 
@@ -393,6 +437,10 @@ export default function TextEditor({
                 <option value="morse">Morse Code</option>
                 <option value="binary">Binary</option>
                 <option value="base64">Base64</option>
+              </optgroup>
+              <optgroup label="Ancient Scripts">
+                <option value="hieroglyphics">Egyptian Hieroglyphics</option>
+                <option value="sumerian">Sumerian Cuneiform</option>
               </optgroup>
             </select>
           </div>
