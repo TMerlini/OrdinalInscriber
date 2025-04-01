@@ -27,6 +27,7 @@ const formSchema = z.object({
   destination: z.string().optional(),
   satPoint: z.string().optional(),
   selectedSatoshi: z.string().optional(),
+  selectedSatoshis: z.array(z.string()).optional(),
   useSatRarity: z.boolean().default(false),
   parentId: z.string().optional(),
   dryRun: z.boolean().default(false),
@@ -139,6 +140,7 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
       destination: "",
       satPoint: "",
       selectedSatoshi: "",
+      selectedSatoshis: [],
       useSatRarity: false,
       parentId: "",
       dryRun: false,
@@ -217,6 +219,10 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
     
     if (!checked) {
       form.setValue("selectedSatoshi", "");
+      // Also reset the selectedSatoshis using the form reset approach
+      const formData = form.getValues();
+      const updatedFormData = { ...formData, selectedSatoshis: [] };
+      form.reset(updatedFormData);
     }
   };
   
@@ -349,7 +355,9 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
               {showRareSats && rareSatsAvailability !== 'unavailable' && (
                 <div className="mt-4 p-4 border border-orange-200 dark:border-navy-600 rounded-md bg-white dark:bg-navy-900">
                   <h4 className="text-sm font-medium mb-2 text-orange-800 dark:text-orange-400">
-                    Select a Rare Satoshi {isBatchMode && `(will be applied to all ${batchFileCount} files)`}
+                    {isBatchMode 
+                      ? `Select Rare Satoshis (for ${batchFileCount} files)` 
+                      : "Select a Rare Satoshi"}
                   </h4>
                   
                   {isBatchMode && (
@@ -357,8 +365,9 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
                       <p className="text-xs text-orange-700 dark:text-orange-300 flex items-start">
                         <Info className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5" />
                         <span>
-                          In batch mode, the selected rare satoshi will be used as the starting point. The system will 
-                          attempt to use sequential satoshis from the same UTXO for each file in the batch.
+                          In batch mode, you can enable Multi-Select Mode to assign a unique rare satoshi to each file. 
+                          Toggle the switch in the Rare Sats section to select up to {batchFileCount} different satoshis 
+                          for your inscription batch.
                         </span>
                       </p>
                     </div>
@@ -369,6 +378,15 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
                       form.setValue("selectedSatoshi", satoshi);
                     }}
                     selectedSatoshi={form.watch("selectedSatoshi")}
+                    batchMode={isBatchMode}
+                    batchFileCount={batchFileCount}
+                    onSelectMultiple={(satoshis) => {
+                      // Use a workaround since selectedSatoshis isn't officially in the form schema
+                      const formData = form.getValues();
+                      const updatedFormData = { ...formData, selectedSatoshis: satoshis };
+                      form.reset(updatedFormData);
+                    }}
+                    selectedSatoshis={(form.getValues().selectedSatoshis as string[]) || []}
                   />
                 </div>
               )}
