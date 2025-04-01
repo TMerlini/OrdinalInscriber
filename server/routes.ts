@@ -373,6 +373,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inscribeCommand += ` --sat-point ${config.satPoint}`;
       }
       
+      // Support for rare sat selection
+      if (config.useSatRarity && config.selectedSatoshi) {
+        inscribeCommand += ` --sat ${config.selectedSatoshi}`;
+      }
+      
       if (config.parentId) {
         inscribeCommand += ` --parent ${config.parentId}`;
       }
@@ -826,6 +831,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (metadataFilePath) requestBody.metadata = metadataFilePath;
         if (contentType) requestBody.content_type = contentType;
         if (satPoint) requestBody.sat_point = satPoint;
+        // Support for rare sat selection
+        if (req.body.useSatRarity && req.body.selectedSatoshi) {
+          requestBody.sat = req.body.selectedSatoshi;
+        }
         if (dryRun) requestBody.dry_run = true;
         
         const response = await fetch(ordUrl, {

@@ -22,7 +22,7 @@ import MetadataInput from "@/components/MetadataInput";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SNSRegister from "@/components/SNSRegister";
 import SNSRegisterNew from "@/components/SNSRegisterNew";
-import { ChevronDown, RefreshCw } from "lucide-react";
+import { ChevronDown, RefreshCw, Info } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -483,7 +483,10 @@ export default function Home() {
           metadataStorage: "on-chain" as const,
           destination: metadataValues.destination,
           parentId: showParentInscription ? parentInscriptionId : undefined,
-          batchMode: true
+          batchMode: true,
+          // Apply rare sats in batch mode (keep the selected satoshi for each file)
+          useSatRarity: config.useSatRarity,
+          selectedSatoshi: config.selectedSatoshi
         };
         
         // Handle individual metadata per file if in batch mode
@@ -724,7 +727,10 @@ export default function Home() {
       metadataStorage: "on-chain" as const,
       destination: metadataValues.destination,
       parentId: showParentInscription ? parentInscriptionId : undefined,
-      batchMode: true
+      batchMode: true,
+      // Apply rare sats in batch mode (keep the selected satoshi for each file)
+      useSatRarity: config.useSatRarity,
+      selectedSatoshi: config.selectedSatoshi
     };
     
     // Handle individual metadata per file if in batch mode and metadata is an array

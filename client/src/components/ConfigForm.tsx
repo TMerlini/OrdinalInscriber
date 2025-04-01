@@ -348,7 +348,22 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
               {/* Rare Sats Selector - only show when toggle is on and sats are available or status is unknown */}
               {showRareSats && rareSatsAvailability !== 'unavailable' && (
                 <div className="mt-4 p-4 border border-orange-200 dark:border-navy-600 rounded-md bg-white dark:bg-navy-900">
-                  <h4 className="text-sm font-medium mb-2 text-orange-800 dark:text-orange-400">Select a Rare Satoshi</h4>
+                  <h4 className="text-sm font-medium mb-2 text-orange-800 dark:text-orange-400">
+                    Select a Rare Satoshi {isBatchMode && `(will be applied to all ${batchFileCount} files)`}
+                  </h4>
+                  
+                  {isBatchMode && (
+                    <div className="mb-4 p-3 bg-orange-50 dark:bg-navy-800 rounded-md border border-orange-100 dark:border-navy-700">
+                      <p className="text-xs text-orange-700 dark:text-orange-300 flex items-start">
+                        <Info className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5" />
+                        <span>
+                          In batch mode, the selected rare satoshi will be used as the starting point. The system will 
+                          attempt to use sequential satoshis from the same UTXO for each file in the batch.
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                  
                   <RareSatSelector
                     onSelect={(satoshi) => {
                       form.setValue("selectedSatoshi", satoshi);
