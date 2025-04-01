@@ -169,6 +169,37 @@ const cipherUtils = {
     }
   },
   
+  // Hexadecimal encoding
+  hex: {
+    encode: (text: string) => {
+      return Array.from(text)
+        .map(char => char.charCodeAt(0).toString(16).padStart(2, '0'))
+        .join('');
+    },
+    decode: (text: string) => {
+      try {
+        // Remove any non-hex characters (spaces, 0x prefix, etc.)
+        const cleanHex = text.replace(/[^0-9a-fA-F]/g, '');
+        
+        // Check if we have an even number of characters
+        if (cleanHex.length % 2 !== 0) {
+          return "Invalid hex string: should have an even number of hex characters";
+        }
+        
+        // Convert hex pairs to characters
+        let result = '';
+        for (let i = 0; i < cleanHex.length; i += 2) {
+          const hexPair = cleanHex.substring(i, i + 2);
+          const charCode = parseInt(hexPair, 16);
+          result += String.fromCharCode(charCode);
+        }
+        return result;
+      } catch (e) {
+        return "Invalid hexadecimal encoded text";
+      }
+    }
+  },
+  
   // Egyptian Hieroglyphics (simplified - using emoji symbols)
   hieroglyphics: {
     encode: (text: string) => {
@@ -436,6 +467,7 @@ export default function TextEditor({
                 <option value="rot13">ROT13</option>
                 <option value="morse">Morse Code</option>
                 <option value="binary">Binary</option>
+                <option value="hex">Hexadecimal</option>
                 <option value="base64">Base64</option>
               </optgroup>
               <optgroup label="Ancient Scripts">
