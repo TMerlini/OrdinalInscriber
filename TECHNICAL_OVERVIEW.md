@@ -59,6 +59,8 @@ The Ordinarinos Inscription Tool is a sophisticated web application designed for
    - Command generation and execution
    - Step-by-step execution or all-at-once options
    - Detailed results and transaction tracking
+   - Comprehensive inscription history management system
+   - Individual and batch deletion of history items
 
 2. **File Handling**:
    - Support for images (JPEG, PNG, WebP)
@@ -126,6 +128,40 @@ The Ordinarinos Inscription Tool is a sophisticated web application designed for
    - Secondary port for Replit workflow
    - Special environment variable configuration
    - ESM module compatibility settings
+
+## Inscription Status and History Management
+
+The application features a comprehensive inscription tracking and history management system:
+
+1. **Architecture**:
+   - Server-side API for CRUD operations on inscription records (`/api/inscriptions`)
+   - UUID-based identification for all inscription records
+   - Persistent storage with transaction information
+   - Status tracking (pending, success, failed) with timestamps
+
+2. **Frontend Components**:
+   - `InscriptionStatus`: Core component for displaying inscription records with filtering
+   - `InscriptionStatusDisplay`: Container component that manages data fetching and state
+   - Status dashboards with success rate calculation and visualization
+   - Responsive cards with color-coding based on status
+
+3. **Features**:
+   - Real-time status updates
+   - Filtering by status type (all, success, pending, failed)
+   - Configurable display limits (10/50/100 items)
+   - Transaction ID copying
+   - Direct link to Ordinals explorer for successful inscriptions
+   - Detailed error messages for failed inscriptions
+   - Individual record deletion with confirmation
+   - Batch deletion (clear all)
+   - Clear explanation of blockchain immutability
+
+4. **Technical Implementation**:
+   - Optimistic UI updates for better user experience
+   - Background status polling for pending transactions
+   - Graceful error handling with user-friendly messages
+   - Tooltips explaining that deletion only affects local records, not blockchain data
+   - Comprehensive progress tracking for both single and batch inscriptions
 
 ## Current Runtime Status
 
