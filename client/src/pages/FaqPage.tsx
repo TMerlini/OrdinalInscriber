@@ -51,6 +51,8 @@ export default function FaqPage() {
                 <p>Ordinarinos allows you to:</p>
                 <ul className="list-disc pl-6 mt-2 space-y-1">
                   <li>Upload and inscribe images and 3D models onto the Bitcoin blockchain</li>
+                  <li>Create and inscribe text with various encoding options (including ciphers and ancient scripts)</li>
+                  <li>Create and inscribe formatted Markdown content with live preview</li>
                   <li>Batch process multiple files at once</li>
                   <li>Register Satoshi Name Service (SNS) names</li>
                   <li>Target specific rare satoshis for your inscriptions</li>
@@ -80,6 +82,26 @@ export default function FaqPage() {
             question: "Is Ordinarinos compatible with Umbrel?",
             answer: "Yes, Ordinarinos is designed to work seamlessly with Umbrel's Bitcoin and Ordinals services. The application automatically detects and connects to Umbrel's Ordinals node.",
             id: "umbrel-compatibility"
+          },
+          {
+            question: "What makes Ordinarinos different from other inscription tools?",
+            answer: (
+              <div>
+                <p>Ordinarinos focuses on providing a seamless user experience with powerful features like:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Direct integration with your Ordinals node</li>
+                  <li>Advanced batch processing for images, text, and markdown</li>
+                  <li>Advanced text encoding options (including ciphers and ancient scripts)</li>
+                  <li>Rich markdown editing with live preview</li>
+                  <li>Comprehensive history tracking</li>
+                  <li>Smart image optimization</li>
+                  <li>Rare sat targeting</li>
+                  <li>Full SNS integration</li>
+                  <li>Detailed real-time feedback</li>
+                </ul>
+              </div>
+            ),
+            id: "what-makes-different"
           }
         ]
       },
@@ -289,6 +311,128 @@ export default function FaqPage() {
         ]
       },
       {
+        title: "Text and Markdown Inscriptions",
+        id: "text-markdown",
+        questions: [
+          {
+            question: "How do I create text inscriptions?",
+            answer: (
+              <div>
+                <p>To create text inscriptions with Ordinarinos:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>Navigate to the Text Editor section</li>
+                  <li>Type or paste your text content</li>
+                  <li>Choose an encoding (default is UTF-8)</li>
+                  <li>Configure your inscription settings (fee rate, destination, etc.)</li>
+                  <li>Generate and execute the inscription commands</li>
+                </ol>
+                <p className="mt-2">For batch processing, switch to batch mode and add multiple text items before processing them all at once.</p>
+              </div>
+            ),
+            id: "create-text-inscriptions"
+          },
+          {
+            question: "What encoding options are available for text?",
+            answer: (
+              <div>
+                <p>Ordinarinos offers several encoding options for text inscriptions:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-2">
+                  <li>
+                    <span className="font-semibold">UTF-8 (Default)</span>
+                    <p className="mt-1">The standard encoding for most modern text; supports most characters from various languages and symbols.</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">ASCII</span>
+                    <p className="mt-1">Basic English characters and common symbols, very compact.</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">UTF-16</span>
+                    <p className="mt-1">Extended character support, particularly for East Asian languages.</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Cryptographic Ciphers</span>
+                    <p className="mt-1">Caesar, Vigenère, and other classic encryption methods.</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Ancient Scripts</span>
+                    <p className="mt-1">Transliteration to hieroglyphics, cuneiform, and other ancient writing systems.</p>
+                  </li>
+                  <li>
+                    <span className="font-semibold">Hexadecimal</span>
+                    <p className="mt-1">Convert text to hex representation.</p>
+                  </li>
+                </ul>
+              </div>
+            ),
+            id: "text-encoding-options"
+          },
+          {
+            question: "How does the Markdown editor work?",
+            answer: (
+              <div>
+                <p>The Markdown Editor provides a dual-pane interface:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Left side: Write Markdown syntax with auto-completion and formatting options</li>
+                  <li>Right side: Live preview of the rendered Markdown</li>
+                </ul>
+                <p className="mt-2">You can use standard Markdown syntax for headings, lists, links, images, code blocks, and more. The editor includes a toolbar for common formatting options.</p>
+                <p className="mt-2">When you inscribe Markdown, both the source Markdown text and the content-type are preserved, so it will render properly in Ordinals explorers.</p>
+              </div>
+            ),
+            id: "markdown-editor"
+          },
+          {
+            question: "How is text optimization different from image optimization?",
+            answer: (
+              <div>
+                <p>While image optimization converts files to WebP format at a target size, text optimization works differently:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Text optimization focuses on efficient encoding to reduce byte size</li>
+                  <li>For plain text, ASCII encoding is often used when possible as it's more compact</li>
+                  <li>For Markdown, unnecessary whitespace and comments are removed</li>
+                  <li>Large text files may be compressed to reduce their size</li>
+                </ul>
+                <p className="mt-2">The optimization preserves all visible content and formatting while reducing the overall file size for more efficient inscription.</p>
+              </div>
+            ),
+            id: "text-optimization"
+          },
+          {
+            question: "How do I batch process text files?",
+            answer: (
+              <div>
+                <p>To batch process text files:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>Enable batch mode in the Text or Markdown section</li>
+                  <li>Add multiple text items using the "Add Text" button</li>
+                  <li>Edit each item's content and name as needed</li>
+                  <li>Select which items to process by toggling their checkboxes</li>
+                  <li>Configure shared inscription settings (fee rate, destination)</li>
+                  <li>Click "Process Selected" to generate and execute commands for all selected items</li>
+                </ol>
+                <p className="mt-2">The batch processing interface provides status indicators for each item, showing whether it's pending, processing, complete, or failed.</p>
+              </div>
+            ),
+            id: "batch-process-text"
+          },
+          {
+            question: "Why does my text look different after applying an encoding?",
+            answer: (
+              <div>
+                <p>Different encodings represent text in various ways:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Some characters may not be supported in certain encodings (especially ASCII)</li>
+                  <li>Specialized encodings like ciphers or ancient scripts intentionally transform the text</li>
+                  <li>When using cryptographic encodings, text is purposely transformed to hide its meaning</li>
+                </ul>
+                <p className="mt-2">Always check the preview to see how your text will appear before inscription. Remember that the encoding you choose becomes permanent once inscribed.</p>
+              </div>
+            ),
+            id: "encoding-differences"
+          }
+        ]
+      },
+      {
         title: "Technical Questions",
         id: "technical",
         questions: [
@@ -304,6 +448,8 @@ export default function FaqPage() {
                 <ul className="list-disc pl-6 space-y-1">
                   <li>Images: JPEG, PNG, WebP (recommended)</li>
                   <li>3D Models: GLB, GLTF</li>
+                  <li>Text: TXT, plain text</li>
+                  <li>Markdown: MD</li>
                   <li>Size limitations: Files under 60KB are recommended, files over 400KB may require miner coordination</li>
                 </ul>
               </div>
@@ -431,6 +577,11 @@ export default function FaqPage() {
             id: "image-different"
           },
           {
+            question: "My text displays incorrectly after encoding",
+            answer: "This can happen with certain encoding options. Make sure the encoding you selected supports all the characters in your text. For special characters or symbols, UTF-8 or UTF-16 is recommended over ASCII. For intentionally transformed text (ciphers or ancient scripts), this behavior is expected as the text is being converted to a different format.",
+            id: "text-display-incorrect"
+          },
+          {
             question: "I can't connect to my Ordinals node",
             answer: (
               <div>
@@ -476,7 +627,18 @@ export default function FaqPage() {
         questions: [
           {
             question: "How is the file cache managed?",
-            answer: "Ordinarinos manages a local file cache with a 5GB limit. Files are cached for future use to avoid reprocessing. You can manually clear individual files or the entire cache. The system automatically removes the oldest files when the cache limit is reached.",
+            answer: (
+              <div>
+                <p>Ordinarinos manages a local file cache with a 5GB limit for various file types:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Images (JPEG, PNG, WebP)</li>
+                  <li>3D Models (GLB, GLTF)</li>
+                  <li>Text files (plaintext, TXT)</li>
+                  <li>Markdown files (MD)</li>
+                </ul>
+                <p className="mt-2">Files are cached for future use to avoid reprocessing. You can manually clear individual files or the entire cache through the Cache Manager interface. The system automatically removes the oldest files when the cache limit is reached.</p>
+              </div>
+            ),
             id: "cache-management"
           },
           {
