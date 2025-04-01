@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
@@ -1217,14 +1218,23 @@ export default function Home() {
           <div className="inline-block px-6 py-2 bg-orange-600 dark:bg-orange-700 rounded-full">
             <p className="text-white font-medium text-sm">Ordinals Inscription Tool - For use with a local Ordinals node running in Docker</p>
           </div>
-          <a 
-            href="https://ordinarinos.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
-          >
-            Powered by Ordinarinos
-          </a>
+          <div className="flex items-center space-x-3 text-xs">
+            <Link 
+              href="/faq"
+              className="text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
+            >
+              FAQ
+            </Link>
+            <span className="text-gray-400 dark:text-gray-600">|</span>
+            <a 
+              href="https://ordinarinos.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
+            >
+              Powered by Ordinarinos
+            </a>
+          </div>
         </footer>
       </div>
     </div>

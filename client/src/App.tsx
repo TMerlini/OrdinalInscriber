@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import FaqPage from "@/pages/FaqPage";
 import { useEffect } from "react";
 import { disableViteErrorOverlay } from "./lib/disableViteOverlay";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -12,6 +13,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/faq" component={FaqPage} />
       <Route component={NotFound} />
     </Switch>
   );
