@@ -8,6 +8,8 @@ Ordinarinos is a comprehensive web application for Bitcoin Ordinals inscriptions
 ### What can I do with Ordinarinos?
 Ordinarinos allows you to:
 - Upload and inscribe images and 3D models onto the Bitcoin blockchain
+- Create and inscribe text with various encoding options (including ciphers and ancient scripts)
+- Create and inscribe formatted Markdown content with live preview
 - Batch process multiple files at once
 - Register Satoshi Name Service (SNS) names
 - Target specific rare satoshis for your inscriptions
@@ -32,6 +34,8 @@ Ordinarinos uses Docker networking to communicate with your Ordinals node contai
 ### What file formats are supported?
 - Images: JPEG, PNG, WebP (recommended)
 - 3D Models: GLB, GLTF
+- Text: TXT, plain text
+- Markdown: MD
 - Size limitations: Files under 60KB are recommended, files over 400KB may require miner coordination
 
 ### What is the file size limit for inscriptions?
@@ -118,6 +122,12 @@ This typically means that your Ordinals wallet doesn't have enough Bitcoin to co
 
 Deposit more Bitcoin to your Ordinals wallet address and try again.
 
+### Why does my text look different after applying an encoding?
+When you change the encoding of text, particularly when using ciphers or ancient scripts, the visual representation will change. Some notes on encodings:
+- Ancient scripts (Hieroglyphics and Cuneiform) are primarily intended for one-way conversion and may not decode perfectly
+- When using specialized encodings like Base64 or Hexadecimal, non-ASCII characters may not be properly represented
+- You can always revert to UTF-8 encoding to see your original text
+
 ## Administration & Maintenance
 
 ### How is the file cache managed?
@@ -142,6 +152,64 @@ The inscription history is stored in the application's database. To back it up:
 3. Store the backup in a safe location
 4. Restart the application: `docker-compose up -d`
 
+## Text and Markdown Inscriptions
+
+### How do I create text inscriptions?
+Ordinarinos provides a specialized text editor that allows you to create and inscribe plain text:
+1. Navigate to the Text section of Ordinarinos
+2. Enter your text content in the editor
+3. Configure file name and encoding options
+4. Save your text to the cache
+5. Configure inscription settings and submit
+
+### What encoding options are available for text inscriptions?
+Ordinarinos supports multiple text encoding options:
+- Standard Encodings: UTF-8, ASCII, UTF-16
+- Substitution Ciphers: Caesar Cipher, Atbash, ROT13, Morse Code, Binary, Hexadecimal, Base64
+- Ancient Scripts: Egyptian Hieroglyphics, Sumerian Cuneiform
+
+### How do the text encoding options work?
+- **UTF-8**: Standard Unicode encoding suitable for most languages
+- **ASCII**: Basic English alphabet and symbols (7-bit)
+- **UTF-16**: Extended Unicode encoding supporting a wider range of characters
+- **Caesar Cipher**: Classic substitution cipher that shifts letters by 3 positions
+- **Atbash**: Reverses the alphabet (A becomes Z, B becomes Y, etc.)
+- **ROT13**: Rotates letters by 13 positions in the alphabet
+- **Morse Code**: Converts text to dots and dashes
+- **Binary**: Converts each character to its binary representation
+- **Hexadecimal**: Converts each character to hexadecimal values
+- **Base64**: Encodes text in Base64 format
+- **Egyptian Hieroglyphics**: Converts text to hieroglyphic symbols
+- **Sumerian Cuneiform**: Converts text to cuneiform symbols
+
+### How does the markdown editor work?
+The markdown editor provides a rich editing environment for creating formatted content:
+1. Use the toolbar to apply formatting (headings, bold, lists, etc.)
+2. Preview your markdown in real-time
+3. Save your markdown to the cache
+4. Configure inscription settings and submit
+
+### How can I optimize my text or markdown inscriptions?
+Both text and markdown editors include an "Optimize" button that:
+- Removes excess whitespace
+- Standardizes line breaks
+- Reduces file size
+- In markdown, ensures proper formatting of headings
+
+### Can I batch process text and markdown files?
+Yes, the batch text manager allows you to:
+- Create multiple text or markdown files
+- Toggle selection of specific files
+- Process them together with the same inscription settings
+- Track their status in the batch processing queue
+
+### Are saved text and markdown files included in the cache management?
+Yes, all text and markdown files that you save are:
+- Stored in the application's file cache
+- Subject to the same 5GB cache limit as images
+- Automatically cleaned up when the cache limit is reached
+- Available for viewing and management in the Cache Manager
+
 ## Advanced Usage
 
 ### Can I customize the metadata for my inscriptions?
@@ -162,7 +230,10 @@ Ordinarinos provides several API endpoints that can be used programmatically:
 - `/api/inscriptions`: Manage inscription history
 - `/api/sns/check`: Check name availability
 - `/api/sns/fees`: Get fee estimates
-- `/api/cache`: Manage the file cache
+- `/api/cache/info`: Get information about the file cache
+- `/api/cache/clear`: Clear all cached files
+- `/api/cache/save-text`: Save text content to the cache
+- `/api/cache/file/:filename`: Get or delete a specific cached file
 
 For a complete API reference, contact Ordinarinos support.
 
@@ -185,9 +256,11 @@ We welcome contributions! Check our GitHub repository for contribution guideline
 ### What makes Ordinarinos different from other inscription tools?
 Ordinarinos focuses on providing a seamless user experience with powerful features like:
 - Direct integration with your Ordinals node
-- Advanced batch processing
+- Advanced batch processing for images, text, and markdown
 - Comprehensive history tracking
 - Smart image optimization
+- Advanced text encoding options (including ciphers and ancient scripts)
+- Rich markdown editing with live preview
 - Rare sat targeting
 - Full SNS integration
 - Detailed real-time feedback
