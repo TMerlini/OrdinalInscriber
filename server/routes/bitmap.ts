@@ -61,6 +61,63 @@ export function registerBitmapRoutes(app: any) {
   });
 
   /**
+   * Calculate bitmap inscription fees
+   * POST /api/bitmap/calculate-fees
+   * Body:
+   *   feeRate: number
+   */
+  app.post('/api/bitmap/calculate-fees', (req: Request, res: Response) => {
+    try {
+      const { feeRate } = req.body;
+      
+      if (!feeRate) {
+        return res.status(400).json({
+          error: true,
+          message: "Missing fee rate parameter"
+        });
+      }
+      
+      // Calculate fees for bitmap inscription
+      // These are approximations based on typical bitmap inscription sizes
+      const vbyte = 320; // Approximate size of a bitmap inscription in vbytes
+      const baseFee = 600; // Base fee in satoshis
+      const inscriptionFee = vbyte * Number(feeRate); // Fee for the inscription transaction
+      const totalFee = inscriptionFee + baseFee; // Total fee including the base fee
+      
+      return res.json({
+        vbyte,
+        baseFee,
+        inscriptionFee,
+        totalFee,
+        feeRate,
+        estimatedUsd: null, // This would be calculated if we had BTC/USD price feed
+        processingTime: getFeeProcessingTime(Number(feeRate))
+      });
+    } catch (error) {
+      console.error('Error calculating bitmap inscription fees:', error);
+      return res.status(500).json({
+        error: true,
+        message: "Failed to calculate inscription fees"
+      });
+    }
+  });
+
+  /**
+   * Helper function to estimate processing time based on fee rate
+   */
+  function getFeeProcessingTime(feeRate: number): string {
+    if (feeRate >= 25) {
+      return "Fast (likely next block, ~10 minutes)";
+    } else if (feeRate >= 15) {
+      return "Standard (typically within an hour)";
+    } else if (feeRate >= 5) {
+      return "Economy (may take several hours)";
+    } else {
+      return "Very slow (could take a day or more)";
+    }
+  }
+
+  /**
    * Generate bitmap inscription command
    * POST /api/bitmap/generate-command
    * Body:
@@ -94,10 +151,24 @@ export function registerBitmapRoutes(app: any) {
       // Add the bitmap number as content (this will be piped in)
       command += `<(echo -n "${bitmapNumber}.bitmap")'`;
       
+      // Calculate fees
+      const vbyte = 320; // Approximate size of a bitmap inscription in vbytes
+      const baseFee = 600; // Base fee in satoshis
+      const inscriptionFee = vbyte * Number(feeRate); // Fee for the inscription transaction
+      const totalFee = inscriptionFee + baseFee; // Total fee including the base fee
+      
       return res.json({
         command,
         bitmapNumber,
-        format: `${bitmapNumber}.bitmap`
+        format: `${bitmapNumber}.bitmap`,
+        feeDetails: {
+          vbyte,
+          baseFee,
+          inscriptionFee,
+          totalFee,
+          feeRate,
+          processingTime: getFeeProcessingTime(Number(feeRate))
+        }
       });
     } catch (error) {
       console.error('Error generating bitmap inscription command:', error);

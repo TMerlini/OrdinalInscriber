@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Info, AlertCircle, Check } from 'lucide-react';
+import { Loader2, Info, AlertCircle, Check, DollarSign } from 'lucide-react';
 import { ConfigOptions, ExecutionStep, StepStatus } from '@/lib/types';
 import CommandSection from '@/components/CommandSection';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,16 @@ interface BitmapInscriptionSectionProps {
   onGenerateCommands?: (commands: string[]) => void;
   defaultFeeRate?: number;
   defaultDestinationAddress?: string;
+}
+
+interface FeeDetails {
+  vbyte: number;
+  baseFee: number;
+  inscriptionFee: number;
+  totalFee: number;
+  feeRate: number;
+  processingTime: string;
+  estimatedUsd?: number | null;
 }
 
 export default function BitmapInscriptionSection({
@@ -44,6 +54,8 @@ export default function BitmapInscriptionSection({
   
   const [commands, setCommands] = useState<string>('');
   const [steps, setSteps] = useState<ExecutionStep[]>([]);
+  const [feeDetails, setFeeDetails] = useState<FeeDetails | null>(null);
+  const [calculatingFees, setCalculatingFees] = useState<boolean>(false);
   
   const { toast } = useToast();
   
@@ -70,6 +82,27 @@ export default function BitmapInscriptionSection({
 
     fetchEnvironmentInfo();
   }, [toast]);
+  
+  // Calculate fees whenever the fee rate changes
+  useEffect(() => {
+    calculateFees();
+  }, [feeRate]);
+  
+  // Calculate inscription fees
+  const calculateFees = async () => {
+    if (!feeRate) return;
+    
+    try {
+      setCalculatingFees(true);
+      const response = await axios.post('/api/bitmap/calculate-fees', { feeRate });
+      setFeeDetails(response.data);
+    } catch (error) {
+      console.error('Error calculating fees:', error);
+      // We don't show a toast here to avoid too many notifications
+    } finally {
+      setCalculatingFees(false);
+    }
+  };
 
   // Check if bitmap number is available when entered
   useEffect(() => {
@@ -381,6 +414,43 @@ export default function BitmapInscriptionSection({
             The bitmap you are trying to inscribe may already be in mempool. We cannot guarantee that your bitmap will be valid as it's possible someone else has already inscribed it.
           </AlertDescription>
         </Alert>
+        
+        {/* Fee details */}
+        {feeDetails && (
+          <div className="border rounded-lg p-4 space-y-3 bg-orange-50 dark:bg-blue-950/30">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium flex items-center">
+                <DollarSign className="h-4 w-4 mr-1 text-orange-500 dark:text-blue-400" />
+                Fee Calculation
+              </h3>
+              {calculatingFees && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            </div>
+            
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Transaction Size</span>
+                <span className="font-medium">{feeDetails.vbyte} vBytes</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Base Fee</span>
+                <span className="font-medium">{feeDetails.baseFee} sats</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Inscription Fee ({feeDetails.feeRate} sats/vB)</span>
+                <span className="font-medium">{feeDetails.inscriptionFee} sats</span>
+              </div>
+              <div className="border-t pt-1 mt-1"></div>
+              <div className="flex justify-between">
+                <span className="font-semibold">Total Fee</span>
+                <span className="font-bold text-orange-600 dark:text-blue-400">{feeDetails.totalFee} sats</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Processing Time</span>
+                <span className="font-medium">{feeDetails.processingTime}</span>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Generate commands button */}
         <Button 
