@@ -180,6 +180,11 @@ function isUmbrelEnvironment(): boolean {
          process.env.ORD_SERVER_AVAILABLE === 'true';
 }
 
+// Get the container name based on environment
+function getOrdContainerName(): string {
+  return isUmbrelEnvironment() ? 'ord' : 'bitcoin-ordinals';
+}
+
 /**
  * Get Bitcoin RPC endpoint URL
  */
@@ -214,6 +219,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/sns', snsRoutes);
   app.use('/api/inscriptions', inscriptionsRoutes);
   registerBitmapRoutes(app); // Register bitmap routes
+  
+  // Environment detection route
+  app.get('/api/environment', (req, res) => {
+    try {
+      const isUmbrel = isUmbrelEnvironment();
+      const containerName = getOrdContainerName();
+      const localIp = getLocalIpAddress();
+      
+      res.json({
+        isUmbrel,
+        containerName,
+        localIp,
+        directConnect: process.env.DIRECT_CONNECT === 'true',
+        bitcoinAvailable: process.env.BTC_SERVER_AVAILABLE === 'true',
+        ordAvailable: process.env.ORD_SERVER_AVAILABLE === 'true'
+      });
+    } catch (error) {
+      console.error('Error getting environment info:', error);
+      res.status(500).json({ error: 'Failed to get environment information' });
+    }
+  });
   
   // API routes
   

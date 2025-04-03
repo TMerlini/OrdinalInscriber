@@ -70,7 +70,7 @@ export function registerBitmapRoutes(app: any) {
    */
   app.post('/api/bitmap/generate-command', (req: Request, res: Response) => {
     try {
-      const { bitmapNumber, feeRate, destinationAddress } = req.body;
+      const { bitmapNumber, feeRate, destinationAddress, containerName } = req.body;
       
       // Validate inputs
       if (!bitmapNumber || !feeRate) {
@@ -80,8 +80,11 @@ export function registerBitmapRoutes(app: any) {
         });
       }
       
+      // Get the container name (use the provided one or default)
+      const container = containerName || 'bitcoin-ordinals';
+      
       // Build the ord command for bitmap inscription
-      let command = `ord wallet inscribe --fee-rate ${feeRate} --file - --content-type text/plain --parent-id `;
+      let command = `docker exec -it ${container} sh -c 'ord wallet inscribe --fee-rate ${feeRate} --file - --content-type text/plain `;
       
       // Optional destination parameter
       if (destinationAddress) {
@@ -89,7 +92,7 @@ export function registerBitmapRoutes(app: any) {
       }
       
       // Add the bitmap number as content (this will be piped in)
-      command += `<(echo -n "${bitmapNumber}.bitmap")`;
+      command += `<(echo -n "${bitmapNumber}.bitmap")'`;
       
       return res.json({
         command,

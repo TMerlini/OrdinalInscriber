@@ -19,20 +19,19 @@ import { useToast } from '@/hooks/use-toast';
 interface BitmapInscriptionSectionProps {
   onGenerateCommands?: (commands: string[]) => void;
   defaultFeeRate?: number;
-  defaultContainerName?: string;
   defaultDestinationAddress?: string;
 }
 
 export default function BitmapInscriptionSection({
   onGenerateCommands,
   defaultFeeRate = 10,
-  defaultContainerName = 'ord_core',
   defaultDestinationAddress = ''
 }: BitmapInscriptionSectionProps) {
   const [bitmapNumber, setBitmapNumber] = useState<string>('');
   const [feeRate, setFeeRate] = useState<number>(defaultFeeRate);
   const [destinationAddress, setDestinationAddress] = useState<string>(defaultDestinationAddress);
-  const [containerName, setContainerName] = useState<string>(defaultContainerName);
+  const [containerName, setContainerName] = useState<string>('');
+  const [isLoadingEnvironment, setIsLoadingEnvironment] = useState<boolean>(true);
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isChecking, setIsChecking] = useState<boolean>(false);
@@ -47,6 +46,30 @@ export default function BitmapInscriptionSection({
   const [steps, setSteps] = useState<ExecutionStep[]>([]);
   
   const { toast } = useToast();
+  
+  // Fetch environment info on component mount
+  useEffect(() => {
+    async function fetchEnvironmentInfo() {
+      try {
+        setIsLoadingEnvironment(true);
+        const response = await axios.get('/api/environment');
+        setContainerName(response.data.containerName);
+      } catch (error) {
+        console.error('Error fetching environment info:', error);
+        toast({
+          title: 'Environment Detection',
+          description: 'Failed to auto-detect container name. Using default container name.',
+          variant: 'destructive',
+        });
+        // Use a sensible default
+        setContainerName('bitcoin-ordinals');
+      } finally {
+        setIsLoadingEnvironment(false);
+      }
+    }
+
+    fetchEnvironmentInfo();
+  }, [toast]);
 
   // Check if bitmap number is available when entered
   useEffect(() => {
@@ -102,21 +125,13 @@ export default function BitmapInscriptionSection({
       return;
     }
 
-    if (!containerName) {
-      toast({
-        title: 'Missing Container Name',
-        description: 'Please enter your Ordinals node container name.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
     setIsLoading(true);
     try {
       const response = await axios.post('/api/bitmap/generate-command', {
         bitmapNumber,
         feeRate,
-        destinationAddress: destinationAddress || undefined
+        destinationAddress: destinationAddress || undefined,
+        containerName: containerName
       });
 
       // Set the command and create execution steps
@@ -293,27 +308,58 @@ export default function BitmapInscriptionSection({
             )}
           </div>
           
-          {/* Container name */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Container Name</label>
-            <Input
-              type="text"
-              placeholder="Your Ordinals node container name"
-              value={containerName}
-              onChange={(e) => setContainerName(e.target.value)}
-            />
-          </div>
-          
-          {/* Fee rate */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Fee Rate (sats/vB)</label>
-            <Input
-              type="number"
-              min={1}
-              placeholder="Fee rate"
-              value={feeRate}
-              onChange={(e) => setFeeRate(Number(e.target.value))}
-            />
+          {/* Fee rate selection */}
+          <div className="space-y-4">
+            <label className="text-sm font-medium">Transaction Fee</label>
+            <div className="grid grid-cols-3 gap-4">
+              <div 
+                className={`cursor-pointer border rounded-lg p-4 transition-colors ${feeRate === 5 ? 'bg-orange-100 border-orange-500 dark:bg-blue-900 dark:border-blue-500' : 'border-gray-200 hover:border-orange-300 dark:border-gray-700 dark:hover:border-blue-700'}`}
+                onClick={() => setFeeRate(5)}
+              >
+                <div className="text-sm font-medium mb-1">Economy</div>
+                <div className="text-lg font-bold text-orange-500 dark:text-blue-400">5 sats/vB</div>
+                <div className="text-xs text-gray-500 mt-2">Slower, may take hours</div>
+              </div>
+              
+              <div 
+                className={`cursor-pointer border rounded-lg p-4 transition-colors ${feeRate === 15 ? 'bg-orange-100 border-orange-500 dark:bg-blue-900 dark:border-blue-500' : 'border-gray-200 hover:border-orange-300 dark:border-gray-700 dark:hover:border-blue-700'}`}
+                onClick={() => setFeeRate(15)}
+              >
+                <div className="text-sm font-medium mb-1">Standard</div>
+                <div className="text-lg font-bold text-orange-500 dark:text-blue-400">15 sats/vB</div>
+                <div className="text-xs text-gray-500 mt-2">Usually within an hour</div>
+              </div>
+              
+              <div 
+                className={`cursor-pointer border rounded-lg p-4 transition-colors ${feeRate !== 5 && feeRate !== 15 && feeRate !== 30 ? 'bg-orange-100 border-orange-500 dark:bg-blue-900 dark:border-blue-500' : 'border-gray-200 hover:border-orange-300 dark:border-gray-700 dark:hover:border-blue-700'}`}
+                onClick={() => setFeeRate(defaultFeeRate)}
+              >
+                <div className="text-sm font-medium mb-1">Custom</div>
+                <div className="flex items-center">
+                  <Input
+                    type="number"
+                    min={1}
+                    placeholder="Custom fee rate"
+                    value={feeRate !== 5 && feeRate !== 15 && feeRate !== 30 ? feeRate : defaultFeeRate}
+                    onChange={(e) => setFeeRate(Number(e.target.value))}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-20 h-8 mr-1"
+                  />
+                  <span className="text-xs">sats/vB</span>
+                </div>
+                <div className="text-xs text-gray-500 mt-2">Set your own fee rate</div>
+              </div>
+              
+              <div 
+                className={`cursor-pointer border rounded-lg p-4 transition-colors ${feeRate === 30 ? 'bg-orange-100 border-orange-500 dark:bg-blue-900 dark:border-blue-500' : 'border-gray-200 hover:border-orange-300 dark:border-gray-700 dark:hover:border-blue-700'}`}
+                onClick={() => setFeeRate(30)}
+              >
+                <div className="text-sm font-medium mb-1">Priority</div>
+                <div className="text-lg font-bold text-orange-500 dark:text-blue-400">30 sats/vB</div>
+                <div className="text-xs text-gray-500 mt-2">Fast, usually &lt;30 minutes</div>
+              </div>
+              
+            </div>
           </div>
           
           {/* Destination address */}
@@ -339,7 +385,7 @@ export default function BitmapInscriptionSection({
         {/* Generate commands button */}
         <Button 
           onClick={generateCommands} 
-          disabled={isLoading || !bitmapNumber || !/^\d+$/.test(bitmapNumber) || !containerName}
+          disabled={isLoading || !bitmapNumber || !/^\d+$/.test(bitmapNumber)}
           className="w-full"
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}

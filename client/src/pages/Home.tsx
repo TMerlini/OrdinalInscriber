@@ -61,12 +61,10 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const configForm = useForm<ConfigOptions>({
     defaultValues: {
-      containerName: "ordinals_ord_1",
-      feeRate: 4,
-      advancedMode: false,
+      containerPath: "/ord/data/",
+      feeRate: "4",
       useSatRarity: false,
-      selectedSatoshi: "",
-      batchMode: false
+      selectedSat: "",
     }
   });
   
@@ -1044,7 +1042,6 @@ export default function Home() {
                 <TabsContent value="bitmap">
                   <ErrorBoundary>
                     <BitmapInscriptionSection 
-                      defaultContainerName={configForm.getValues().containerName} 
                       defaultFeeRate={Number(configForm.getValues().feeRate)}
                       defaultDestinationAddress={metadataForm.getValues().destination}
                     />
