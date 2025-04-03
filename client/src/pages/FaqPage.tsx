@@ -106,6 +106,67 @@ export default function FaqPage() {
         ]
       },
       {
+        title: "Bitmap Inscriptions",
+        id: "bitmap",
+        questions: [
+          {
+            question: "What are bitmap inscriptions?",
+            answer: "Bitmap inscriptions are a unique type of ordinal that represent specific districts or numbers on the Bitcoin blockchain. Each bitmap represents a unique district that can be inscribed and traded, creating on-chain communities around specific bitmap numbers.",
+            id: "what-are-bitmaps"
+          },
+          {
+            question: "How do I create a bitmap inscription?",
+            answer: (
+              <div>
+                <p>To create a bitmap inscription with Ordinarinos:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>Navigate to the Bitmap Inscription section</li>
+                  <li>Enter the bitmap number you wish to inscribe</li>
+                  <li>Click "Check" to verify its availability</li>
+                  <li>Select a fee rate (economy, standard, priority, or custom)</li>
+                  <li>Optionally provide a destination address</li>
+                  <li>Generate and execute the inscription commands</li>
+                </ol>
+              </div>
+            ),
+            id: "create-bitmap-inscription"
+          },
+          {
+            question: "How can I verify if a bitmap is available?",
+            answer: (
+              <div>
+                <p>Ordinarinos provides a built-in bitmap availability checker that:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Verifies if the bitmap number has already been inscribed</li>
+                  <li>Shows the current availability status with clear indicators</li>
+                  <li>Provides immediate feedback about validity</li>
+                  <li>Connects to the Bitcoin blockchain to check the latest status</li>
+                </ul>
+                <p className="mt-2">Green checkmarks indicate available bitmaps, while amber warnings indicate potentially unavailable or already inscribed numbers.</p>
+              </div>
+            ),
+            id: "bitmap-availability"
+          },
+          {
+            question: "How does the bitmap fee calculator work?",
+            answer: (
+              <div>
+                <p>The bitmap fee calculator shows a detailed breakdown of the inscription costs:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Transaction Size</span>: The size of the bitmap inscription transaction in vBytes</li>
+                  <li><span className="font-semibold">Base Fee</span>: The minimum cost for the transaction</li>
+                  <li><span className="font-semibold">Inscription Fee</span>: The fee based on your selected rate (sats/vB)</li>
+                  <li><span className="font-semibold">Total Fee</span>: The combined total fee in satoshis</li>
+                  <li><span className="font-semibold">Processing Time</span>: Estimated time for the transaction to be confirmed</li>
+                </ul>
+                <p className="mt-2">The calculator updates dynamically when you change fee rates, allowing you to make informed decisions about your inscription costs.</p>
+              </div>
+            ),
+            id: "bitmap-fee-calculator"
+          }
+        ]
+      },
+      {
         title: "Rare Satoshis Explained",
         id: "rare-sats",
         questions: [

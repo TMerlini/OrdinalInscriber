@@ -210,6 +210,37 @@ Yes, all text and markdown files that you save are:
 - Automatically cleaned up when the cache limit is reached
 - Available for viewing and management in the Cache Manager
 
+## Bitmap Inscriptions
+
+### What are bitmap inscriptions?
+Bitmap inscriptions are a unique type of ordinal that represent specific districts or numbers on the Bitcoin blockchain. Each bitmap represents a unique district that can be inscribed and traded, creating on-chain communities around specific bitmap numbers.
+
+### How do I create a bitmap inscription?
+To create a bitmap inscription with Ordinarinos:
+1. Navigate to the Bitmap Inscription section
+2. Enter the bitmap number you wish to inscribe
+3. Click "Check" to verify its availability
+4. Select a fee rate (economy, standard, priority, or custom)
+5. Optionally provide a destination address
+6. Generate and execute the inscription commands
+
+### How can I verify if a bitmap is available?
+Ordinarinos provides a built-in bitmap availability checker that:
+- Verifies if the bitmap number has already been inscribed
+- Shows the current availability status with clear indicators
+- Provides immediate feedback about validity
+- Connects to the Bitcoin blockchain to check the latest status
+
+### How does the bitmap fee calculator work?
+The bitmap fee calculator shows a detailed breakdown of the inscription costs:
+- Transaction Size: The size of the bitmap inscription transaction in vBytes
+- Base Fee: The minimum cost for the transaction
+- Inscription Fee: The fee based on your selected rate (sats/vB)
+- Total Fee: The combined total fee in satoshis
+- Processing Time: Estimated time for the transaction to be confirmed
+
+The calculator updates dynamically when you change fee rates, allowing you to make informed decisions about your inscription costs.
+
 ## Advanced Usage
 
 ### Can I customize the metadata for my inscriptions?
@@ -274,6 +305,16 @@ Transaction fees are calculated based on:
 - Network congestion: Fees increase during high network activity
 - Priority level: Economy, normal, or custom fee tiers
 - Additional services: SNS registration includes service fees
+
+### How does the fee calculator work?
+The fee calculator helps you understand the cost breakdown of your inscriptions:
+- Transaction Size: Shows the size of your transaction in vBytes
+- Base Fee: The minimum fee required for the transaction
+- Inscription Fee: The fee based on your selected rate (sats/vB)
+- Total Fee: The combined total fee in satoshis
+- Processing Time: Estimated time for the transaction to be confirmed
+
+The calculator updates automatically when you change fee rates, allowing you to compare costs between economy, standard, priority, and custom fee tiers.
 
 ### Can I use Ordinarinos on my mobile device?
 Yes, Ordinarinos is designed with a responsive interface that works on mobile devices. However, for the best experience, we recommend using a desktop browser, especially when working with batch processing or complex inscriptions.
