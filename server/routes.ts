@@ -11,6 +11,7 @@ import { networkInterfaces } from "os";
 import sharp from "sharp";
 import snsRoutes from "./routes/sns";
 import inscriptionsRoutes from "./routes/inscriptions";
+import { registerBitmapRoutes } from "./routes/bitmap";
 
 // SNS Registry Address (this would be the official SNS registry address in production)
 const SNS_REGISTRY_ADDRESS = "bc1qe8grz79ej3ywxkfcdchrncfl5antlc9tzmy5c2";
@@ -194,7 +195,7 @@ function getBitcoinRpcUrl(): string {
 /**
  * Get Ord API endpoint URL
  */
-function getOrdApiUrl(): string {
+export function getOrdApiUrl(): string {
   const host = process.env.ORD_RPC_HOST || 'ord.embassy';
   const port = process.env.ORD_RPC_PORT || '8080';
   
@@ -209,9 +210,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`Ord API endpoint: ${getOrdApiUrl()}`);
   }
   
-  // Mount the SNS and inscriptions routes
+  // Mount the SNS, inscriptions, and bitmap routes
   app.use('/api/sns', snsRoutes);
   app.use('/api/inscriptions', inscriptionsRoutes);
+  registerBitmapRoutes(app); // Register bitmap routes
   
   // API routes
   
@@ -560,6 +562,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error downloading file to container:', error);
+      res.status(500).json({ 
+        error: true,
+        output: String(error)
+      });
+    }
+  });
+  
+  // Execute a generic command (used for bitmap inscriptions and other direct commands)
+  app.post('/api/execute/command', async (req, res) => {
+    try {
+      const { command } = req.body;
+      
+      if (!command) {
+        return res.status(400).json({ 
+          error: true, 
+          output: 'No command provided' 
+        });
+      }
+      
+      // Execute the command
+      const result = await execCommand(command);
+      
+      if (result.error) {
+        return res.status(500).json({
+          error: true,
+          output: result.output
+        });
+      }
+      
+      res.json({
+        error: false,
+        output: result.output || 'Command executed successfully'
+      });
+    } catch (error) {
+      console.error('Error executing command:', error);
       res.status(500).json({ 
         error: true,
         output: String(error)

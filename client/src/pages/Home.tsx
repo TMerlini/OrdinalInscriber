@@ -25,8 +25,9 @@ import SNSRegister from "@/components/SNSRegister";
 import SNSRegisterNew from "@/components/SNSRegisterNew";
 import TextInscriptionSection from "@/components/TextInscriptionSection";
 import MarkdownInscriptionSection from "@/components/MarkdownInscriptionSection";
+import BitmapInscriptionSection from "@/components/BitmapInscriptionSection";
 import InscriptionStatusDisplay from "@/components/InscriptionStatusDisplay";
-import { ChevronDown, RefreshCw, Info, FileText, FileCode, Image } from "lucide-react";
+import { ChevronDown, RefreshCw, Info, FileText, FileCode, Image, Grid } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -994,6 +995,10 @@ export default function Home() {
                     <FileCode className="h-4 w-4 mr-2" />
                     Markdown
                   </TabsTrigger>
+                  <TabsTrigger value="bitmap">
+                    <Grid className="h-4 w-4 mr-2" />
+                    Bitmap
+                  </TabsTrigger>
                   <TabsTrigger value="sns">
                     SNS Names
                   </TabsTrigger>
@@ -1033,6 +1038,16 @@ export default function Home() {
                 <TabsContent value="markdown">
                   <ErrorBoundary>
                     <MarkdownInscriptionSection />
+                  </ErrorBoundary>
+                </TabsContent>
+                
+                <TabsContent value="bitmap">
+                  <ErrorBoundary>
+                    <BitmapInscriptionSection 
+                      defaultContainerName={configForm.getValues().containerName} 
+                      defaultFeeRate={Number(configForm.getValues().feeRate)}
+                      defaultDestinationAddress={metadataForm.getValues().destination}
+                    />
                   </ErrorBoundary>
                 </TabsContent>
                 
