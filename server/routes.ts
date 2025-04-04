@@ -12,6 +12,7 @@ import sharp from "sharp";
 import snsRoutes from "./routes/sns";
 import inscriptionsRoutes from "./routes/inscriptions";
 import { registerBitmapRoutes } from "./routes/bitmap";
+import { registerBrc20Routes } from "./routes/brc20";
 
 // SNS Registry Address (this would be the official SNS registry address in production)
 const SNS_REGISTRY_ADDRESS = "bc1qe8grz79ej3ywxkfcdchrncfl5antlc9tzmy5c2";
@@ -215,10 +216,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`Ord API endpoint: ${getOrdApiUrl()}`);
   }
   
-  // Mount the SNS, inscriptions, and bitmap routes
+  // Mount the SNS, inscriptions, bitmap, and BRC-20 routes
   app.use('/api/sns', snsRoutes);
   app.use('/api/inscriptions', inscriptionsRoutes);
   registerBitmapRoutes(app); // Register bitmap routes
+  registerBrc20Routes(app); // Register BRC-20 routes
   
   // Environment detection route
   app.get('/api/environment', (req, res) => {

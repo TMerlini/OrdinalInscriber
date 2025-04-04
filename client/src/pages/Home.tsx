@@ -26,8 +26,9 @@ import SNSRegisterNew from "@/components/SNSRegisterNew";
 import TextInscriptionSection from "@/components/TextInscriptionSection";
 import MarkdownInscriptionSection from "@/components/MarkdownInscriptionSection";
 import BitmapInscriptionSection from "@/components/BitmapInscriptionSection";
+import Brc20InscriptionSection from "@/components/Brc20InscriptionSection";
 import InscriptionStatusDisplay from "@/components/InscriptionStatusDisplay";
-import { ChevronDown, RefreshCw, Info, FileText, FileCode, Image, Grid } from "lucide-react";
+import { ChevronDown, RefreshCw, Info, FileText, FileCode, Image, Grid, Bitcoin } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -997,6 +998,10 @@ export default function Home() {
                     <Grid className="h-4 w-4 mr-2" />
                     Bitmap
                   </TabsTrigger>
+                  <TabsTrigger value="brc20">
+                    <Bitcoin className="h-4 w-4 mr-2" />
+                    BRC-20
+                  </TabsTrigger>
                   <TabsTrigger value="sns">
                     SNS Names
                   </TabsTrigger>
@@ -1042,6 +1047,15 @@ export default function Home() {
                 <TabsContent value="bitmap">
                   <ErrorBoundary>
                     <BitmapInscriptionSection 
+                      defaultFeeRate={Number(configForm.getValues().feeRate)}
+                      defaultDestinationAddress={metadataForm.getValues().destination}
+                    />
+                  </ErrorBoundary>
+                </TabsContent>
+                
+                <TabsContent value="brc20">
+                  <ErrorBoundary>
+                    <Brc20InscriptionSection 
                       defaultFeeRate={Number(configForm.getValues().feeRate)}
                       defaultDestinationAddress={metadataForm.getValues().destination}
                     />
