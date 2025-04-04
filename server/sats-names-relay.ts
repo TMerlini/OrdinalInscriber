@@ -22,6 +22,10 @@ const COMMUNITY_INDEXERS = [
   'https://ns1.satsnames.co/api',
   'https://ns2.satsnames.co/api'
 ];
+// GeniiData API for SNS and bitmap data
+const GENIIDATA_API = 'https://api.geniidata.com';
+// GeniiData API for SNS lookups
+const GENIIDATA_SNS_API = `${GENIIDATA_API}/ordinals/sns`;
 
 // Relay event types
 export type RelayEvent = {
@@ -320,6 +324,73 @@ export class SatsNamesRelayClient extends EventEmitter {
   }
 
   /**
+   * Check name availability using GeniiData API
+   * @param name Name to check
+   */
+  private async checkNameViaGeniiData(name: string): Promise<NameQueryResponse> {
+    try {
+      this.log(`Checking SNS name via GeniiData API: ${name}`);
+      
+      // GeniiData uses a different endpoint structure
+      const response = await axios.get(`${GENIIDATA_SNS_API}/names`, {
+        params: { domain: name }
+      });
+      
+      if (response.data && response.data.code === 0) {
+        const data = response.data.data;
+        
+        // If there's no data or empty data array, the name is available
+        if (!data || !data.list || data.list.length === 0) {
+          return {
+            name,
+            isAvailable: true,
+            fallback: true,
+            warning: 'Data from GeniiData API (Primary services unavailable)'
+          };
+        }
+        
+        // Find the exact name match (important if API returns partial matches)
+        const exactMatch = data.list.find((item: any) => 
+          item.domain?.toLowerCase() === name.toLowerCase()
+        );
+        
+        if (!exactMatch) {
+          return {
+            name,
+            isAvailable: true,
+            fallback: true,
+            warning: 'Name available according to GeniiData API'
+          };
+        }
+        
+        // Name exists and we have details
+        return {
+          name,
+          isAvailable: false,
+          owner: exactMatch.owner,
+          address: exactMatch.owner,
+          inscription_id: exactMatch.inscriptionId,
+          registered_at: exactMatch.timestamp * 1000, // Convert to milliseconds
+          fallback: true,
+          warning: 'Data from GeniiData API (Primary services unavailable)'
+        };
+      }
+      
+      // If we got an unexpected response, provide a fallback
+      return {
+        name,
+        isAvailable: name.length >= 5 && 
+          !['bitcoin', 'satoshi', 'ordinal', 'ord', 'inscription'].includes(name.toLowerCase()),
+        warning: 'GeniiData API returned an unexpected format, availability status is approximate',
+        fallback: true
+      };
+    } catch (error) {
+      this.log('Error querying GeniiData API:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check if a name is available
    * @param name Name to check
    */
@@ -332,31 +403,39 @@ export class SatsNamesRelayClient extends EventEmitter {
         } catch (connectError) {
           this.log('Connection error during name check, will try fallback APIs:', connectError);
           
-          // Try the fallback indexer API
+          // First try the GeniiData API as it's been identified as more reliable
           try {
-            return await this.checkNameViaIndexerAPI(name, FALLBACK_INDEXER);
-          } catch (indexerError) {
-            this.log('Primary indexer API failed, trying community indexers:', indexerError);
+            this.log('Trying GeniiData API as first fallback...');
+            return await this.checkNameViaGeniiData(name);
+          } catch (geniiDataError) {
+            this.log('GeniiData API failed, trying standard indexers:', geniiDataError);
             
-            // Try each community indexer in sequence
-            for (const indexerUrl of COMMUNITY_INDEXERS) {
-              try {
-                return await this.checkNameViaIndexerAPI(name, indexerUrl);
-              } catch (communityIndexerError) {
-                this.log(`Community indexer ${indexerUrl} failed:`, communityIndexerError);
-                // Continue to next indexer
+            // Then try the fallback indexer API
+            try {
+              return await this.checkNameViaIndexerAPI(name, FALLBACK_INDEXER);
+            } catch (indexerError) {
+              this.log('Primary indexer API failed, trying community indexers:', indexerError);
+              
+              // Try each community indexer in sequence
+              for (const indexerUrl of COMMUNITY_INDEXERS) {
+                try {
+                  return await this.checkNameViaIndexerAPI(name, indexerUrl);
+                } catch (communityIndexerError) {
+                  this.log(`Community indexer ${indexerUrl} failed:`, communityIndexerError);
+                  // Continue to next indexer
+                }
               }
+              
+              // If all indexers fail, fall back to basic validation
+              this.log('All indexers failed, using basic validation');
+              return {
+                name,
+                isAvailable: name.length >= 5 && 
+                  !['bitcoin', 'satoshi', 'ordinal', 'ord', 'inscription'].includes(name.toLowerCase()),
+                warning: 'All relay and indexer services unavailable. Status may not be accurate.',
+                fallback: true
+              };
             }
-            
-            // If all indexers fail, fall back to basic validation
-            this.log('All indexers failed, using basic validation');
-            return {
-              name,
-              isAvailable: name.length >= 5 && 
-                !['bitcoin', 'satoshi', 'ordinal', 'ord', 'inscription'].includes(name.toLowerCase()),
-              warning: 'All relay and indexer services unavailable. Status may not be accurate.',
-              fallback: true
-            };
           }
         }
       }
@@ -371,27 +450,35 @@ export class SatsNamesRelayClient extends EventEmitter {
     } catch (error) {
       this.log('Error checking name via relay, trying fallback APIs:', error);
       
-      // If relay request fails, try the fallback API
+      // First try GeniiData API
       try {
-        return await this.checkNameViaIndexerAPI(name, FALLBACK_INDEXER);
-      } catch (fallbackError) {
-        // If fallback also fails, try community indexers
-        for (const indexerUrl of COMMUNITY_INDEXERS) {
-          try {
-            return await this.checkNameViaIndexerAPI(name, indexerUrl);
-          } catch (communityError) {
-            // Continue to next indexer
-          }
-        }
+        this.log('Trying GeniiData API after relay failure...');
+        return await this.checkNameViaGeniiData(name);
+      } catch (geniiDataError) {
+        this.log('GeniiData API failed after relay failure:', geniiDataError);
         
-        // Last resort fallback to basic validation
-        return {
-          name,
-          isAvailable: name.length >= 5 && 
-            !['bitcoin', 'satoshi', 'ordinal', 'ord', 'inscription'].includes(name.toLowerCase()),
-          warning: 'All services unavailable. Status is based on basic validation only.',
-          fallback: true
-        };
+        // If GeniiData fails, try the standard fallback API
+        try {
+          return await this.checkNameViaIndexerAPI(name, FALLBACK_INDEXER);
+        } catch (fallbackError) {
+          // If fallback also fails, try community indexers
+          for (const indexerUrl of COMMUNITY_INDEXERS) {
+            try {
+              return await this.checkNameViaIndexerAPI(name, indexerUrl);
+            } catch (communityError) {
+              // Continue to next indexer
+            }
+          }
+          
+          // Last resort fallback to basic validation
+          return {
+            name,
+            isAvailable: name.length >= 5 && 
+              !['bitcoin', 'satoshi', 'ordinal', 'ord', 'inscription'].includes(name.toLowerCase()),
+            warning: 'All services unavailable. Status is based on basic validation only.',
+            fallback: true
+          };
+        }
       }
     }
   }
