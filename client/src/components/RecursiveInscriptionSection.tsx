@@ -6,15 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   AlertCircle, 
-  ChevronRight, 
   FileCode, 
   FileImage, 
   Link2, 
@@ -364,8 +360,6 @@ export default function RecursiveInscriptionSection() {
                           Parent Inscription ID
                         </FormLabel>
                         <FormDescription>
-                          The inscription ID that this recursive inscription will reference and display.
-                          <br />
                           <span className="text-xs">Format: [transaction_id]i[index]</span>
                         </FormDescription>
                         <div className="flex space-x-2">
@@ -391,9 +385,7 @@ export default function RecursiveInscriptionSection() {
                             Preview
                           </Button>
                         </div>
-                        <FormDescription>
-                          Enter the inscription ID you want to reference
-                        </FormDescription>
+
                         <FormMessage />
                       </FormItem>
                     )}
