@@ -152,6 +152,124 @@ The inscription history is stored in the application's database. To back it up:
 3. Store the backup in a safe location
 4. Restart the application: `docker-compose up -d`
 
+## Umbrel Installation Guide
+
+### How do I install Ordinarinos on Umbrel?
+There are two ways to install Ordinarinos on Umbrel:
+
+**Method 1: Using the Umbrel App Store**
+1. In your Umbrel dashboard, go to "App Store"
+2. Click on "Add App Store" 
+3. Enter the following URL: `https://github.com/ordinarinos/umbrel-app-store`
+4. Click "Add App Store"
+5. Find Ordinarinos in the list of available apps and click "Install"
+6. Wait for the installation to complete
+7. Access Ordinarinos at `http://umbrel.local:3500` or `http://[your-umbrel-ip]:3500`
+
+**Method 2: Manual Installation**
+1. SSH into your Umbrel server
+2. Navigate to the apps directory: `cd ~/umbrel/apps`
+3. Clone the repository: `git clone https://github.com/ordinarinos/ordinarinos`
+4. Enter the directory: `cd ordinarinos`
+5. Run the installation script: `./umbrel-install.sh`
+6. Access Ordinarinos at `http://umbrel.local:3500` or `http://[your-umbrel-ip]:3500`
+
+### What are the prerequisites for running Ordinarinos on Umbrel?
+Ordinarinos on Umbrel requires:
+1. A running Umbrel instance (version 0.5.0 or later)
+2. Bitcoin Core app installed and fully synced
+3. Ordinals app installed and operational
+4. At least 5GB of free space for the file cache
+
+### How does Ordinarinos integrate with Umbrel's Bitcoin and Ordinals services?
+Ordinarinos automatically detects and connects to Umbrel's Bitcoin Core and Ordinals services using Umbrel's internal networking. The application is preconfigured to:
+- Connect to Bitcoin Core via RPC at `bitcoin.embassy:8332`
+- Connect to the Ordinals node API at `ord.embassy:8080`
+- Use the correct authentication credentials from environment variables
+- Access the Ordinals container for executing inscription commands
+
+This means you don't need to configure anything manually - Ordinarinos works with your Umbrel setup out of the box.
+
+### How do I configure port settings on Umbrel?
+The default port for Ordinarinos is 3500. On Umbrel, this is managed through the `umbrel-app.yml` configuration:
+
+1. **Default Configuration**: By default, Ordinarinos runs on port 3500 and is accessible at `http://umbrel.local:3500`
+
+2. **Changing the Port**:
+   - If you need to change the port, you'll need to modify both the `umbrel-app.yml` and `docker-compose.umbrel.yml` files
+   - In `umbrel-app.yml`, update the `port` field and the `ports` section under containers
+   - In `docker-compose.umbrel.yml`, update the `ports` mapping
+   - Restart the application for changes to take effect
+
+3. **Port Conflicts**: If you experience port conflicts (another service using port 3500):
+   - Change the external port mapping in `docker-compose.umbrel.yml` from `"3500:3500"` to something like `"3501:3500"`
+   - The application will still run on port 3500 internally but will be accessible on port 3501 externally
+
+### What alternative configurations are available for Umbrel installations?
+
+**1. Direct Connection Mode**
+- Default: `DIRECT_CONNECT: "true"`
+- This allows Ordinarinos to communicate directly with your Ordinals node
+- For enhanced security, you can set this to `"false"` and use API-only mode
+
+**2. Custom Data Directory**
+- Default: The data is stored in `${APP_DATA_DIR}/data`
+- You can modify the volume mapping in `docker-compose.umbrel.yml` to use a different directory
+
+**3. Resource Allocation**
+- You can add resource limits (CPU, memory) in the `docker-compose.umbrel.yml` file if your system has limited resources
+- Example:
+  ```yaml
+  resources:
+    limits:
+      cpus: '1.0'
+      memory: 1G
+  ```
+
+**4. Network Configuration**
+- By default, Ordinarinos connects to both the default network and the embassy network
+- You can modify the networks section in `docker-compose.umbrel.yml` if you have a custom network setup
+
+### Troubleshooting Umbrel Installations
+
+**1. Connection Issues with Ordinals Node**
+- **Symptom**: Unable to connect to Ordinals node
+- **Check**: Ensure the Ordinals app is installed and running on your Umbrel
+- **Solution**: Restart both the Ordinals app and Ordinarinos
+- **Verification**: Access `http://umbrel.local:3500/api/status` to check connectivity status
+
+**2. Bitcoin Core Connection Problems**
+- **Symptom**: Unable to retrieve Bitcoin fee estimates or verify UTXO data
+- **Check**: Verify Bitcoin Core is running and fully synced
+- **Solution**: Ensure your Umbrel's Bitcoin app is operational and fully synced
+- **Advanced**: Check the logs with `~/umbrel/scripts/app logs ordinarinos-inscriptions`
+
+**3. Permission Issues**
+- **Symptom**: Unable to write to data directory or execute commands
+- **Check**: Verify that the data directory permissions are correct
+- **Solution**: Run `sudo chown -R 1000:1000 ~/umbrel/app-data/ordinarinos-inscriptions/data`
+
+**4. Port Accessibility Issues**
+- **Symptom**: Cannot access the Ordinarinos web interface
+- **Check**: Try accessing via IP address instead of umbrel.local
+- **Solution**: Ensure your firewall allows access to port 3500
+- **Alternative**: Try a different browser or clear your browser cache
+
+**5. Persistent Docker Errors**
+- **Symptom**: Container fails to start or crashes repeatedly
+- **Solution**: Try the following steps:
+  ```
+  cd ~/umbrel
+  ./scripts/app stop ordinarinos-inscriptions
+  ./scripts/app start ordinarinos-inscriptions
+  ./scripts/app logs ordinarinos-inscriptions
+  ```
+
+**6. "Ord container not found" Error**
+- **Symptom**: Error message about missing Ord container
+- **Check**: Verify the Ordinals app name with `docker ps | grep ord`
+- **Solution**: The container may have a different name than expected. Check the actual name and update your configuration accordingly.
+
 ## Text and Markdown Inscriptions
 
 ### How do I create text inscriptions?
@@ -487,3 +605,121 @@ Unlike conventional blockchains, BRC-20 tokens don't have built-in accounting. I
 4. Your actual balance is determined by what inscriptions you own
 
 This means your BRC-20 balances are directly tied to the inscriptions in your wallet.
+
+## Umbrel Installation Guide
+
+### How do I install Ordinarinos on Umbrel?
+There are two ways to install Ordinarinos on Umbrel:
+
+**Method 1: Using the Umbrel App Store**
+1. In your Umbrel dashboard, go to "App Store"
+2. Click on "Add App Store" 
+3. Enter the following URL: `https://github.com/ordinarinos/umbrel-app-store`
+4. Click "Add App Store"
+5. Find Ordinarinos in the list of available apps and click "Install"
+6. Wait for the installation to complete
+7. Access Ordinarinos at `http://umbrel.local:3500` or `http://[your-umbrel-ip]:3500`
+
+**Method 2: Manual Installation**
+1. SSH into your Umbrel server
+2. Navigate to the apps directory: `cd ~/umbrel/apps`
+3. Clone the repository: `git clone https://github.com/ordinarinos/ordinarinos`
+4. Enter the directory: `cd ordinarinos`
+5. Run the installation script: `./umbrel-install.sh`
+6. Access Ordinarinos at `http://umbrel.local:3500` or `http://[your-umbrel-ip]:3500`
+
+### What are the prerequisites for running Ordinarinos on Umbrel?
+Ordinarinos on Umbrel requires:
+1. A running Umbrel instance (version 0.5.0 or later)
+2. Bitcoin Core app installed and fully synced
+3. Ordinals app installed and operational
+4. At least 5GB of free space for the file cache
+
+### How does Ordinarinos integrate with Umbrel's Bitcoin and Ordinals services?
+Ordinarinos automatically detects and connects to Umbrel's Bitcoin Core and Ordinals services using Umbrel's internal networking. The application is preconfigured to:
+- Connect to Bitcoin Core via RPC at `bitcoin.embassy:8332`
+- Connect to the Ordinals node API at `ord.embassy:8080`
+- Use the correct authentication credentials from environment variables
+- Access the Ordinals container for executing inscription commands
+
+This means you don't need to configure anything manually - Ordinarinos works with your Umbrel setup out of the box.
+
+### How do I configure port settings on Umbrel?
+The default port for Ordinarinos is 3500. On Umbrel, this is managed through the `umbrel-app.yml` configuration:
+
+1. **Default Configuration**: By default, Ordinarinos runs on port 3500 and is accessible at `http://umbrel.local:3500`
+
+2. **Changing the Port**:
+   - If you need to change the port, you'll need to modify both the `umbrel-app.yml` and `docker-compose.umbrel.yml` files
+   - In `umbrel-app.yml`, update the `port` field and the `ports` section under containers
+   - In `docker-compose.umbrel.yml`, update the `ports` mapping
+   - Restart the application for changes to take effect
+
+3. **Port Conflicts**: If you experience port conflicts (another service using port 3500):
+   - Change the external port mapping in `docker-compose.umbrel.yml` from `"3500:3500"` to something like `"3501:3500"`
+   - The application will still run on port 3500 internally but will be accessible on port 3501 externally
+
+### What alternative configurations are available for Umbrel installations?
+
+**1. Direct Connection Mode**
+- Default: `DIRECT_CONNECT: "true"`
+- This allows Ordinarinos to communicate directly with your Ordinals node
+- For enhanced security, you can set this to `"false"` and use API-only mode
+
+**2. Custom Data Directory**
+- Default: The data is stored in `${APP_DATA_DIR}/data`
+- You can modify the volume mapping in `docker-compose.umbrel.yml` to use a different directory
+
+**3. Resource Allocation**
+- You can add resource limits (CPU, memory) in the `docker-compose.umbrel.yml` file if your system has limited resources
+- Example:
+  ```yaml
+  resources:
+    limits:
+      cpus: '1.0'
+      memory: 1G
+  ```
+
+**4. Network Configuration**
+- By default, Ordinarinos connects to both the default network and the embassy network
+- You can modify the networks section in `docker-compose.umbrel.yml` if you have a custom network setup
+
+### Troubleshooting Umbrel Installations
+
+**1. Connection Issues with Ordinals Node**
+- **Symptom**: Unable to connect to Ordinals node
+- **Check**: Ensure the Ordinals app is installed and running on your Umbrel
+- **Solution**: Restart both the Ordinals app and Ordinarinos
+- **Verification**: Access `http://umbrel.local:3500/api/status` to check connectivity status
+
+**2. Bitcoin Core Connection Problems**
+- **Symptom**: Unable to retrieve Bitcoin fee estimates or verify UTXO data
+- **Check**: Verify Bitcoin Core is running and fully synced
+- **Solution**: Ensure your Umbrel's Bitcoin app is operational and fully synced
+- **Advanced**: Check the logs with `~/umbrel/scripts/app logs ordinarinos-inscriptions`
+
+**3. Permission Issues**
+- **Symptom**: Unable to write to data directory or execute commands
+- **Check**: Verify that the data directory permissions are correct
+- **Solution**: Run `sudo chown -R 1000:1000 ~/umbrel/app-data/ordinarinos-inscriptions/data`
+
+**4. Port Accessibility Issues**
+- **Symptom**: Cannot access the Ordinarinos web interface
+- **Check**: Try accessing via IP address instead of umbrel.local
+- **Solution**: Ensure your firewall allows access to port 3500
+- **Alternative**: Try a different browser or clear your browser cache
+
+**5. Persistent Docker Errors**
+- **Symptom**: Container fails to start or crashes repeatedly
+- **Solution**: Try the following steps:
+  ```
+  cd ~/umbrel
+  ./scripts/app stop ordinarinos-inscriptions
+  ./scripts/app start ordinarinos-inscriptions
+  ./scripts/app logs ordinarinos-inscriptions
+  ```
+
+**6. "Ord container not found" Error**
+- **Symptom**: Error message about missing Ord container
+- **Check**: Verify the Ordinals app name with `docker ps | grep ord`
+- **Solution**: The container may have a different name than expected. Check the actual name and update your configuration accordingly.

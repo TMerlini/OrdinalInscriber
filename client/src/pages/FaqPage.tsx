@@ -935,6 +935,192 @@ export default function FaqPage() {
         ]
       },
       {
+        title: "Umbrel Installation Guide",
+        id: "umbrel-guide",
+        questions: [
+          {
+            question: "How do I install Ordinarinos on Umbrel?",
+            answer: (
+              <div>
+                <p>There are two ways to install Ordinarinos on Umbrel:</p>
+                
+                <p className="font-semibold mt-3">Method 1: Using the Umbrel App Store</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>In your Umbrel dashboard, go to "App Store"</li>
+                  <li>Click on "Add App Store"</li>
+                  <li>Enter the following URL: <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">https://github.com/ordinarinos/umbrel-app-store</code></li>
+                  <li>Click "Add App Store"</li>
+                  <li>Find Ordinarinos in the list of available apps and click "Install"</li>
+                  <li>Wait for the installation to complete</li>
+                  <li>Access Ordinarinos at <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">http://umbrel.local:3500</code> or <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">http://[your-umbrel-ip]:3500</code></li>
+                </ol>
+                
+                <p className="font-semibold mt-3">Method 2: Manual Installation</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>SSH into your Umbrel server</li>
+                  <li>Navigate to the apps directory: <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">cd ~/umbrel/apps</code></li>
+                  <li>Clone the repository: <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">git clone https://github.com/ordinarinos/ordinarinos</code></li>
+                  <li>Enter the directory: <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">cd ordinarinos</code></li>
+                  <li>Run the installation script: <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">./umbrel-install.sh</code></li>
+                  <li>Access Ordinarinos at <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">http://umbrel.local:3500</code> or <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">http://[your-umbrel-ip]:3500</code></li>
+                </ol>
+              </div>
+            ),
+            id: "umbrel-installation"
+          },
+          {
+            question: "What are the prerequisites for running Ordinarinos on Umbrel?",
+            answer: (
+              <div>
+                <p>Ordinarinos on Umbrel requires:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>A running Umbrel instance (version 0.5.0 or later)</li>
+                  <li>Bitcoin Core app installed and fully synced</li>
+                  <li>Ordinals app installed and operational</li>
+                  <li>At least 5GB of free space for the file cache</li>
+                </ol>
+              </div>
+            ),
+            id: "umbrel-prerequisites"
+          },
+          {
+            question: "How does Ordinarinos integrate with Umbrel's Bitcoin and Ordinals services?",
+            answer: (
+              <div>
+                <p>Ordinarinos automatically detects and connects to Umbrel's Bitcoin Core and Ordinals services using Umbrel's internal networking. The application is preconfigured to:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Connect to Bitcoin Core via RPC at <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">bitcoin.embassy:8332</code></li>
+                  <li>Connect to the Ordinals node API at <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">ord.embassy:8080</code></li>
+                  <li>Use the correct authentication credentials from environment variables</li>
+                  <li>Access the Ordinals container for executing inscription commands</li>
+                </ul>
+                <p className="mt-2">This means you don't need to configure anything manually - Ordinarinos works with your Umbrel setup out of the box.</p>
+              </div>
+            ),
+            id: "umbrel-integration"
+          },
+          {
+            question: "How do I configure port settings on Umbrel?",
+            answer: (
+              <div>
+                <p>The default port for Ordinarinos is 3500. On Umbrel, this is managed through the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">umbrel-app.yml</code> configuration:</p>
+                
+                <p className="font-semibold mt-3">1. Default Configuration</p>
+                <p>By default, Ordinarinos runs on port 3500 and is accessible at <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">http://umbrel.local:3500</code></p>
+                
+                <p className="font-semibold mt-3">2. Changing the Port</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>If you need to change the port, you'll need to modify both the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">umbrel-app.yml</code> and <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">docker-compose.umbrel.yml</code> files</li>
+                  <li>In <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">umbrel-app.yml</code>, update the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">port</code> field and the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">ports</code> section under containers</li>
+                  <li>In <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">docker-compose.umbrel.yml</code>, update the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">ports</code> mapping</li>
+                  <li>Restart the application for changes to take effect</li>
+                </ul>
+                
+                <p className="font-semibold mt-3">3. Port Conflicts</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>If you experience port conflicts (another service using port 3500):</li>
+                  <li>Change the external port mapping in <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">docker-compose.umbrel.yml</code> from <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">"3500:3500"</code> to something like <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">"3501:3500"</code></li>
+                  <li>The application will still run on port 3500 internally but will be accessible on port 3501 externally</li>
+                </ul>
+              </div>
+            ),
+            id: "umbrel-port-config"
+          },
+          {
+            question: "What alternative configurations are available for Umbrel installations?",
+            answer: (
+              <div>
+                <p className="font-semibold">1. Direct Connection Mode</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Default: <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">DIRECT_CONNECT: "true"</code></li>
+                  <li>This allows Ordinarinos to communicate directly with your Ordinals node</li>
+                  <li>For enhanced security, you can set this to <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">"false"</code> and use API-only mode</li>
+                </ul>
+                
+                <p className="font-semibold mt-3">2. Custom Data Directory</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Default: The data is stored in <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">${APP_DATA_DIR}/data</code></li>
+                  <li>You can modify the volume mapping in <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">docker-compose.umbrel.yml</code> to use a different directory</li>
+                </ul>
+                
+                <p className="font-semibold mt-3">3. Resource Allocation</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>You can add resource limits (CPU, memory) in the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">docker-compose.umbrel.yml</code> file if your system has limited resources</li>
+                  <li>Example:
+                    <pre className="bg-gray-100 dark:bg-gray-800 rounded p-2 mt-1 overflow-x-auto text-sm">
+                      resources:{"\n"}  limits:{"\n"}    cpus: '1.0'{"\n"}    memory: 1G
+                    </pre>
+                  </li>
+                </ul>
+                
+                <p className="font-semibold mt-3">4. Network Configuration</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>By default, Ordinarinos connects to both the default network and the embassy network</li>
+                  <li>You can modify the networks section in <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">docker-compose.umbrel.yml</code> if you have a custom network setup</li>
+                </ul>
+              </div>
+            ),
+            id: "umbrel-alt-configs"
+          },
+          {
+            question: "Troubleshooting Umbrel Installations",
+            answer: (
+              <div>
+                <p className="font-semibold">1. Connection Issues with Ordinals Node</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Symptom</span>: Unable to connect to Ordinals node</li>
+                  <li><span className="font-semibold">Check</span>: Ensure the Ordinals app is installed and running on your Umbrel</li>
+                  <li><span className="font-semibold">Solution</span>: Restart both the Ordinals app and Ordinarinos</li>
+                  <li><span className="font-semibold">Verification</span>: Access <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">http://umbrel.local:3500/api/status</code> to check connectivity status</li>
+                </ul>
+                
+                <p className="font-semibold mt-3">2. Bitcoin Core Connection Problems</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Symptom</span>: Unable to retrieve Bitcoin fee estimates or verify UTXO data</li>
+                  <li><span className="font-semibold">Check</span>: Verify Bitcoin Core is running and fully synced</li>
+                  <li><span className="font-semibold">Solution</span>: Ensure your Umbrel's Bitcoin app is operational and fully synced</li>
+                  <li><span className="font-semibold">Advanced</span>: Check the logs with <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">~/umbrel/scripts/app logs ordinarinos-inscriptions</code></li>
+                </ul>
+                
+                <p className="font-semibold mt-3">3. Permission Issues</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Symptom</span>: Unable to write to data directory or execute commands</li>
+                  <li><span className="font-semibold">Check</span>: Verify that the data directory permissions are correct</li>
+                  <li><span className="font-semibold">Solution</span>: Run <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">sudo chown -R 1000:1000 ~/umbrel/app-data/ordinarinos-inscriptions/data</code></li>
+                </ul>
+                
+                <p className="font-semibold mt-3">4. Port Accessibility Issues</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Symptom</span>: Cannot access the Ordinarinos web interface</li>
+                  <li><span className="font-semibold">Check</span>: Try accessing via IP address instead of umbrel.local</li>
+                  <li><span className="font-semibold">Solution</span>: Ensure your firewall allows access to port 3500</li>
+                  <li><span className="font-semibold">Alternative</span>: Try a different browser or clear your browser cache</li>
+                </ul>
+                
+                <p className="font-semibold mt-3">5. Persistent Docker Errors</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Symptom</span>: Container fails to start or crashes repeatedly</li>
+                  <li><span className="font-semibold">Solution</span>: Try the following steps:</li>
+                  <li>
+                    <pre className="bg-gray-100 dark:bg-gray-800 rounded p-2 mt-1 overflow-x-auto text-sm">
+                      cd ~/umbrel{"\n"}./scripts/app stop ordinarinos-inscriptions{"\n"}./scripts/app start ordinarinos-inscriptions{"\n"}./scripts/app logs ordinarinos-inscriptions
+                    </pre>
+                  </li>
+                </ul>
+                
+                <p className="font-semibold mt-3">6. "Ord container not found" Error</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Symptom</span>: Error message about missing Ord container</li>
+                  <li><span className="font-semibold">Check</span>: Verify the Ordinals app name with <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">docker ps | grep ord</code></li>
+                  <li><span className="font-semibold">Solution</span>: The container may have a different name than expected. Check the actual name and update your configuration accordingly.</li>
+                </ul>
+              </div>
+            ),
+            id: "umbrel-troubleshooting"
+          }
+        ]
+      },
+      {
         title: "Support & Resources",
         id: "support",
         questions: [

@@ -1,0 +1,33 @@
+version: "3.7"
+
+services:
+  web:
+    image: ghcr.io/ordinarinos/ordinarinos:latest
+    container_name: ${APP_ID}
+    restart: on-failure
+    environment:
+      DIRECT_CONNECT: "true"
+      BTC_SERVER_AVAILABLE: "true"
+      ORD_SERVER_AVAILABLE: "true"
+      BTC_RPC_USER: "${BITCOIN_RPC_USER}"
+      BTC_RPC_PASSWORD: "${BITCOIN_RPC_PASS}"
+      BTC_RPC_HOST: "bitcoin.embassy"
+      BTC_RPC_PORT: "8332"
+      ORD_RPC_HOST: "ord.embassy"
+      ORD_RPC_PORT: "8080"
+      NODE_ENV: "production"
+      PORT: "3500"
+    ports:
+      - "3500:3500"
+    volumes:
+      - ${APP_DATA_DIR}/data:/ord/data
+    networks:
+      - default
+      - embassy
+
+networks:
+  default:
+    name: ${APP_ID}_default
+  embassy:
+    name: embassy
+    external: true
