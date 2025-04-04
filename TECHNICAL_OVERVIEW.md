@@ -67,6 +67,7 @@ The Ordinarinos Inscription Tool is a sophisticated web application designed for
    - Support for 3D models (GLB/GLTF)
    - Automatic file optimization using sharp
    - Secure temporary file storage
+   - Recursive inscriptions (HTML, SVG, CSS, custom formats) - Recursive inscriptions (HTML, SVG, CSS, custom formats)
 
 3. **Docker Integration**:
    - Communication with Docker containers
@@ -175,3 +176,43 @@ The application is accessible at both http://localhost:3500 and http://localhost
 ## Limitations in Replit Environment
 
 The main limitation of running this application in Replit is the lack of Docker support, which is essential for the core functionality of inscribing files onto the Bitcoin blockchain. While the UI and file upload components work correctly, the actual inscription process will fail due to Docker-related permission errors.
+
+## Recursive Inscriptions System
+
+The application includes a comprehensive recursive inscription system that enables creating inscriptions that reference and display other inscriptions:
+
+1. **Architecture**:
+   - Server-side API for recursive inscription command generation (`/api/recursive/generate-command`)
+   - Parent inscription preview capability (`/api/inscriptions/preview/:id`)
+   - Content type management for different recursion formats
+   - Temporary file creation for inscription content
+   - Dynamic template generation for different formats
+
+2. **Frontend Components**:
+   - `RecursiveInscriptionSection`: Core component for creating recursive inscriptions
+   - Interactive form with contextual help and tooltips
+   - Format-specific templates (HTML, SVG, CSS, custom)
+   - Parent inscription preview functionality
+   - Command generation and clipboard integration
+
+3. **Technical Implementation**:
+   - Parent inscription validation and preview
+   - Dynamic template substitution for parent inscription IDs
+   - Content type selection and validation
+   - JSON metadata generation with parent references
+   - Fee rate estimation with processing time display
+   - Support for custom destination addresses
+   - Detailed user guidance throughout the process
+
+4. **Supported Recursion Types**:
+   - **HTML**: Web pages embedding parent inscriptions (using img tags)
+   - **SVG**: Vector graphics incorporating parent inscriptions (via image elements)
+   - **CSS**: Stylesheets using parent inscriptions as backgrounds (via CSS variables)
+   - **Custom**: User-defined formats with custom MIME types
+
+5. **Benefits and Use Cases**:
+   - Creation of framed displays for inscriptions
+   - Building galleries of multiple inscriptions
+   - Applying visual effects and transformations to inscriptions
+   - Creating interactive displays and experiences
+   - Establishing on-chain relationships between inscriptions
