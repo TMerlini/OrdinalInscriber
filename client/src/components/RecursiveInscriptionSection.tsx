@@ -228,11 +228,35 @@ export default function RecursiveInscriptionSection() {
                 />
 
                 <Tabs defaultValue="html" onValueChange={(value) => form.setValue("recursionType", value as any)}>
-                  <TabsList className="mb-2">
-                    <TabsTrigger value="html">HTML</TabsTrigger>
-                    <TabsTrigger value="svg">SVG</TabsTrigger>
-                    <TabsTrigger value="css">CSS</TabsTrigger>
-                    <TabsTrigger value="custom">Custom</TabsTrigger>
+                  <TabsList className="mb-4 w-full flex gap-2 p-2 bg-orange-50 dark:bg-navy-800 rounded-lg">
+                    <TabsTrigger 
+                      value="html" 
+                      className="flex-1 px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                    >
+                      <FileCode className="h-4 w-4 mr-2" />
+                      HTML
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="svg" 
+                      className="flex-1 px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                    >
+                      <FileImage className="h-4 w-4 mr-2" />
+                      SVG
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="css" 
+                      className="flex-1 px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                    >
+                      <FileCode className="h-4 w-4 mr-2" />
+                      CSS
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="custom" 
+                      className="flex-1 px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                    >
+                      <FileCode className="h-4 w-4 mr-2" />
+                      Custom
+                    </TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="custom">
