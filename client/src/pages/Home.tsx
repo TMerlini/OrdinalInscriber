@@ -978,36 +978,62 @@ export default function Home() {
             <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
               <SectionTitle title="Inscription Tools" />
               <Tabs defaultValue="single" className="w-full">
-                <TabsList className="mb-4">
-                  <TabsTrigger value="single" onClick={() => handleBatchModeToggle(false)}>
+                <TabsList className="mb-6 w-full flex flex-wrap justify-center gap-2 p-2 bg-orange-50 dark:bg-navy-800 rounded-lg">
+                  <TabsTrigger 
+                    value="single" 
+                    onClick={() => handleBatchModeToggle(false)}
+                    className="px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  >
                     <Image className="h-4 w-4 mr-2" />
                     Image
                   </TabsTrigger>
-                  <TabsTrigger value="batch" onClick={() => handleBatchModeToggle(true)}>
+                  <TabsTrigger 
+                    value="batch" 
+                    onClick={() => handleBatchModeToggle(true)}
+                    className="px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  >
                     <Image className="h-4 w-4 mr-2" />
                     Batch Images
                   </TabsTrigger>
-                  <TabsTrigger value="text">
+                  <TabsTrigger 
+                    value="text"
+                    className="px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  >
                     <FileText className="h-4 w-4 mr-2" />
                     Text
                   </TabsTrigger>
-                  <TabsTrigger value="markdown">
+                  <TabsTrigger 
+                    value="markdown"
+                    className="px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  >
                     <FileCode className="h-4 w-4 mr-2" />
                     Markdown
                   </TabsTrigger>
-                  <TabsTrigger value="bitmap">
+                  <TabsTrigger 
+                    value="bitmap"
+                    className="px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  >
                     <Grid className="h-4 w-4 mr-2" />
                     Bitmap
                   </TabsTrigger>
-                  <TabsTrigger value="brc20">
+                  <TabsTrigger 
+                    value="brc20"
+                    className="px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  >
                     <Bitcoin className="h-4 w-4 mr-2" />
                     BRC-20
                   </TabsTrigger>
-                  <TabsTrigger value="recursive">
+                  <TabsTrigger 
+                    value="recursive"
+                    className="px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  >
                     <Link2 className="h-4 w-4 mr-2" />
                     Recursive
                   </TabsTrigger>
-                  <TabsTrigger value="sns">
+                  <TabsTrigger 
+                    value="sns"
+                    className="px-4 py-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+                  >
                     SNS Names
                   </TabsTrigger>
                 </TabsList>
