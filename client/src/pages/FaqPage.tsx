@@ -226,6 +226,78 @@ export default function FaqPage() {
               </div>
             ),
             id: "brc20-fee-calculator"
+          },
+          {
+            question: "How does Ordinarinos process BRC-20 inscriptions?",
+            answer: (
+              <div>
+                <p>BRC-20 token operations are processed entirely through your local Ordinals node, just like other inscription types. The process works as follows:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>Ordinarinos generates the proper JSON format for the selected operation (deploy, mint, or transfer)</li>
+                  <li>The application sends this command to your local Ordinals node container</li>
+                  <li>Your Ordinals node performs the inscription and broadcasts it to the Bitcoin network</li>
+                  <li>The transaction is tracked in the Inscription Status section</li>
+                </ol>
+                <p className="mt-2">While Ordinarinos uses the GeniiData API to validate token existence and check information (max supply, mint limits, etc.), all actual inscription transactions happen directly on your Ordinals node using your node's wallet. This means BRC-20 operations require your Ordinals node to be running properly.</p>
+              </div>
+            ),
+            id: "brc20-processing"
+          },
+          {
+            question: "What happens behind the scenes when I deploy a BRC-20 token?",
+            answer: (
+              <div>
+                <p>When you deploy a BRC-20 token:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>Ordinarinos creates a JSON payload that follows the BRC-20 standard format:
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded p-3 my-2 font-mono text-sm">
+                      {`{
+  "p": "brc-20",
+  "op": "deploy",
+  "tick": "EXMP",
+  "max": "21000000",
+  "lim": "1000"
+}`}
+                    </div>
+                  </li>
+                  <li>This JSON is inscribed onto a satoshi using your Ordinals node</li>
+                  <li>Once confirmed on the blockchain, the token is officially deployed</li>
+                  <li>Other users can view and interact with your token using any BRC-20 compatible application</li>
+                </ol>
+              </div>
+            ),
+            id: "brc20-behind-scenes"
+          },
+          {
+            question: "Are there any special requirements for BRC-20 operations?",
+            answer: (
+              <div>
+                <p>BRC-20 operations have the same requirements as other inscriptions, but with these considerations:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Deploy</span>: You can only deploy tokens that haven't been claimed yet</li>
+                  <li><span className="font-semibold">Mint</span>: You can only mint up to the limit per mint (if set) and can't exceed the maximum supply</li>
+                  <li><span className="font-semibold">Transfer</span>: You must own the token you're trying to transfer</li>
+                </ul>
+                <p className="mt-2">The application's interface will guide you through these requirements and display validation messages to help prevent errors.</p>
+              </div>
+            ),
+            id: "brc20-requirements"
+          },
+          {
+            question: "How are BRC-20 token balances tracked?",
+            answer: (
+              <div>
+                <p>Unlike conventional blockchains, BRC-20 tokens don't have built-in accounting. Instead:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>Indexers like GeniiData scan the blockchain for BRC-20 inscriptions</li>
+                  <li>They interpret deploy, mint, and transfer operations to calculate balances</li>
+                  <li>Ordinarinos queries these indexers to show token information</li>
+                  <li>Your actual balance is determined by what inscriptions you own</li>
+                </ol>
+                <p className="mt-2">This means your BRC-20 balances are directly tied to the inscriptions in your wallet.</p>
+              </div>
+            ),
+            id: "brc20-balances"
           }
         ]
       },

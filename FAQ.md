@@ -445,3 +445,45 @@ The BRC-20 fee calculator shows a detailed breakdown of the inscription costs:
 - Processing Time: Estimated time for the transaction to be confirmed
 
 You can choose from preset fee rates (economy, average, priority) or set a custom rate.
+
+### How does Ordinarinos process BRC-20 inscriptions?
+BRC-20 token operations are processed entirely through your local Ordinals node, just like other inscription types. The process works as follows:
+1. Ordinarinos generates the proper JSON format for the selected operation (deploy, mint, or transfer)
+2. The application sends this command to your local Ordinals node container
+3. Your Ordinals node performs the inscription and broadcasts it to the Bitcoin network
+4. The transaction is tracked in the Inscription Status section
+
+While Ordinarinos uses the GeniiData API to validate token existence and check information (max supply, mint limits, etc.), all actual inscription transactions happen directly on your Ordinals node using your node's wallet. This means BRC-20 operations require your Ordinals node to be running properly.
+
+### What happens behind the scenes when I deploy a BRC-20 token?
+When you deploy a BRC-20 token:
+1. Ordinarinos creates a JSON payload that follows the BRC-20 standard format:
+   ```json
+   {
+     "p": "brc-20",
+     "op": "deploy",
+     "tick": "EXMP",
+     "max": "21000000",
+     "lim": "1000"
+   }
+   ```
+2. This JSON is inscribed onto a satoshi using your Ordinals node
+3. Once confirmed on the blockchain, the token is officially deployed
+4. Other users can view and interact with your token using any BRC-20 compatible application
+
+### Are there any special requirements for BRC-20 operations?
+BRC-20 operations have the same requirements as other inscriptions, but with these considerations:
+- **Deploy**: You can only deploy tokens that haven't been claimed yet
+- **Mint**: You can only mint up to the limit per mint (if set) and can't exceed the maximum supply
+- **Transfer**: You must own the token you're trying to transfer
+
+The application's interface will guide you through these requirements and display validation messages to help prevent errors.
+
+### How are BRC-20 token balances tracked?
+Unlike conventional blockchains, BRC-20 tokens don't have built-in accounting. Instead:
+1. Indexers like GeniiData scan the blockchain for BRC-20 inscriptions
+2. They interpret deploy, mint, and transfer operations to calculate balances
+3. Ordinarinos queries these indexers to show token information
+4. Your actual balance is determined by what inscriptions you own
+
+This means your BRC-20 balances are directly tied to the inscriptions in your wallet.
