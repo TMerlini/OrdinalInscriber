@@ -19,6 +19,8 @@ A sophisticated web-based Ordinals inscription platform that enables you to effi
 
 Features:
 - Inscribe images, text, markdown, 3D models, BRC-20 tokens, and bitmap numbers
+- Create recursive inscriptions that reference other inscriptions (HTML, SVG, CSS)
+- Create recursive inscriptions that reference other inscriptions (HTML, SVG, CSS)
 - Batch processing with transaction fee confirmation
 - Rare sat selection for premium inscriptions
 - Full Umbrel integration with Bitcoin Core and Ordinals services

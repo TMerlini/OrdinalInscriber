@@ -423,6 +423,64 @@ The bitmap fee calculator shows a detailed breakdown of the inscription costs:
 
 The calculator updates dynamically when you change fee rates, allowing you to make informed decisions about your inscription costs.
 
+## Recursive Inscriptions
+
+### What are recursive inscriptions?
+Recursive inscriptions are a powerful type of inscription that reference and display other existing inscriptions. They allow you to create compositions, frames, galleries, or interactive views of other inscriptions.
+
+### How do recursive inscriptions work?
+Recursive inscriptions work by referencing the content of another inscription using a special URL format:
+- The reference format is: `/content/{inscriptionId}` 
+- When the recursive inscription is viewed, it dynamically loads and displays the content of the referenced inscription
+- This creates a relationship between inscriptions, with one "parent" inscription being referenced by a "child" inscription
+
+### What types of recursive inscriptions can I create?
+Ordinarinos supports four primary types of recursive inscriptions:
+- **HTML**: Create web pages that embed and interact with other inscriptions
+- **SVG**: Create vector graphics that incorporate other inscriptions as elements
+- **CSS**: Create stylesheets that use other inscriptions as backgrounds or design elements
+- **Custom**: Create your own custom format recursive inscriptions with a specific MIME type
+
+### How do I create a recursive inscription?
+To create a recursive inscription with Ordinarinos:
+1. Navigate to the Recursive tab
+2. Enter the parent inscription ID you want to reference
+3. Click "Preview" to view the parent inscription
+4. Select a format type (HTML, SVG, CSS, or Custom)
+5. Edit the template or use the provided template
+6. Set a fee rate and optional destination address
+7. Generate and execute the inscription command
+
+### What can I do with the different recursive formats?
+
+**HTML Recursive Inscriptions**
+- Create interactive galleries of inscriptions
+- Build framed displays for other inscriptions
+- Design interactive web pages that use inscriptions as content
+- Combine multiple inscriptions in a single view
+
+**SVG Recursive Inscriptions**
+- Create vector graphic frames around inscriptions
+- Apply transformations (scaling, rotation) to inscriptions
+- Combine multiple inscriptions in creative compositions
+- Add visual effects and annotations to inscriptions
+
+**CSS Recursive Inscriptions**
+- Apply styling to how inscriptions are displayed
+- Use inscriptions as background images
+- Create animated or interactive displays
+- Design custom viewing experiences for inscriptions
+
+### Are there limitations to recursive inscriptions?
+While powerful, recursive inscriptions have some limitations:
+- They rely on the continued existence and accessibility of the parent inscription
+- Some inscription platforms may have security measures that limit cross-inscription references
+- The display quality depends on the compatibility of the parent inscription with the recursive format
+- There may be loading delays when viewing complex recursive structures
+
+### How do I know if a recursive inscription will display correctly?
+The Ordinarinos Recursive tool allows you to preview your recursive inscription before inscribing it. This helps ensure that the reference is working correctly and the display matches your expectations.
+
 ## Advanced Usage
 
 ### Can I customize the metadata for my inscriptions?
@@ -723,3 +781,61 @@ The default port for Ordinarinos is 3500. On Umbrel, this is managed through the
 - **Symptom**: Error message about missing Ord container
 - **Check**: Verify the Ordinals app name with `docker ps | grep ord`
 - **Solution**: The container may have a different name than expected. Check the actual name and update your configuration accordingly.
+
+## Recursive Inscriptions
+
+### What are recursive inscriptions?
+Recursive inscriptions are a powerful type of inscription that reference and display other existing inscriptions. They allow you to create compositions, frames, galleries, or interactive views of other inscriptions.
+
+### How do recursive inscriptions work?
+Recursive inscriptions work by referencing the content of another inscription using a special URL format:
+- The reference format is: `/content/{inscriptionId}` 
+- When the recursive inscription is viewed, it dynamically loads and displays the content of the referenced inscription
+- This creates a relationship between inscriptions, with one "parent" inscription being referenced by a "child" inscription
+
+### What types of recursive inscriptions can I create?
+Ordinarinos supports four primary types of recursive inscriptions:
+- **HTML**: Create web pages that embed and interact with other inscriptions
+- **SVG**: Create vector graphics that incorporate other inscriptions as elements
+- **CSS**: Create stylesheets that use other inscriptions as backgrounds or design elements
+- **Custom**: Create your own custom format recursive inscriptions with a specific MIME type
+
+### How do I create a recursive inscription?
+To create a recursive inscription with Ordinarinos:
+1. Navigate to the Recursive tab
+2. Enter the parent inscription ID you want to reference
+3. Click "Preview" to view the parent inscription
+4. Select a format type (HTML, SVG, CSS, or Custom)
+5. Edit the template or use the provided template
+6. Set a fee rate and optional destination address
+7. Generate and execute the inscription command
+
+### What can I do with the different recursive formats?
+
+**HTML Recursive Inscriptions**
+- Create interactive galleries of inscriptions
+- Build framed displays for other inscriptions
+- Design interactive web pages that use inscriptions as content
+- Combine multiple inscriptions in a single view
+
+**SVG Recursive Inscriptions**
+- Create vector graphic frames around inscriptions
+- Apply transformations (scaling, rotation) to inscriptions
+- Combine multiple inscriptions in creative compositions
+- Add visual effects and annotations to inscriptions
+
+**CSS Recursive Inscriptions**
+- Apply styling to how inscriptions are displayed
+- Use inscriptions as background images
+- Create animated or interactive displays
+- Design custom viewing experiences for inscriptions
+
+### Are there limitations to recursive inscriptions?
+While powerful, recursive inscriptions have some limitations:
+- They rely on the continued existence and accessibility of the parent inscription
+- Some inscription platforms may have security measures that limit cross-inscription references
+- The display quality depends on the compatibility of the parent inscription with the recursive format
+- There may be loading delays when viewing complex recursive structures
+
+### How do I know if a recursive inscription will display correctly?
+The Ordinarinos Recursive tool allows you to preview your recursive inscription before inscribing it. This helps ensure that the reference is working correctly and the display matches your expectations.
