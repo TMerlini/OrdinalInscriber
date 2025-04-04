@@ -1039,7 +1039,7 @@ export default function FaqPage() {
                 
                 <p className="font-semibold mt-3">2. Custom Data Directory</p>
                 <ul className="list-disc pl-6 mt-2 space-y-1">
-                  <li>Default: The data is stored in <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">${APP_DATA_DIR}/data</code></li>
+                  <li>Default: The data is stored in <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">APP_DATA_DIR/data</code></li>
                   <li>You can modify the volume mapping in <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">docker-compose.umbrel.yml</code> to use a different directory</li>
                 </ul>
                 
