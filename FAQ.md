@@ -210,6 +210,70 @@ Yes, all text and markdown files that you save are:
 - Automatically cleaned up when the cache limit is reached
 - Available for viewing and management in the Cache Manager
 
+## BRC-20 Token Inscriptions
+
+### What are BRC-20 tokens?
+BRC-20 is a token standard for fungible tokens on the Bitcoin blockchain using Ordinals. It enables the creation (deploy), distribution (mint), and transfer of tokens with Bitcoin transactions, similar to how ERC-20 tokens work on Ethereum.
+
+### What operations can I perform with BRC-20 tokens?
+Ordinarinos lets you perform all three core BRC-20 operations:
+- **Deploy**: Create a new token with a ticker (1-4 characters), max supply, and optional mint limit
+- **Mint**: Create new tokens of an existing BRC-20 token up to its maximum supply
+- **Transfer**: Move tokens from your wallet to another address
+
+### How do I deploy a new BRC-20 token?
+To deploy a new BRC-20 token with Ordinarinos:
+1. Navigate to the BRC-20 tab and select "Deploy"
+2. Enter a ticker (1-4 alphanumeric characters)
+3. Set the maximum supply for your token
+4. (Optional) Set a mint limit per inscription
+5. Select a fee rate (economy, average, priority, or custom)
+6. (Optional) Specify a destination address
+7. Generate and execute the inscription commands
+
+### How do I mint BRC-20 tokens?
+To mint existing BRC-20 tokens:
+1. Navigate to the BRC-20 tab and select "Mint"
+2. Enter the ticker of an existing token
+3. Specify the amount to mint (must be within mint limits)
+4. Select a fee rate
+5. (Optional) Specify a destination address
+6. Generate and execute the inscription commands
+
+### How do I transfer BRC-20 tokens?
+To transfer BRC-20 tokens:
+1. Navigate to the BRC-20 tab and select "Transfer"
+2. Enter the ticker of the token you want to transfer
+3. Specify the amount to transfer
+4. Select a fee rate
+5. Enter the destination address
+6. Generate and execute the inscription commands
+
+### How can I check if a BRC-20 token already exists?
+When you enter a ticker in the deploy tab, Ordinarinos automatically checks if the token has already been deployed. It will show:
+- A green badge if the ticker is available for deployment
+- A red badge if the ticker has already been deployed
+
+### Does Ordinarinos validate token information?
+Yes, Ordinarinos integrates with the GeniiData API to verify token information including:
+- If a token exists
+- Its maximum supply
+- Mint limits
+- Total minted amount
+- Whether minting is complete
+
+This information helps ensure you're making informed decisions about BRC-20 operations.
+
+### How does the BRC-20 fee calculator work?
+The BRC-20 fee calculator shows a detailed breakdown of the inscription costs:
+- Transaction Size: The size of the BRC-20 operation transaction in vBytes
+- Base Fee: The minimum cost for the transaction
+- Inscription Fee: The fee based on your selected rate (sats/vB)
+- Total Fee: The combined total fee in satoshis
+- Processing Time: Estimated time for the transaction to be confirmed
+
+You can choose from preset fee rates (economy, average, priority) or set a custom rate.
+
 ## Bitmap Inscriptions
 
 ### What are bitmap inscriptions?
@@ -318,3 +382,66 @@ The calculator updates automatically when you change fee rates, allowing you to 
 
 ### Can I use Ordinarinos on my mobile device?
 Yes, Ordinarinos is designed with a responsive interface that works on mobile devices. However, for the best experience, we recommend using a desktop browser, especially when working with batch processing or complex inscriptions.
+## BRC-20 Token Inscriptions
+
+### What are BRC-20 tokens?
+BRC-20 is a token standard for fungible tokens on the Bitcoin blockchain using Ordinals. It enables the creation (deploy), distribution (mint), and transfer of tokens with Bitcoin transactions, similar to how ERC-20 tokens work on Ethereum.
+
+### What operations can I perform with BRC-20 tokens?
+Ordinarinos lets you perform all three core BRC-20 operations:
+- **Deploy**: Create a new token with a ticker (1-4 characters), max supply, and optional mint limit
+- **Mint**: Create new tokens of an existing BRC-20 token up to its maximum supply
+- **Transfer**: Move tokens from your wallet to another address
+
+### How do I deploy a new BRC-20 token?
+To deploy a new BRC-20 token with Ordinarinos:
+1. Navigate to the BRC-20 tab and select "Deploy"
+2. Enter a ticker (1-4 alphanumeric characters)
+3. Set the maximum supply for your token
+4. (Optional) Set a mint limit per inscription
+5. Select a fee rate (economy, average, priority, or custom)
+6. (Optional) Specify a destination address
+7. Generate and execute the inscription commands
+
+### How do I mint BRC-20 tokens?
+To mint existing BRC-20 tokens:
+1. Navigate to the BRC-20 tab and select "Mint"
+2. Enter the ticker of an existing token
+3. Specify the amount to mint (must be within mint limits)
+4. Select a fee rate
+5. (Optional) Specify a destination address
+6. Generate and execute the inscription commands
+
+### How do I transfer BRC-20 tokens?
+To transfer BRC-20 tokens:
+1. Navigate to the BRC-20 tab and select "Transfer"
+2. Enter the ticker of the token you want to transfer
+3. Specify the amount to transfer
+4. Select a fee rate
+5. Enter the destination address
+6. Generate and execute the inscription commands
+
+### How can I check if a BRC-20 token already exists?
+When you enter a ticker in the deploy tab, Ordinarinos automatically checks if the token has already been deployed. It will show:
+- A green badge if the ticker is available for deployment
+- A red badge if the ticker has already been deployed
+
+### Does Ordinarinos validate token information?
+Yes, Ordinarinos integrates with the GeniiData API to verify token information including:
+- If a token exists
+- Its maximum supply
+- Mint limits
+- Total minted amount
+- Whether minting is complete
+
+This information helps ensure you're making informed decisions about BRC-20 operations.
+
+### How does the BRC-20 fee calculator work?
+The BRC-20 fee calculator shows a detailed breakdown of the inscription costs:
+- Transaction Size: The size of the BRC-20 operation transaction in vBytes
+- Base Fee: The minimum cost for the transaction
+- Inscription Fee: The fee based on your selected rate (sats/vB)
+- Total Fee: The combined total fee in satoshis
+- Processing Time: Estimated time for the transaction to be confirmed
+
+You can choose from preset fee rates (economy, average, priority) or set a custom rate.

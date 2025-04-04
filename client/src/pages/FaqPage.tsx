@@ -106,6 +106,130 @@ export default function FaqPage() {
         ]
       },
       {
+        title: "BRC-20 Token Inscriptions",
+        id: "brc20",
+        questions: [
+          {
+            question: "What are BRC-20 tokens?",
+            answer: "BRC-20 is a token standard for fungible tokens on the Bitcoin blockchain using Ordinals. It enables the creation (deploy), distribution (mint), and transfer of tokens with Bitcoin transactions, similar to how ERC-20 tokens work on Ethereum.",
+            id: "what-are-brc20"
+          },
+          {
+            question: "What operations can I perform with BRC-20 tokens?",
+            answer: (
+              <div>
+                <p>Ordinarinos lets you perform all three core BRC-20 operations:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Deploy</span>: Create a new token with a ticker (1-4 characters), max supply, and optional mint limit</li>
+                  <li><span className="font-semibold">Mint</span>: Create new tokens of an existing BRC-20 token up to its maximum supply</li>
+                  <li><span className="font-semibold">Transfer</span>: Move tokens from your wallet to another address</li>
+                </ul>
+              </div>
+            ),
+            id: "brc20-operations"
+          },
+          {
+            question: "How do I deploy a new BRC-20 token?",
+            answer: (
+              <div>
+                <p>To deploy a new BRC-20 token with Ordinarinos:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>Navigate to the BRC-20 tab and select "Deploy"</li>
+                  <li>Enter a ticker (1-4 alphanumeric characters)</li>
+                  <li>Set the maximum supply for your token</li>
+                  <li>(Optional) Set a mint limit per inscription</li>
+                  <li>Select a fee rate (economy, average, priority, or custom)</li>
+                  <li>(Optional) Specify a destination address</li>
+                  <li>Generate and execute the inscription commands</li>
+                </ol>
+              </div>
+            ),
+            id: "deploy-brc20"
+          },
+          {
+            question: "How do I mint BRC-20 tokens?",
+            answer: (
+              <div>
+                <p>To mint existing BRC-20 tokens:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>Navigate to the BRC-20 tab and select "Mint"</li>
+                  <li>Enter the ticker of an existing token</li>
+                  <li>Specify the amount to mint (must be within mint limits)</li>
+                  <li>Select a fee rate</li>
+                  <li>(Optional) Specify a destination address</li>
+                  <li>Generate and execute the inscription commands</li>
+                </ol>
+              </div>
+            ),
+            id: "mint-brc20"
+          },
+          {
+            question: "How do I transfer BRC-20 tokens?",
+            answer: (
+              <div>
+                <p>To transfer BRC-20 tokens:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>Navigate to the BRC-20 tab and select "Transfer"</li>
+                  <li>Enter the ticker of the token you want to transfer</li>
+                  <li>Specify the amount to transfer</li>
+                  <li>Select a fee rate</li>
+                  <li>Enter the destination address</li>
+                  <li>Generate and execute the inscription commands</li>
+                </ol>
+              </div>
+            ),
+            id: "transfer-brc20"
+          },
+          {
+            question: "How can I check if a BRC-20 token already exists?",
+            answer: (
+              <div>
+                <p>When you enter a ticker in the deploy tab, Ordinarinos automatically checks if the token has already been deployed. It will show:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>A green badge if the ticker is available for deployment</li>
+                  <li>A red badge if the ticker has already been deployed</li>
+                </ul>
+              </div>
+            ),
+            id: "check-brc20"
+          },
+          {
+            question: "Does Ordinarinos validate token information?",
+            answer: (
+              <div>
+                <p>Yes, Ordinarinos integrates with the GeniiData API to verify token information including:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>If a token exists</li>
+                  <li>Its maximum supply</li>
+                  <li>Mint limits</li>
+                  <li>Total minted amount</li>
+                  <li>Whether minting is complete</li>
+                </ul>
+                <p className="mt-2">This information helps ensure you're making informed decisions about BRC-20 operations.</p>
+              </div>
+            ),
+            id: "validate-brc20"
+          },
+          {
+            question: "How does the BRC-20 fee calculator work?",
+            answer: (
+              <div>
+                <p>The BRC-20 fee calculator shows a detailed breakdown of the inscription costs:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><span className="font-semibold">Transaction Size</span>: The size of the BRC-20 operation transaction in vBytes</li>
+                  <li><span className="font-semibold">Base Fee</span>: The minimum cost for the transaction</li>
+                  <li><span className="font-semibold">Inscription Fee</span>: The fee based on your selected rate (sats/vB)</li>
+                  <li><span className="font-semibold">Total Fee</span>: The combined total fee in satoshis</li>
+                  <li><span className="font-semibold">Processing Time</span>: Estimated time for the transaction to be confirmed</li>
+                </ul>
+                <p className="mt-2">You can choose from preset fee rates (economy, average, priority) or set a custom rate.</p>
+              </div>
+            ),
+            id: "brc20-fee-calculator"
+          }
+        ]
+      },
+      {
         title: "Bitmap Inscriptions",
         id: "bitmap",
         questions: [
