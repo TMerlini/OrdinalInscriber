@@ -28,7 +28,7 @@ import {
   Copy 
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+// Removed tooltip imports to fix DOM manipulation errors
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -362,18 +362,13 @@ export default function RecursiveInscriptionSection() {
                       <FormItem>
                         <FormLabel className="text-sm font-medium flex items-center">
                           Parent Inscription ID
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent className="w-80 p-2">
-                                <p>The inscription ID that this recursive inscription will reference and display.</p>
-                                <p className="mt-1 text-xs">Format: [transaction_id]i[index]</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Info className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
                         </FormLabel>
+                        <FormDescription>
+                          The inscription ID that this recursive inscription will reference and display.
+                          <br />
+                          <span className="text-xs">Format: [transaction_id]i[index]</span>
+                        </FormDescription>
                         <div className="flex space-x-2">
                           <FormControl>
                             <Input 
@@ -413,22 +408,7 @@ export default function RecursiveInscriptionSection() {
                     <div className="flex justify-between items-center mb-2">
                       <h4 className="text-sm font-medium flex items-center">
                         Recursion Format
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="w-80 p-2">
-                              <p>Select how you want to present the parent inscription:</p>
-                              <ul className="mt-1 space-y-1">
-                                <li><strong>HTML:</strong> For interactive web presentation</li>
-                                <li><strong>SVG:</strong> For vector graphic framing</li>
-                                <li><strong>CSS:</strong> For styling via CSS backgrounds</li>
-                                <li><strong>Custom:</strong> For advanced custom formats</li>
-                              </ul>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Info className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
                       </h4>
                       <Badge variant="outline" className="bg-orange-50 text-orange-800 dark:bg-navy-900 dark:text-blue-300 border-orange-200 dark:border-navy-700">
                         {recursionType.toUpperCase()}
@@ -448,24 +428,12 @@ export default function RecursiveInscriptionSection() {
                       ))}
                     </TabsList>
                     
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-md text-sm mb-4">
-                            <p>{RECURSION_TYPE_INFO[recursionType as keyof typeof RECURSION_TYPE_INFO]}</p>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="w-80 p-2">
-                          <p>Each format has different capabilities:</p>
-                          <ul className="mt-1 space-y-1 text-xs">
-                            <li><strong>HTML:</strong> Most versatile - create interactive experiences</li>
-                            <li><strong>SVG:</strong> Great for visual frames and compositions</li>
-                            <li><strong>CSS:</strong> Powerful for styling and animation</li>
-                            <li><strong>Custom:</strong> For specialized MIME types and formats</li>
-                          </ul>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-md text-sm mb-4">
+                      <p className="flex items-center">
+                        <Info className="h-4 w-4 mr-2 text-blue-600 dark:text-blue-400" />
+                        {RECURSION_TYPE_INFO[recursionType as keyof typeof RECURSION_TYPE_INFO]}
+                      </p>
+                    </div>
                     
                     <TabsContent value="custom">
                       <FormField
