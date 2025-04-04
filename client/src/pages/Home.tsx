@@ -27,8 +27,9 @@ import TextInscriptionSection from "@/components/TextInscriptionSection";
 import MarkdownInscriptionSection from "@/components/MarkdownInscriptionSection";
 import BitmapInscriptionSection from "@/components/BitmapInscriptionSection";
 import Brc20InscriptionSection from "@/components/Brc20InscriptionSection";
+import RecursiveInscriptionSection from "@/components/RecursiveInscriptionSection";
 import InscriptionStatusDisplay from "@/components/InscriptionStatusDisplay";
-import { ChevronDown, RefreshCw, Info, FileText, FileCode, Image, Grid, Bitcoin } from "lucide-react";
+import { ChevronDown, RefreshCw, Info, FileText, FileCode, Image, Grid, Bitcoin, Link2 } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -1002,6 +1003,10 @@ export default function Home() {
                     <Bitcoin className="h-4 w-4 mr-2" />
                     BRC-20
                   </TabsTrigger>
+                  <TabsTrigger value="recursive">
+                    <Link2 className="h-4 w-4 mr-2" />
+                    Recursive
+                  </TabsTrigger>
                   <TabsTrigger value="sns">
                     SNS Names
                   </TabsTrigger>
@@ -1059,6 +1064,12 @@ export default function Home() {
                       defaultFeeRate={Number(configForm.getValues().feeRate)}
                       defaultDestinationAddress={metadataForm.getValues().destination}
                     />
+                  </ErrorBoundary>
+                </TabsContent>
+                
+                <TabsContent value="recursive">
+                  <ErrorBoundary>
+                    <RecursiveInscriptionSection />
                   </ErrorBoundary>
                 </TabsContent>
                 
