@@ -360,9 +360,8 @@ export default function RecursiveInscriptionSection() {
                     name="parentInscriptionId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium flex items-center">
+                        <FormLabel className="text-sm font-medium">
                           Parent Inscription ID
-                          <Info className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
                         </FormLabel>
                         <FormDescription>
                           The inscription ID that this recursive inscription will reference and display.
@@ -406,9 +405,8 @@ export default function RecursiveInscriptionSection() {
                     className="mt-6"
                   >
                     <div className="flex justify-between items-center mb-2">
-                      <h4 className="text-sm font-medium flex items-center">
+                      <h4 className="text-sm font-medium">
                         Recursion Format
-                        <Info className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
                       </h4>
                       <Badge variant="outline" className="bg-orange-50 text-orange-800 dark:bg-navy-900 dark:text-blue-300 border-orange-200 dark:border-navy-700">
                         {recursionType.toUpperCase()}
@@ -429,8 +427,7 @@ export default function RecursiveInscriptionSection() {
                     </TabsList>
                     
                     <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded-md text-sm mb-4">
-                      <p className="flex items-center">
-                        <Info className="h-4 w-4 mr-2 text-blue-600 dark:text-blue-400" />
+                      <p>
                         {RECURSION_TYPE_INFO[recursionType as keyof typeof RECURSION_TYPE_INFO]}
                       </p>
                     </div>
