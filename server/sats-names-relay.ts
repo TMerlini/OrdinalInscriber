@@ -1,11 +1,27 @@
 /**
  * Sats Names Relay Client
  * Based on examples from https://docs.satsnames.org/sats-names/relay-examples
+ * 
+ * Supports both WebSocket relay connection and HTTP fallback to indexer API
+ * Primary: WebSocket relay for real-time queries
+ * Fallback: HTTP API for name availability checks when relay is unavailable
  */
 
 import { WebSocket } from 'ws';
 import { EventEmitter } from 'events';
 import * as crypto from 'crypto';
+import axios from 'axios';
+
+// Primary relay server
+const PRIMARY_RELAY = 'wss://relay.satsnames.network';
+// Fallback indexer (using official SatsNames API)
+const FALLBACK_INDEXER = 'https://snserver.io/api';
+// Additional community indexers for further fallback (in order of preference)
+const COMMUNITY_INDEXERS = [
+  'https://ns0.satsnames.co/api',
+  'https://ns1.satsnames.co/api',
+  'https://ns2.satsnames.co/api'
+];
 
 // Relay event types
 export type RelayEvent = {
@@ -59,15 +75,23 @@ export class SatsNamesRelayClient extends EventEmitter {
   /**
    * Constructor
    * @param url Relay URL (default is the official Sats Names relay)
+   * @param debug Enable debug logging
    */
   constructor(
-    private url: string = 'wss://relay.satsnames.network', 
+    private url: string = PRIMARY_RELAY, 
     private debug: boolean = false
   ) {
     super();
+    
+    // Log our fallback configuration
+    this.log('Initialized with primary relay:', this.url);
+    this.log('Fallback indexer:', FALLBACK_INDEXER);
+    this.log('Community indexers:', COMMUNITY_INDEXERS);
+    
     // Try to connect but catch any error to prevent app crash
     this.connect().catch(err => {
       this.log('Initial connection failed:', err);
+      this.log('Will use fallback APIs for queries when needed');
     });
   }
 
@@ -246,27 +270,98 @@ export class SatsNamesRelayClient extends EventEmitter {
   }
 
   /**
+   * Try to fetch name availability from an HTTP indexer API
+   * @param name Name to check
+   * @param indexerUrl The indexer API URL to use
+   */
+  private async checkNameViaIndexerAPI(name: string, indexerUrl: string): Promise<NameQueryResponse> {
+    try {
+      // Attempt to fetch from the indexer API
+      const response = await axios.get(`${indexerUrl}/names/${name}`);
+      
+      // Process the response based on the indexer API format
+      if (response.data) {
+        if (response.data.error) {
+          // If the API returns an error, usually means the name is available
+          return {
+            name,
+            isAvailable: true,
+            warning: `Response from indexer API: ${response.data.error}`,
+            fallback: true
+          };
+        }
+        
+        // If we got a successful response with data, the name exists
+        return {
+          name,
+          isAvailable: false,
+          owner: response.data.owner,
+          address: response.data.address,
+          inscription_id: response.data.inscription_id,
+          registered_at: response.data.registered_at,
+          expires_at: response.data.expires_at,
+          fallback: true,
+          warning: 'Data from indexer API (WebSocket relay unavailable)'
+        };
+      }
+      
+      // Default fallback if the response format is unexpected
+      return {
+        name,
+        isAvailable: true,
+        warning: 'Unusual response from indexer API, availability might not be accurate',
+        fallback: true
+      };
+    } catch (error) {
+      // If the API request fails, log and rethrow
+      this.log(`Error querying indexer API (${indexerUrl}):`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Check if a name is available
    * @param name Name to check
    */
   async checkName(name: string): Promise<NameQueryResponse> {
     try {
+      // First try the WebSocket relay connection
       if (!this.isConnected) {
         try {
           await this.connect();
         } catch (connectError) {
-          this.log('Connection error during name check:', connectError);
-          // Return a fallback response when we can't connect to the relay
-          return {
-            name,
-            isAvailable: name.length >= 5 && 
-              !['bitcoin', 'satoshi', 'ordinal', 'ord', 'inscription'].includes(name.toLowerCase()),
-            warning: 'Relay connection unavailable. Availability status is approximate.',
-            fallback: true
-          };
+          this.log('Connection error during name check, will try fallback APIs:', connectError);
+          
+          // Try the fallback indexer API
+          try {
+            return await this.checkNameViaIndexerAPI(name, FALLBACK_INDEXER);
+          } catch (indexerError) {
+            this.log('Primary indexer API failed, trying community indexers:', indexerError);
+            
+            // Try each community indexer in sequence
+            for (const indexerUrl of COMMUNITY_INDEXERS) {
+              try {
+                return await this.checkNameViaIndexerAPI(name, indexerUrl);
+              } catch (communityIndexerError) {
+                this.log(`Community indexer ${indexerUrl} failed:`, communityIndexerError);
+                // Continue to next indexer
+              }
+            }
+            
+            // If all indexers fail, fall back to basic validation
+            this.log('All indexers failed, using basic validation');
+            return {
+              name,
+              isAvailable: name.length >= 5 && 
+                !['bitcoin', 'satoshi', 'ordinal', 'ord', 'inscription'].includes(name.toLowerCase()),
+              warning: 'All relay and indexer services unavailable. Status may not be accurate.',
+              fallback: true
+            };
+          }
         }
       }
       
+      // If we're connected to the WebSocket relay, use it
       const response = await this.request<NameQueryResponse>(
         'NAME_QUERY', 
         [name]
@@ -274,15 +369,30 @@ export class SatsNamesRelayClient extends EventEmitter {
       
       return response;
     } catch (error) {
-      this.log('Error checking name:', error);
-      // Return a fallback response on error
-      return {
-        name,
-        isAvailable: name.length >= 5 && 
-          !['bitcoin', 'satoshi', 'ordinal', 'ord', 'inscription'].includes(name.toLowerCase()),
-        warning: 'Relay error. Availability status is approximate.',
-        fallback: true
-      };
+      this.log('Error checking name via relay, trying fallback APIs:', error);
+      
+      // If relay request fails, try the fallback API
+      try {
+        return await this.checkNameViaIndexerAPI(name, FALLBACK_INDEXER);
+      } catch (fallbackError) {
+        // If fallback also fails, try community indexers
+        for (const indexerUrl of COMMUNITY_INDEXERS) {
+          try {
+            return await this.checkNameViaIndexerAPI(name, indexerUrl);
+          } catch (communityError) {
+            // Continue to next indexer
+          }
+        }
+        
+        // Last resort fallback to basic validation
+        return {
+          name,
+          isAvailable: name.length >= 5 && 
+            !['bitcoin', 'satoshi', 'ordinal', 'ord', 'inscription'].includes(name.toLowerCase()),
+          warning: 'All services unavailable. Status is based on basic validation only.',
+          fallback: true
+        };
+      }
     }
   }
   
