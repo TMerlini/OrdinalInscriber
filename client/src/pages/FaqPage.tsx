@@ -1260,3 +1260,42 @@ export default function FaqPage() {
     </div>
   );
 }
+
+          {
+            question: "What are recursive inscriptions?",
+            answer: (
+              <div>
+                <p>Recursive inscriptions are a powerful feature that allows one inscription to reference and display other inscriptions. This creates a nested structure where you can build complex compositions from multiple individual inscriptions.</p>
+                <p className="mt-2">For example, you could create an inscription that serves as a gallery or collection by referencing multiple image inscriptions you own.</p>
+              </div>
+            ),
+            id: "what-are-recursive-inscriptions"
+          },
+          {
+            question: "How do recursive inscriptions work?",
+            answer: (
+              <div>
+                <p>Recursive inscriptions work by using HTML with special reference tags:</p>
+                <ol className="list-decimal pl-6 mt-2 space-y-1">
+                  <li>The main inscription contains HTML with <code>&lt;inscription id="..."&gt;&lt;/inscription&gt;</code> tags</li>
+                  <li>Each tag references another inscription by its ID</li>
+                  <li>When the inscription is viewed in an Ordinals explorer that supports recursion, the referenced inscriptions are embedded and displayed</li>
+                  <li>This allows for creating galleries, collections, or interactive compositions</li>
+                </ol>
+              </div>
+            ),
+            id: "how-recursive-inscriptions-work"
+          },
+          {
+            question: "What's the difference between parent and recursive inscriptions?",
+            answer: (
+              <div>
+                <p>While both create relationships between inscriptions, they serve different purposes:</p>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li><strong>Parent inscriptions</strong> establish a logical hierarchical relationship between inscriptions but don't affect how they're displayed. They're primarily for organizational purposes.</li>
+                  <li><strong>Recursive inscriptions</strong> actually embed and display the referenced inscriptions within the main inscription. They're for visual composition and creating new experiences from existing inscriptions.</li>
+                </ul>
+              </div>
+            ),
+            id: "difference-parent-recursive-inscriptions"
+          }
