@@ -8,10 +8,6 @@ import FaqPage from "@/pages/FaqPage";
 import { useEffect } from "react";
 import { disableViteErrorOverlay } from "./lib/disableViteOverlay";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import TextInscriptionSection from './components/TextInscriptionSection';
-import MarkdownInscriptionSection from './components/MarkdownInscriptionSection';
-import Brc20InscriptionSection from './components/Brc20InscriptionSection';
-import RecursiveInscriptionSection from './components/RecursiveInscriptionSection';
 
 function Router() {
   return (
@@ -28,7 +24,7 @@ function App() {
   useEffect(() => {
     // Run the disableViteErrorOverlay function to aggressively remove error overlays
     const cleanup = disableViteErrorOverlay();
-
+    
     // Also attempt to remove any error overlays when page loads or changes
     const handlePageChange = () => {
       try {
@@ -39,7 +35,7 @@ function App() {
             el.parentNode.removeChild(el);
           }
         });
-
+        
         // Also try to override Vite's error handlers
         // @ts-ignore: Vite internal property
         window.__vite_plugin_react_preamble_installed__ = false;
@@ -47,13 +43,13 @@ function App() {
         // Ignore errors during cleanup
       }
     };
-
+    
     // Call once immediately
     handlePageChange();
-
+    
     // Set up listener for page changes
     window.addEventListener('popstate', handlePageChange);
-
+    
     return () => {
       cleanup();
       window.removeEventListener('popstate', handlePageChange);

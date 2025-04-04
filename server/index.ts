@@ -4,11 +4,6 @@ import { setupVite, serveStatic, log } from "./vite";
 import { networkInterfaces } from "os";
 import * as http from "http";
 import { exec } from 'child_process';
-import inscriptionsRoutes from './routes/inscriptions';
-import brc20Routes from './routes/brc20';
-import bitmapRoutes from './routes/bitmap';
-import snsRoutes from './routes/sns';
-import recursiveRoutes from './routes/recursive';
 
 const app = express();
 app.use(express.json());
@@ -75,7 +70,7 @@ app.use((req, res, next) => {
   // Add error handling for server listening
   let serverStartAttempt = 0;
   const maxAttempts = 3;
-
+  
   const startServer = () => {
     try {
       // First try to free the port if it's in use
@@ -86,20 +81,20 @@ app.use((req, res, next) => {
           reusePort: true,
         }, () => {
           log(`Primary server running on ${host}:${primaryPort}`);
-
+  
           // Instead of just showing 0.0.0.0, show all possible access URLs
           const nets = networkInterfaces() || {};
           const accessURLs: string[] = [];
-
+  
           // Always add localhost
           accessURLs.push(`http://localhost:${primaryPort}`);
-
+  
           // Add all network interfaces
           try {
             for (const name of Object.keys(nets || {})) {
               const interfaces = nets[name];
               if (!interfaces) continue;
-
+  
               for (const net of interfaces) {
                 // Skip over internal and non-IPv4 addresses
                 if (net.family === 'IPv4' && !net.internal) {
@@ -110,21 +105,21 @@ app.use((req, res, next) => {
           } catch (error) {
             console.error('Error getting network interfaces:', error);
           }
-
+  
           // Log access URLs
           log(`Application accessible at:`);
           accessURLs.forEach(url => log(`  - ${url}`));
-
+  
           log(`API endpoints available at ${accessURLs[0]}/api/*`);
           log(`Environment: ${process.env.NODE_ENV}`);
-
+  
           // Create a secondary server for Replit compatibility
           if (process.env.NODE_ENV === 'development') {
             // Use environment variable for secondary port if provided, or fallback to default logic
             const secondaryPort = process.env.SECONDARY_PORT 
               ? parseInt(process.env.SECONDARY_PORT, 10)
               : (primaryPort === 5000 ? 5001 : developmentPort);
-
+  
             // Only start secondary server if secondary port is different from primary
             if (secondaryPort !== primaryPort) {
               try {
@@ -135,7 +130,7 @@ app.use((req, res, next) => {
                     log(`Secondary development server running on ${host}:${secondaryPort} (for Replit workflow compatibility)`);
                     log(`Additional access URL: http://localhost:${secondaryPort}`);
                   });
-
+                  
                   // Handle errors gracefully
                   secondary.on('error', (err) => {
                     if ((err as any).code === 'EADDRINUSE') {
@@ -152,17 +147,17 @@ app.use((req, res, next) => {
           }
         });
       });
-
+  
       // Add error handler for primary server
       server.on('error', (err: NodeJS.ErrnoException) => {
         if (err.code === 'EADDRINUSE') {
           log(`Warning: Port ${primaryPort} already in use. Attempting to kill the process and retry...`);
-
+          
           // Try to force close the port and retry
           serverStartAttempt++;
           if (serverStartAttempt <= maxAttempts) {
             log(`Retry attempt ${serverStartAttempt}/${maxAttempts}...`);
-
+            
             // Try to kill the process using the port
             exec(`lsof -t -i:${primaryPort} | xargs kill -9 2>/dev/null || true`, () => {
               setTimeout(startServer, 1000); // Wait 1 second before retrying
@@ -178,13 +173,6 @@ app.use((req, res, next) => {
       log(`Error in startServer: ${error}`);
     }
   };
-
-  // API routes
-  app.use('/api/inscriptions', inscriptionsRoutes);
-  app.use('/api/brc20', brc20Routes);
-  app.use('/api/bitmap', bitmapRoutes);
-  app.use('/api/sns', snsRoutes);
-  app.use('/api/inscriptions/recursive', recursiveRoutes);
 
   // Start the server with retry mechanism
   startServer();
