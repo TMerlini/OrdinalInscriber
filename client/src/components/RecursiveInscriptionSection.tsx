@@ -359,9 +359,7 @@ export default function RecursiveInscriptionSection() {
                         <FormLabel className="text-sm font-medium">
                           Parent Inscription ID
                         </FormLabel>
-                        <FormDescription>
-                          <span className="text-xs">Format: [transaction_id]i[index]</span>
-                        </FormDescription>
+                        {/* Removed format description as requested */}
                         <div className="flex space-x-2">
                           <FormControl>
                             <Input 
