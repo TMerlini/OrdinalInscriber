@@ -8,26 +8,30 @@ If you're encountering issues with your Ordinarinos installation on Umbrel, firs
 
 1. **Check Bitcoin Core connectivity**:
    ```
-   docker exec -it ordinarinos curl -s --data-binary '{"jsonrpc":"1.0","id":"check","method":"getblockchaininfo","params":[]}' -H 'content-type:text/plain;' http://$BTC_RPC_USER:$BTC_RPC_PASSWORD@bitcoin.embassy:8332/
+   docker exec -it ordinarinos-inscriptions curl -s --data-binary '{"jsonrpc":"1.0","id":"check","method":"getblockchaininfo","params":[]}' -H 'content-type:text/plain;' http://$BTC_RPC_USER:$BTC_RPC_PASSWORD@bitcoin.embassy:8332/
    ```
 
-2. **Check Ord connectivity**:
+2. **Check Ord connectivity** (try both endpoints):
    ```
-   docker exec -it ordinarinos curl -s http://ord.embassy:8080/status
+   # First try the status endpoint
+   docker exec -it ordinarinos-inscriptions curl -s http://ordinals_ord_1:80/status
+   
+   # If that fails, try the root endpoint
+   docker exec -it ordinarinos-inscriptions curl -s http://ordinals_ord_1:80/
    ```
 
 ## Log Access
 
 To view the live logs from the Ordinarinos container:
 ```
-docker logs -f ordinarinos
+docker logs -f ordinarinos-inscriptions
 ```
 
 ## Configuration Check
 
 Verify your environment variables are set correctly:
 ```
-docker exec -it ordinarinos env | grep -E 'BTC_|ORD_'
+docker exec -it ordinarinos-inscriptions env | grep -E 'BTC_|ORD_'
 ```
 
 ## Checking Network Connectivity
@@ -43,6 +47,7 @@ docker network inspect embassy
 - Ensure that both Bitcoin Core and Ord are running in your Umbrel node
 - Check that the port mappings are correct in docker-compose.umbrel.yml
 - Verify that Bitcoin Core has RPC enabled
+- If using the newer Umbrel, make sure the Ord container name is correct (usually `ordinals_ord_1` not `ord`)
 
 ### 2. Application starts but shows errors
 - Check the application logs for specific error messages
@@ -75,8 +80,8 @@ docker network inspect embassy
   
   3. Verify network connectivity to the relay service:
      ```
-     docker exec -it ordinarinos ping relay.satsnames.network
-     docker exec -it ordinarinos curl -I https://relay.satsnames.network
+     docker exec -it ordinarinos-inscriptions ping relay.satsnames.network
+     docker exec -it ordinarinos-inscriptions curl -I https://relay.satsnames.network
      ```
   
   4. Common causes of relay connectivity issues:
@@ -90,19 +95,40 @@ docker network inspect embassy
      - Registration transactions will not be generated
      - Fee estimations will still be available
 
+### 5. BRC-20 and Bitmap Functionality Issues
+- These features require direct communication with the Ord node API
+- Make sure your Ord node is synced and running properly
+- Check that the container name and port settings match your Umbrel setup
+- For the latest Umbrel version, the default Ord container is `ordinals_ord_1` on port 80
+
+### 6. Container Name Detection
+- The application now has enhanced container name detection for both Bitcoin and Ord containers
+- The startup script automatically tries multiple container names when the default one fails
+- For Bitcoin, it tries: `bitcoin_bitcoind_1`, `bitcoin-1`, and `bitcoin`
+- For Ord, it tries: `ordinals_ord_1`, `ord-1`, and `ord`
+- You can check which container was detected by visiting the application's help page
+
+### 7. Using Umbrel's APP_BITCOIN_NODE_IP
+- For Umbrel OS 1.0.0+, the application uses the `APP_BITCOIN_NODE_IP` environment variable
+- This variable is automatically set by Umbrel and provides the correct IP for the Bitcoin node
+- If you're having issues with Bitcoin connectivity, check if this variable is set correctly:
+  ```
+  docker exec -it ordinarinos-inscriptions printenv | grep APP_BITCOIN_NODE_IP
+  ```
+
 ## Reinstalling
 
 If you need to reinstall the application:
 
 1. Remove the existing container:
    ```
-   docker stop ordinarinos
-   docker rm ordinarinos
+   docker stop ordinarinos-inscriptions
+   docker rm ordinarinos-inscriptions
    ```
 
 2. Delete the data directory:
    ```
-   rm -rf /home/umbrel/umbrel/app-data/ordinarinos/data
+   rm -rf /home/umbrel/umbrel/app-data/ordinarinos-inscriptions/data
    ```
 
 3. Reinstall from the Umbrel app store
@@ -110,3 +136,18 @@ If you need to reinstall the application:
 ## Support
 
 For additional support, please open an issue on our GitHub repository.
+
+### 6. Container Name Detection
+- The application now has enhanced container name detection for both Bitcoin and Ord containers
+- The startup script automatically tries multiple container names when the default one fails
+- For Bitcoin, it tries: `bitcoin_bitcoind_1`, `bitcoin-1`, and `bitcoin`
+- For Ord, it tries: `ordinals_ord_1`, `ord-1`, and `ord`
+- You can check which container was detected by visiting the application's help page
+
+### 7. Using Umbrel's APP_BITCOIN_NODE_IP
+- For Umbrel OS 1.0.0+, the application uses the `APP_BITCOIN_NODE_IP` environment variable
+- This variable is automatically set by Umbrel and provides the correct IP for the Bitcoin node
+- If you're having issues with Bitcoin connectivity, check if this variable is set correctly:
+  ```
+  docker exec -it ordinarinos-inscriptions printenv | grep APP_BITCOIN_NODE_IP
+  ```

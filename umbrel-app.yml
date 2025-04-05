@@ -10,7 +10,6 @@ developer: Ordinarinos
 website: https://github.com/ordinarinos
 dependencies:
   - bitcoin
-  - ord
 repo: https://github.com/ordinarinos/ordinarinos
 support: https://github.com/ordinarinos/ordinarinos/issues
 port: 3500
@@ -34,10 +33,10 @@ containers:
       ORD_SERVER_AVAILABLE: true
       BTC_RPC_USER: "$BITCOIN_RPC_USER"
       BTC_RPC_PASSWORD: "$BITCOIN_RPC_PASS"
-      BTC_RPC_HOST: "bitcoin.embassy"
+      BTC_RPC_HOST: "${APP_BITCOIN_NODE_IP:-bitcoin.embassy}"
       BTC_RPC_PORT: 8332
-      ORD_RPC_HOST: "ord.embassy"
-      ORD_RPC_PORT: 8080
+      ORD_RPC_HOST: "ordinals_ord_1"
+      ORD_RPC_PORT: 80
       NODE_ENV: "production"
       PORT: 3500
     mounts:

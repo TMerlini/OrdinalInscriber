@@ -184,7 +184,37 @@ function isUmbrelEnvironment(): boolean {
 
 // Get the container name based on environment
 function getOrdContainerName(): string {
-  return isUmbrelEnvironment() ? 'ord' : 'bitcoin-ordinals';
+  // First check if ORD_RPC_HOST is set, which takes precedence for container name
+  if (process.env.ORD_RPC_HOST) {
+    return process.env.ORD_RPC_HOST; // Use the hostname as container name
+  }
+  
+  // Umbrel v1 uses "ord", newer Umbrel versions use "ordinals_ord_1"
+  if (isUmbrelEnvironment()) {
+    return 'ordinals_ord_1';
+  }
+  
+  // Default fallback
+  return 'bitcoin-ordinals';
+}
+
+/**
+ * Get Bitcoin container name based on the environment
+ */
+function getBitcoinContainerName(): string {
+  // First check if BTC_RPC_HOST is set, which takes precedence
+  if (process.env.BTC_RPC_HOST) {
+    return process.env.BTC_RPC_HOST;
+  }
+  
+  // Umbrel container names can vary
+  if (isUmbrelEnvironment()) {
+    // Try different common Umbrel container names
+    return 'bitcoin_bitcoind_1';
+  }
+  
+  // Default fallback
+  return 'bitcoin';
 }
 
 /**
@@ -205,8 +235,16 @@ function getBitcoinRpcUrl(): string {
 export function getOrdApiUrl(): string {
   const host = process.env.ORD_RPC_HOST || 'ord.embassy';
   const port = process.env.ORD_RPC_PORT || '8080';
+  const baseUrl = `http://${host}:${port}`;
   
-  return `http://${host}:${port}`;
+  // Check if we're in Umbrel environment with ordinals_ord_1 container
+  if (host === 'ordinals_ord_1') {
+    console.log('Using Umbrel Ordinals configuration');
+    // The Umbrel Ord container exposes API directly at the root path
+    return baseUrl;
+  }
+  
+  return baseUrl;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -228,12 +266,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/environment', (req, res) => {
     try {
       const isUmbrel = isUmbrelEnvironment();
-      const containerName = getOrdContainerName();
+      const ordContainerName = getOrdContainerName();
+      const bitcoinContainerName = getBitcoinContainerName();
       const localIp = getLocalIpAddress();
       
       res.json({
         isUmbrel,
-        containerName,
+        ordContainerName,
+        bitcoinContainerName,
         localIp,
         directConnect: process.env.DIRECT_CONNECT === 'true',
         bitcoinAvailable: process.env.BTC_SERVER_AVAILABLE === 'true',
@@ -645,11 +685,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Container name is required' });
       }
       
-      // Actually check if the docker container exists
-      const result = await execCommand(`docker ps -q -f name=${name}`);
-      const containerExists = !result.error && result.output.trim() !== '';
-      console.log('Container exists:', containerExists);
+      // Check if we're in Umbrel environment
+      let alternativeNames: string[] = [];
+      if (isUmbrelEnvironment()) {
+        // Provide alternative container names to check in Umbrel environment
+        if (name === 'ord' || name === 'ordinals_ord_1') {
+          alternativeNames = ['ordinals_ord_1', 'ord-1', 'ord'];
+        } else if (name === 'bitcoin' || name === 'bitcoin_bitcoind_1') {
+          alternativeNames = ['bitcoin_bitcoind_1', 'bitcoin-1', 'bitcoin'];
+        }
+      }
       
+      // Try the requested name first
+      let result = await execCommand(`docker ps -q -f name=${name}`);
+      let containerExists = !result.error && result.output.trim() !== '';
+      
+      // If not found and we have alternatives, try them
+      if (!containerExists && alternativeNames.length > 0) {
+        for (const altName of alternativeNames) {
+          if (altName === name) continue; // Skip if same as original
+          
+          console.log(`Container ${name} not found, trying alternative: ${altName}`);
+          result = await execCommand(`docker ps -q -f name=${altName}`);
+          
+          if (!result.error && result.output.trim() !== '') {
+            containerExists = true;
+            console.log(`Found container with alternative name: ${altName}`);
+            break;
+          }
+        }
+      }
+      
+      console.log('Container exists:', containerExists);
       return res.json({ exists: containerExists });
     } catch (error) {
       console.error('Error checking container:', error);
@@ -948,8 +1015,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const btcStatus = await btcResponse.json();
         
         // Check Ord connection
-        const ordResponse = await fetch(`${getOrdApiUrl()}/status`);
-        const ordStatus = await ordResponse.json();
+        let ordResponse;
+        let ordStatus;
+        
+        try {
+          // First try with /status endpoint
+          ordResponse = await fetch(`${getOrdApiUrl()}/status`);
+          ordStatus = await ordResponse.json();
+        } catch (error) {
+          console.log('Error with /status endpoint, trying root endpoint for Umbrel Ord container...');
+          try {
+            // For Umbrel Ord container, try the root endpoint
+            ordResponse = await fetch(getOrdApiUrl());
+            ordStatus = await ordResponse.json();
+          } catch (innerError) {
+            console.error('Failed to connect to Ord API:', innerError);
+            throw new Error('Failed to connect to Ord API');
+          }
+        }
         
         res.json({
           bitcoin: {

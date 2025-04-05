@@ -1,2 +1,25 @@
-id: "ordinarinos" # The ID for your app store
-name: "Ordinarinos" # The name of your app store
+manifestVersion: 1
+id: ordinarinos-inscriptions
+name: Ordinarinos
+tagline: Easily inscribe Ordinals on Bitcoin
+description: >-
+  A sophisticated web-based Ordinals inscription platform that enables you to efficiently 
+  manage blockchain image uploads with precise fee calculation and optimization capabilities. 
+  Simplifies the process of transferring files to an Ordinals node and executing inscription
+  commands through an intuitive web interface.
+version: "1.0.0"
+port: 3500
+category: bitcoin
+developer: Ordinarinos
+website: https://github.com/ordinarinos
+dependencies:
+  - bitcoin
+  - ordinals
+repo: https://github.com/ordinarinos/ordinarinos
+support: https://github.com/ordinarinos/ordinarinos/issues
+gallery:
+  - https://raw.githubusercontent.com/ordinarinos/ordinarinos/main/screenshots/main.png
+  - https://raw.githubusercontent.com/ordinarinos/ordinarinos/main/screenshots/batch.png
+  - https://raw.githubusercontent.com/ordinarinos/ordinarinos/main/screenshots/brc20.png
+submitter: Ordinarinos
+submission: https://github.com/ordinarinos/ordinarinos
