@@ -7,11 +7,11 @@ tagline: "Easily inscribe Ordinals on Bitcoin"
 description: >-
   A sophisticated web-based Ordinals inscription platform that enables you to efficiently manage blockchain image uploads with precise fee calculation and optimization capabilities. Simplifies the process of transferring files to an Ordinals node and executing inscription commands through an intuitive web interface.
 developer: Ordinarinos
-website: https://github.com/ordinarinos
+website: https://github.com/TMerlini
 dependencies:
   - bitcoin
-repo: https://github.com/ordinarinos/ordinarinos
-support: https://github.com/ordinarinos/ordinarinos/issues
+repo: https://github.com/TMerlini/OrdinalInscriber.git
+support: https://github.com/TMerlini/OrdinalInscriber/issues
 port: 3500
 icon: /icon.png
 platforms:
@@ -21,7 +21,7 @@ path: ""
 defaultUsername: ""
 defaultPassword: ""
 submitter: Ordinarinos
-submission: "https://github.com/ordinarinos/ordinarinos"
+submission: "https://github.com/TMerlini/OrdinalInscriber.git"
 donate: bc1qnr5datqu7hw53w8vdvdtkmhr8pmh4sj5a0v0yf
 
 containers:

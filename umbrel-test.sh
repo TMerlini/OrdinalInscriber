@@ -25,6 +25,29 @@ echo "Checking manifest files:"
 if [ -f "/app/umbrel-app.yml" ]; then
   echo "✓ umbrel-app.yml exists"
   
+  # Check umbrel-app-store.yml
+  if [ -f "/app/umbrel-app-store.yml" ]; then
+    echo "✓ umbrel-app-store.yml exists"
+    
+    # Check repository URL in store file
+    if grep -q "repo: https://github.com/TMerlini/OrdinalInscriber" /app/umbrel-app-store.yml; then
+      echo "  ✓ Repository URL properly configured in umbrel-app-store.yml"
+    else
+      echo "  ✗ Repository URL improperly configured in umbrel-app-store.yml"
+      echo "    - Should be 'repo: https://github.com/TMerlini/OrdinalInscriber'"
+    fi
+    
+    # Check gallery URLs
+    if grep -q "TMerlini/OrdinalInscriber/main/screenshots" /app/umbrel-app-store.yml; then
+      echo "  ✓ Gallery image URLs properly configured"
+    else
+      echo "  ✗ Gallery image URLs improperly configured"
+      echo "    - Should use 'TMerlini/OrdinalInscriber/main/screenshots'"
+    fi
+  else
+    echo "✗ umbrel-app-store.yml missing!"
+  fi
+  
   # Check icon configuration
   if grep -q "icon: /icon.png" /app/umbrel-app.yml; then
     echo "  ✓ Icon properly configured in umbrel-app.yml"
@@ -39,6 +62,14 @@ if [ -f "/app/umbrel-app.yml" ]; then
   else
     echo "  ✗ Port improperly configured in umbrel-app.yml"
     echo "    - Should be 'port: 3500'"
+  fi
+  
+  # Check repository URL
+  if grep -q "repo: https://github.com/TMerlini/OrdinalInscriber" /app/umbrel-app.yml; then
+    echo "  ✓ Repository URL properly configured in umbrel-app.yml"
+  else
+    echo "  ✗ Repository URL improperly configured in umbrel-app.yml"
+    echo "    - Should be 'repo: https://github.com/TMerlini/OrdinalInscriber'"
   fi
 else
   echo "✗ umbrel-app.yml missing!"

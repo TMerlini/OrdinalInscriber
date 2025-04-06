@@ -22,6 +22,10 @@ fi
 # Print environment (without sensitive data)
 echo "Starting Ordinarinos in Umbrel environment"
 echo "----------------------------------------"
+echo "App: Ordinarinos Inscription Tool"
+echo "Version: 1.0.0"
+echo "Repository: https://github.com/TMerlini/OrdinalInscriber"
+echo "----------------------------------------"
 echo "NODE_ENV: $NODE_ENV"
 echo "PORT: $PORT"
 echo "BTC_RPC_HOST: $BTC_RPC_HOST"

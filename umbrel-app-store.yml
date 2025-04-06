@@ -11,16 +11,16 @@ version: "1.0.0"
 port: 3500
 category: bitcoin
 developer: Ordinarinos
-website: https://github.com/ordinarinos
+website: https://github.com/TMerlini
 dependencies:
   - bitcoin
   - ordinals
-repo: https://github.com/ordinarinos/ordinarinos
-support: https://github.com/ordinarinos/ordinarinos/issues
+repo: https://github.com/TMerlini/OrdinalInscriber.git
+support: https://github.com/TMerlini/OrdinalInscriber/issues
 icon: /icon.png
 gallery:
-  - https://raw.githubusercontent.com/ordinarinos/ordinarinos/main/screenshots/main.png
-  - https://raw.githubusercontent.com/ordinarinos/ordinarinos/main/screenshots/batch.png
-  - https://raw.githubusercontent.com/ordinarinos/ordinarinos/main/screenshots/brc20.png
+  - https://raw.githubusercontent.com/TMerlini/OrdinalInscriber/main/screenshots/main.png
+  - https://raw.githubusercontent.com/TMerlini/OrdinalInscriber/main/screenshots/batch.png
+  - https://raw.githubusercontent.com/TMerlini/OrdinalInscriber/main/screenshots/brc20.png
 submitter: Ordinarinos
-submission: https://github.com/ordinarinos/ordinarinos
+submission: https://github.com/TMerlini/OrdinalInscriber.git
