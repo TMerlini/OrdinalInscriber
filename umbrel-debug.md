@@ -133,6 +133,38 @@ If you need to reinstall the application:
 
 3. Reinstall from the Umbrel app store
 
+## Diagnostic Tool
+
+Ordinarinos includes a built-in diagnostic tool that can help identify and resolve common installation issues:
+
+```bash
+# Run the diagnostic tool in the Docker container
+docker exec -it ordinarinos-inscriptions /usr/local/bin/start-umbrel.sh --diagnose
+```
+
+This tool will check:
+- Proper icon placement for app store visibility
+- Configuration of manifest files
+- Network connectivity to Bitcoin and Ord containers
+- Environment variables
+- Docker and Docker Compose installation
+
+## Diagnostic Tool
+
+Ordinarinos includes a built-in diagnostic tool that can help identify and resolve common installation issues:
+
+```bash
+# Run the diagnostic tool in the Docker container
+docker exec -it ordinarinos-inscriptions /usr/local/bin/start-umbrel.sh --diagnose
+```
+
+This tool will check:
+- Proper icon placement for app store visibility
+- Configuration of manifest files
+- Network connectivity to Bitcoin and Ord containers
+- Environment variables
+- Docker and Docker Compose installation
+
 ## Support
 
 For additional support, please open an issue on our GitHub repository.

@@ -17,6 +17,7 @@ dependencies:
   - ordinals
 repo: https://github.com/ordinarinos/ordinarinos
 support: https://github.com/ordinarinos/ordinarinos/issues
+icon: /icon.png
 gallery:
   - https://raw.githubusercontent.com/ordinarinos/ordinarinos/main/screenshots/main.png
   - https://raw.githubusercontent.com/ordinarinos/ordinarinos/main/screenshots/batch.png

@@ -2,6 +2,13 @@
 
 # Ordinarinos Umbrel Startup Script
 
+# Check for diagnostic mode
+if [ "$1" = "--diagnose" ] || [ "$1" = "-d" ]; then
+  echo "Running in diagnostic mode"
+  /usr/local/bin/umbrel-test.sh
+  exit 0
+fi
+
 # Set APP_BITCOIN_NODE_IP from environment or use default
 if [ -z "$APP_BITCOIN_NODE_IP" ]; then
   echo "APP_BITCOIN_NODE_IP not set, using default bitcoin.embassy"

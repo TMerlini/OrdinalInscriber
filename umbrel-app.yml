@@ -13,7 +13,7 @@ dependencies:
 repo: https://github.com/ordinarinos/ordinarinos
 support: https://github.com/ordinarinos/ordinarinos/issues
 port: 3500
-icon: https://raw.githubusercontent.com/ordinarinos/ordinarinos/main/generated-icon.png
+icon: /icon.png
 platforms:
   - "linux/amd64"
   - "linux/arm64"
