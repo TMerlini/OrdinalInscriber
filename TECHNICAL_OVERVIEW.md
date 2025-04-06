@@ -216,3 +216,48 @@ The application includes a comprehensive recursive inscription system that enabl
    - Applying visual effects and transformations to inscriptions
    - Creating interactive displays and experiences
    - Establishing on-chain relationships between inscriptions
+
+## Umbrel Integration
+
+The application is designed to operate seamlessly within the Umbrel environment, a popular self-hosting platform for Bitcoin and Lightning Network applications.
+
+### Container Detection and Communication
+
+1. **Dynamic Container Detection**:
+   - Automatically detects and attempts connections to various container naming patterns:
+   - Bitcoin containers: `bitcoin_bitcoind_1`, `bitcoin-1`, `bitcoin`
+   - Ordinals containers: `ordinals_ord_1`, `ord-1`, `ord`
+   - App Proxy containers: `ordinals_app_proxy_1`
+
+2. **App Proxy Support**:
+   - New in this version is support for Umbrel's app-proxy architecture
+   - The app-proxy (`ordinals_app_proxy_1`) sits between applications and the Ord service
+   - Provides additional routing, security, and access control
+   - Usually operates on port 4000 instead of the standard port 80
+   - Configuration via `USE_APP_PROXY` environment variable
+
+3. **Multiple Endpoint Testing**:
+   - Tests root endpoint `/` and `/status` for different services
+   - Automatically adjusts port numbers for standard services (80) vs app-proxy (4000)
+   - Hierarchical fallback ensures robust connectivity in varied environments
+
+### Environment Variables
+
+The application respects several Umbrel-specific environment variables:
+
+- `APP_BITCOIN_NODE_IP`: IP address of the Bitcoin node (set by Umbrel)
+- `USE_APP_PROXY`: When set to "true", uses the app-proxy container instead of direct Ord connection
+- `ORD_RPC_PORT`: Defaults to 80 for standard Ord service, 4000 for app-proxy
+- `DIRECT_CONNECT`: Controls whether to attempt direct container connections
+- `BTC_SERVER_AVAILABLE` and `ORD_SERVER_AVAILABLE`: Status flags for service availability
+
+### Startup Process
+
+The startup sequence in `start-umbrel.sh` handles:
+
+1. Detecting available containers and their naming patterns
+2. Testing connectivity to Bitcoin node and Ord services
+3. Attempting connection through app-proxy if direct connection fails
+4. Setting appropriate environment variables based on detection results
+5. Creating required data directories with proper permissions
+

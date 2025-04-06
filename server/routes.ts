@@ -189,8 +189,15 @@ function getOrdContainerName(): string {
     return process.env.ORD_RPC_HOST; // Use the hostname as container name
   }
   
-  // Umbrel v1 uses "ord", newer Umbrel versions use "ordinals_ord_1"
+  // Umbrel environment detection
   if (isUmbrelEnvironment()) {
+    // Check for ordinals_app_proxy_1 container, which may be used instead
+    if (process.env.USE_APP_PROXY === 'true') {
+      console.log('Using app_proxy for Ord access (from environment variable)');
+      return 'ordinals_app_proxy_1';
+    }
+    
+    // Default to ordinals_ord_1 for Umbrel v2+
     return 'ordinals_ord_1';
   }
   
@@ -235,13 +242,19 @@ function getBitcoinRpcUrl(): string {
 export function getOrdApiUrl(): string {
   const host = process.env.ORD_RPC_HOST || 'ord.embassy';
   const port = process.env.ORD_RPC_PORT || '8080';
+  
+  // If we're using app_proxy, use port 4000 by default unless specifically configured
+  if (host === 'ordinals_app_proxy_1' && process.env.USE_APP_PROXY === 'true' && !process.env.ORD_RPC_PORT) {
+    console.log(`Using app_proxy configuration (${host}:4000)`);
+    return `http://${host}:4000`;
+  }
+  
+  // Otherwise use the configured port
   const baseUrl = `http://${host}:${port}`;
   
-  // Check if we're in Umbrel environment with ordinals_ord_1 container
-  if (host === 'ordinals_ord_1') {
-    console.log('Using Umbrel Ordinals configuration');
-    // The Umbrel Ord container exposes API directly at the root path
-    return baseUrl;
+  // Check if we're in Umbrel environment with ordinals containers
+  if (host === 'ordinals_ord_1' || host === 'ordinals_app_proxy_1') {
+    console.log(`Using Umbrel Ordinals configuration (${host}:${port})`);
   }
   
   return baseUrl;
@@ -277,7 +290,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         localIp,
         directConnect: process.env.DIRECT_CONNECT === 'true',
         bitcoinAvailable: process.env.BTC_SERVER_AVAILABLE === 'true',
-        ordAvailable: process.env.ORD_SERVER_AVAILABLE === 'true'
+        ordAvailable: process.env.ORD_SERVER_AVAILABLE === 'true',
+        usingAppProxy: process.env.USE_APP_PROXY === 'true',
+        ordPort: process.env.ORD_RPC_PORT || '80'
       });
     } catch (error) {
       console.error('Error getting environment info:', error);
@@ -689,8 +704,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let alternativeNames: string[] = [];
       if (isUmbrelEnvironment()) {
         // Provide alternative container names to check in Umbrel environment
-        if (name === 'ord' || name === 'ordinals_ord_1') {
-          alternativeNames = ['ordinals_ord_1', 'ord-1', 'ord'];
+        if (name === 'ord' || name === 'ordinals_ord_1' || name === 'ordinals_app_proxy_1') {
+          alternativeNames = ['ordinals_ord_1', 'ordinals_app_proxy_1', 'ord-1', 'ord'];
         } else if (name === 'bitcoin' || name === 'bitcoin_bitcoind_1') {
           alternativeNames = ['bitcoin_bitcoind_1', 'bitcoin-1', 'bitcoin'];
         }

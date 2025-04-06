@@ -20,6 +20,10 @@ RUN npm run build
 # Create directory for inscriptions
 RUN mkdir -p /ord/data
 
+# Set default environment variables
+ENV USE_APP_PROXY=false
+ENV ORD_RPC_PORT=80
+
 # Expose port
 EXPOSE 3500
 

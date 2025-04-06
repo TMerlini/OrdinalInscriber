@@ -74,7 +74,7 @@ if [ "$DIRECT_CONNECT" = "true" ]; then
       echo "Trying alternative Ordinals hosts..."
       
       # Try alternative Ordinals node names
-      ALTERNATIVE_ORD_HOSTS=("ordinals_ord_1" "ord-1" "ord")
+      ALTERNATIVE_ORD_HOSTS=("ordinals_ord_1" "ordinals_app_proxy_1" "ord-1" "ord")
       for ALT_ORD_HOST in "${ALTERNATIVE_ORD_HOSTS[@]}"; do
         if [ "$ALT_ORD_HOST" != "$ORD_RPC_HOST" ]; then
           echo "Trying alternative Ord host: $ALT_ORD_HOST"
@@ -93,6 +93,20 @@ if [ "$DIRECT_CONNECT" = "true" ]; then
               export ORD_RPC_HOST="$ALT_ORD_HOST"
               export ORD_SERVER_AVAILABLE=true
               break
+            fi
+            
+            # If this is the app_proxy, try port 4000 which is commonly used for it
+            if [ "$ALT_ORD_HOST" = "ordinals_app_proxy_1" ]; then
+              echo "Trying app_proxy on port 4000..."
+              APP_PROXY_CHECK=$(curl -s -m 5 --fail http://$ALT_ORD_HOST:4000/ 2>/dev/null || echo "failed")
+              if [ "$APP_PROXY_CHECK" != "failed" ]; then
+                echo "App proxy connection successful on port 4000"
+                export ORD_RPC_HOST="$ALT_ORD_HOST"
+                export ORD_RPC_PORT="4000"
+                export ORD_SERVER_AVAILABLE=true
+                export USE_APP_PROXY=true
+                break
+              fi
             fi
           fi
         fi
@@ -115,8 +129,12 @@ echo "----------------------------------------"
 echo "Detected configuration:"
 echo "BTC_RPC_HOST: $BTC_RPC_HOST"
 echo "ORD_RPC_HOST: $ORD_RPC_HOST"
+echo "ORD_RPC_PORT: $ORD_RPC_PORT"
 echo "BTC_SERVER_AVAILABLE: $BTC_SERVER_AVAILABLE"
 echo "ORD_SERVER_AVAILABLE: $ORD_SERVER_AVAILABLE"
+if [ "$USE_APP_PROXY" = "true" ]; then
+  echo "USING APP PROXY: yes"
+fi
 echo "----------------------------------------"
 
 # Ensure the ord data directory exists with proper permissions

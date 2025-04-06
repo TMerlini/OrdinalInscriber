@@ -151,3 +151,15 @@ For additional support, please open an issue on our GitHub repository.
   ```
   docker exec -it ordinarinos-inscriptions printenv | grep APP_BITCOIN_NODE_IP
   ```
+
+### 8. Ordinals App Proxy
+- Umbrel uses an app-proxy container (`ordinals_app_proxy_1`) that sits in front of the Ord container
+- This proxy handles routing and access control for the ordinals application
+- The application now supports connecting through either the direct Ord container or via the app proxy
+- If you're having connectivity issues with the Ord container, try using the app proxy instead
+  ```
+  # Set environment variable to use app proxy
+  docker exec -it ordinarinos-inscriptions env USE_APP_PROXY=true
+  ```
+- The app proxy typically runs on port 4000 instead of the default Ord port 80
+- The application automatically detects and adapts to the proxy configuration
