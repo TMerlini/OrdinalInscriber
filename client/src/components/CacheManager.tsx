@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Trash2, RefreshCw, Database, Eye, ExternalLink, XCircle } from "lucide-react";
+import { Trash2, RefreshCw, Database, Eye, ExternalLink, XCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -24,12 +24,27 @@ export default function CacheManager() {
   const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
   const [previewFile, setPreviewFile] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<boolean>(false);
 
   // Fetch cache info
   const { data: cacheInfo, isLoading, refetch } = useQuery<CacheInfo>({
     queryKey: ['/api/cache/info'],
     refetchOnWindowFocus: false
   });
+
+  // Effect to set up preview URL when previewFile changes
+  useEffect(() => {
+    if (previewFile) {
+      // Create a unique URL with a timestamp to prevent caching
+      const timestamp = new Date().getTime();
+      setPreviewUrl(`/api/cache/file/${previewFile}?t=${timestamp}`);
+      setImageError(false);
+    } else {
+      setPreviewUrl(null);
+      setImageError(false);
+    }
+  }, [previewFile]);
 
   // Clear cache mutation
   const clearCache = useMutation({
@@ -109,6 +124,21 @@ export default function CacheManager() {
   const isImageFile = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase();
     return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '');
+  };
+
+  // Handle image load error
+  const handleImageError = () => {
+    setImageError(true);
+    console.error('Failed to load image:', previewFile);
+  };
+
+  // Retry loading the image
+  const retryImageLoad = () => {
+    if (previewFile) {
+      const timestamp = new Date().getTime();
+      setPreviewUrl(`/api/cache/file/${previewFile}?t=${timestamp}`);
+      setImageError(false);
+    }
   };
 
   if (isLoading || !cacheInfo) {
@@ -273,12 +303,35 @@ export default function CacheManager() {
                 <XCircle className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-4 overflow-auto max-h-[70vh]">
-              <img 
-                src={`/api/cache/file/${previewFile}`} 
-                alt={previewFile}
-                className="max-w-full h-auto mx-auto"
-              />
+            <div className="p-4 overflow-auto max-h-[70vh] flex items-center justify-center">
+              {imageError ? (
+                <div className="text-center p-6">
+                  <AlertTriangle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+                  <p className="text-gray-700 dark:text-gray-300 mb-4">Failed to load the image. The file may no longer exist or be accessible.</p>
+                  <div className="flex justify-center space-x-4">
+                    <Button onClick={retryImageLoad} variant="outline">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry
+                    </Button>
+                    <Button onClick={() => handleDeleteFile(previewFile)} variant="destructive">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete File
+                    </Button>
+                  </div>
+                </div>
+              ) : previewUrl ? (
+                <img 
+                  src={previewUrl} 
+                  alt={previewFile}
+                  className="max-w-full h-auto mx-auto"
+                  onError={handleImageError}
+                />
+              ) : (
+                <div className="flex items-center justify-center">
+                  <RefreshCw className="h-8 w-8 animate-spin text-orange-500" />
+                  <span className="ml-2 text-gray-600 dark:text-gray-400">Loading...</span>
+                </div>
+              )}
             </div>
             <div className="p-4 flex justify-between border-t border-gray-200 dark:border-navy-700">
               <Button

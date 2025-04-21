@@ -1,19 +1,21 @@
-import type { Express } from "express";
-import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import multer from "multer";
-import path from "path";
-import fs from "fs/promises";
+import express, { Express, Request, Response } from 'express';
+import multer from 'multer';
+import { createServer, Server } from 'http';
 import { execCommand, startWebServer, stopWebServer, checkNetworkConnectivity } from "./cmd-executor";
+import cors from 'cors';
+import path from 'path';
+import os from 'os';
+import fs from 'fs';
+import { promises as fsPromises } from 'fs';
+import sharp from 'sharp';
 import { getCacheInfo, clearAllCachedFiles, cleanCacheIfNeeded } from "./cache-manager";
-import os from "os";
 import { networkInterfaces } from "os";
-import sharp from "sharp";
 import snsRoutes from "./routes/sns";
 import inscriptionsRoutes from "./routes/inscriptions";
 import { registerBitmapRoutes } from "./routes/bitmap";
 import { registerBrc20Routes } from "./routes/brc20";
 import { registerRecursiveRoutes } from "./routes/recursive";
+import errorLogger from './errorLogger';
 
 // SNS Registry Address (this would be the official SNS registry address in production)
 const SNS_REGISTRY_ADDRESS = "bc1qe8grz79ej3ywxkfcdchrncfl5antlc9tzmy5c2";
@@ -319,6 +321,115 @@ export function getOrdApiUrl(): string {
   return baseUrl;
 }
 
+// Fee cache to avoid frequent API calls
+let feeCache = {
+  estimates: null,
+  lastUpdated: 0,
+  ttl: 5 * 60 * 1000 // 5 minutes
+};
+
+/**
+ * Get fee estimates from multiple sources
+ */
+async function getBitcoinFeeEstimates() {
+  // Check cache first
+  if (feeCache.estimates && (Date.now() - feeCache.lastUpdated < feeCache.ttl)) {
+    console.log('Using cached fee estimates');
+    return feeCache.estimates;
+  }
+
+  // Try Bitcoin Core first (if running in Umbrel environment)
+  try {
+    const isUmbrel = isUmbrelEnvironment();
+    if (isUmbrel) {
+      const bitcoinContainer = getBitcoinContainerName();
+      if (bitcoinContainer) {
+        console.log('Getting fee estimates from Bitcoin Core');
+        
+        // Call estimatesmartfee for different confirmation targets
+        const oneBlockCmd = await execCommand(`docker exec ${bitcoinContainer} bitcoin-cli estimatesmartfee 1`);
+        const threeBlockCmd = await execCommand(`docker exec ${bitcoinContainer} bitcoin-cli estimatesmartfee 3`);
+        const sixBlockCmd = await execCommand(`docker exec ${bitcoinContainer} bitcoin-cli estimatesmartfee 6`);
+        
+        if (!oneBlockCmd.error && !threeBlockCmd.error && !sixBlockCmd.error) {
+          try {
+            const oneBlock = JSON.parse(oneBlockCmd.output);
+            const threeBlock = JSON.parse(threeBlockCmd.output);
+            const sixBlock = JSON.parse(sixBlockCmd.output);
+            
+            // Convert BTC/kB to sat/vB
+            const oneBlockFee = Math.ceil((oneBlock.feerate || 0.0001) * 100000);
+            const threeBlockFee = Math.ceil((threeBlock.feerate || 0.00005) * 100000);
+            const sixBlockFee = Math.ceil((sixBlock.feerate || 0.00002) * 100000);
+            
+            const estimates = {
+              economyFee: sixBlockFee || 2,
+              standardFee: threeBlockFee || 5,
+              priorityFee: oneBlockFee || 10,
+              currentMempool: threeBlockFee || 4,
+              source: 'bitcoin_core'
+            };
+            
+            // Update cache
+            feeCache.estimates = estimates;
+            feeCache.lastUpdated = Date.now();
+            
+            return estimates;
+          } catch (parseErr) {
+            console.error('Error parsing Bitcoin Core response:', parseErr);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error getting fees from Bitcoin Core:', err);
+  }
+  
+  // Fallback to public API
+  try {
+    console.log('Getting fee estimates from mempool.space API');
+    
+    // Try mempool.space API
+    const response = await fetch('https://mempool.space/api/v1/fees/recommended');
+    if (response.ok) {
+      const data = await response.json();
+      
+      const estimates = {
+        economyFee: data.economyFee || 2,
+        standardFee: data.halfHourFee || 5,
+        priorityFee: data.fastestFee || 10,
+        currentMempool: data.hourFee || 4,
+        mempoolMinFee: data.minimumFee || 1,
+        source: 'mempool.space'
+      };
+      
+      // Update cache
+      feeCache.estimates = estimates;
+      feeCache.lastUpdated = Date.now();
+      
+      return estimates;
+    }
+  } catch (err) {
+    console.error('Error getting fees from mempool.space API:', err);
+  }
+  
+  // Final fallback - static reasonable values
+  const fallbackEstimates = {
+    economyFee: 2,
+    standardFee: 5,
+    priorityFee: 10,
+    currentMempool: 4,
+    mempoolMinFee: 1,
+    source: 'static_fallback'
+  };
+  
+  // Update cache even with fallback
+  feeCache.estimates = fallbackEstimates;
+  feeCache.lastUpdated = Date.now();
+  
+  return fallbackEstimates;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Log Umbrel environment if detected
   if (isUmbrelEnvironment()) {
@@ -435,10 +546,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filePath = path.join(tmpDir, safeFileName);
       
       // Write the content to the file
-      await fs.writeFile(filePath, content, 'utf-8');
+      await fsPromises.writeFile(filePath, content, 'utf-8');
       
       // Get file stats
-      const stats = await fs.stat(filePath);
+      const stats = await fsPromises.stat(filePath);
       
       // Check cache limit and clean if needed
       await cleanCacheIfNeeded();
@@ -472,13 +583,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if file exists
       try {
-        await fs.access(filePath);
+        await fsPromises.access(filePath);
       } catch (err) {
         return res.status(404).json({ error: 'File not found' });
       }
       
       // Delete the file
-      await fs.unlink(filePath);
+      await fsPromises.unlink(filePath);
       
       res.json({
         success: true,
@@ -503,15 +614,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if file exists
       try {
-        await fs.access(filePath);
+        await fsPromises.access(filePath, fs.constants.R_OK);
       } catch (err) {
-        return res.status(404).json({ error: 'File not found' });
+        console.error(`File not found or not readable: ${filePath}`, err);
+        return res.status(404).json({ 
+          error: 'File not found or not readable',
+          details: `Could not access ${filename} in temporary directory. It may have been cleaned up by the system.`
+        });
       }
       
-      res.sendFile(filePath);
+      // Get file stats to determine content type
+      const stats = await fsPromises.stat(filePath);
+      if (!stats.isFile()) {
+        return res.status(400).json({ error: 'Not a file' });
+      }
+      
+      // Set appropriate content type based on file extension
+      const ext = path.extname(filename).toLowerCase();
+      let contentType = 'application/octet-stream'; // Default
+      
+      if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+      else if (ext === '.png') contentType = 'image/png';
+      else if (ext === '.webp') contentType = 'image/webp';
+      else if (ext === '.gif') contentType = 'image/gif';
+      else if (ext === '.txt' || ext === '.text') contentType = 'text/plain';
+      else if (ext === '.md' || ext === '.markdown') contentType = 'text/markdown';
+      else if (ext === '.glb') contentType = 'model/gltf-binary';
+      else if (ext === '.gltf') contentType = 'model/gltf+json';
+      
+      // Set CORS headers to ensure images can be loaded in the browser
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.setHeader('Content-Type', contentType);
+      
+      // Stream the file instead of loading it all into memory
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.on('error', (error) => {
+        console.error(`Error streaming file ${filePath}:`, error);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Error streaming file', message: error.message });
+        }
+      });
+      
+      fileStream.pipe(res);
     } catch (error) {
       console.error('Error serving file:', error);
-      res.status(500).json({ error: 'Failed to serve file' });
+      res.status(500).json({ 
+        error: 'Failed to serve file',
+        message: error instanceof Error ? error.message : String(error)
+      });
     }
   });
   
@@ -550,7 +702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           metadataFilePath = path.join(os.tmpdir(), metadataFileName);
           
           // Write the metadata JSON to a temporary file
-          await fs.writeFile(metadataFilePath, config.metadataJson, 'utf8');
+          await fsPromises.writeFile(metadataFilePath, config.metadataJson, 'utf8');
           
           // Command to copy metadata file to container
           commands.push(`\n# Step 2: Copy metadata file to container`);
@@ -622,6 +774,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Execute the serve command (run a local web server)
   app.post('/api/execute/serve', upload.single('file'), async (req, res) => {
+    // Create a variable to track if the response has been sent to avoid "headers already sent" errors
+    let responseSent = false;
+    
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -639,10 +794,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Environment variables: DIRECT_CONNECT=${process.env.DIRECT_CONNECT}, BTC_SERVER_AVAILABLE=${process.env.BTC_SERVER_AVAILABLE}, ORD_SERVER_AVAILABLE=${process.env.ORD_SERVER_AVAILABLE}`);
       console.log(`Additional debug: OS=${process.platform}, NodeJS=${process.version}`);
       
+      // Add a timeout handler to send an error response if the operation takes too long
+      const timeoutId = setTimeout(() => {
+        if (!responseSent) {
+          responseSent = true;
+          console.error('Operation timed out on server');
+          res.status(504).json({ 
+            error: true, 
+            output: 'Operation timed out. The server took too long to process the file. Try a smaller file or disable image optimization.' 
+          });
+          
+          // Log additional debug info about the file and container
+          errorLogger.log('Timeout in /api/execute/serve', 'api_timeout', {
+            fileName: originalFileName,
+            fileSize: file.size,
+            fileType: file.mimetype,
+            tempPath: filePath
+          });
+        }
+      }, 90000); // 90 second timeout
+      
       // Parse config
       const config = req.body.config ? JSON.parse(req.body.config) : {};
       
-      // Optimize image if needed
+      // Make image optimization optional and more efficient
+      let imageOptimized = false;
       if (config.optimizeImage && 
           file.mimetype.match(/^image\/(jpeg|jpg|png)$/) && 
           file.size > (46 * 1024)) {
@@ -651,27 +827,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const newFilePath = path.join(path.dirname(file.path), newFileName);
           
           console.log(`Optimizing image to WebP: ${newFilePath}`);
+          
+          // Use a more efficient optimization configuration
           await sharp(file.path)
-            .resize(1000)
+            .resize({ width: 1000, withoutEnlargement: true }) // Only resize if larger than 1000px
             .webp({ 
               quality: 80,
-              lossless: false,
-              nearLossless: false,
-              effort: 6
+              effort: 4 // Lower effort for faster processing
             })
             .toFile(newFilePath);
           
-          const optimizedStats = await fs.stat(newFilePath);
+          const optimizedStats = await fsPromises.stat(newFilePath);
           
           if (optimizedStats.size < file.size) {
             filePath = newFilePath;
+            imageOptimized = true;
             console.log(`Optimized ${originalFileName} from ${formatByteSize(file.size)} to ${formatByteSize(optimizedStats.size)}`);
           } else {
-            await fs.unlink(newFilePath).catch(() => {});
+            await fsPromises.unlink(newFilePath).catch(() => {});
             console.log(`Optimization did not reduce file size, using original`);
           }
         } catch (err) {
           console.error('Error optimizing image:', err);
+          // Continue with original file if optimization fails
         }
       }
       
@@ -688,7 +866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let copyError = '';
       
       try {
-        // First verify the container exists
+        // First verify the container exists with a short timeout
         console.log('Verifying container exists...');
         const containerCheck = await execCommand(`docker ps -q -f name=${containerName}`);
         const containerExists = !containerCheck.error && containerCheck.output.trim() !== '';
@@ -722,9 +900,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error(copyError);
           }
         } else {
-          // Copy to the primary container
+          // Copy to the primary container - increase timeout here
           console.log(`Container ${containerName} found, copying file...`);
-          const copyResult = await execCommand(`docker cp "${filePath}" ${containerName}:${containerPath}${fileName}`);
+          const copyCommand = `docker cp "${filePath}" ${containerName}:${containerPath}${fileName}`;
+          console.log(`Executing: ${copyCommand}`);
+          
+          // Execute with longer timeout for large files
+          const copyResult = await execCommand(copyCommand);
           
           if (!copyResult.error) {
             copySuccess = true;
@@ -739,76 +921,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Exception during file copy:', err);
       }
       
+      // Clear the timeout as we're about to send the response
+      clearTimeout(timeoutId);
+      
       // Track completion time for performance monitoring
       const elapsedTime = Date.now() - startTime;
       console.log(`File copy operation completed in ${elapsedTime}ms, success: ${copySuccess}`);
       
-      // Prepare response based on copy success
-      if (copySuccess) {
-        // Successfully copied - return container path
-        console.log('======= DEBUG: SERVE REQUEST END (SUCCESS) =======');
-        return res.json({
-          error: false,
-          direct_copy: true,
-          elapsedTime,
-          output: `File successfully copied to ord container.\nContainer path: ${containerPath}${fileName}\n\nYou can now use this path in your inscription command.`
-        });
-      } else {
-        // Failed to copy - provide full diagnostic info and alternatives
-        console.log('======= DEBUG: SERVE REQUEST END (MANUAL ALTERNATIVES) =======');
+      // Only send response if it hasn't been sent already (by timeout)
+      if (!responseSent) {
+        responseSent = true;
         
-        // Check if container exists again
-        const containerCheck = await execCommand(`docker ps -q -f name=${containerName}`);
-        const containerExists = !containerCheck.error && containerCheck.output.trim() !== '';
-        
-        let outputMessage = `Unable to automatically copy file to container.\n\n`;
-        
-        if (!containerExists) {
-          outputMessage += `The container "${containerName}" doesn't seem to be running. Please check your Umbrel setup.\n\n`;
-          outputMessage += `Available containers: `;
-          
-          try {
-            const listContainers = await execCommand(`docker ps --format "{{.Names}}"`);
-            if (!listContainers.error) {
-              outputMessage += listContainers.output.split('\n').join(', ') + '\n\n';
-            } else {
-              outputMessage += 'Unable to list containers.\n\n';
-            }
-          } catch (err) {
-            outputMessage += `Unable to list containers: ${err}\n\n`;
-          }
-        } else if (copyError.includes("executable file not found in $PATH")) {
-          outputMessage += `The container is missing required tools. This is expected in minimal containers.\n\n`;
+        // Prepare response based on copy success
+        if (copySuccess) {
+          // Successfully copied - return container path
+          console.log('======= DEBUG: SERVE REQUEST END (SUCCESS) =======');
+          return res.json({
+            error: false,
+            direct_copy: true,
+            elapsedTime,
+            imageOptimized,
+            originalSize: file.size,
+            output: `File successfully copied to ord container.\nContainer path: ${containerPath}${fileName}\n\nYou can now use this path in your inscription command.`
+          });
         } else {
-          outputMessage += `Error: ${copyError}\n\n`;
+          // Failed to copy - provide full diagnostic info and alternatives
+          console.log('======= DEBUG: SERVE REQUEST END (MANUAL ALTERNATIVES) =======');
+          
+          // Check if container exists again
+          const containerCheck = await execCommand(`docker ps -q -f name=${containerName}`);
+          const containerExists = !containerCheck.error && containerCheck.output.trim() !== '';
+          
+          let outputMessage = `Unable to automatically copy file to container.\n\n`;
+          
+          if (!containerExists) {
+            outputMessage += `The container "${containerName}" doesn't seem to be running. Please check your Umbrel setup.\n\n`;
+            outputMessage += `Available containers: `;
+            
+            try {
+              const listContainers = await execCommand(`docker ps --format "{{.Names}}"`);
+              if (!listContainers.error) {
+                outputMessage += listContainers.output.split('\n').join(', ') + '\n\n';
+              } else {
+                outputMessage += 'Unable to list containers.\n\n';
+              }
+            } catch (err) {
+              outputMessage += `Unable to list containers: ${err}\n\n`;
+            }
+          } else if (copyError.includes("executable file not found in $PATH")) {
+            outputMessage += `The container is missing required tools. This is expected in minimal containers.\n\n`;
+          } else {
+            outputMessage += `Error: ${copyError}\n\n`;
+          }
+          
+          outputMessage += `MANUAL FILE TRANSFER OPTIONS:\n\n`;
+          outputMessage += `1. Direct Docker Copy (recommended for Umbrel):\n`;
+          outputMessage += `   docker cp "${filePath}" ${containerName}:${containerPath}${fileName}\n\n`;
+          
+          outputMessage += `2. Using shared volumes (if available):\n`;
+          outputMessage += `   Copy the file to a location that's mounted in the container.\n`;
+          outputMessage += `   Source file: ${filePath}\n\n`;
+          
+          outputMessage += `Once you've transferred the file, use this path in your inscription command:\n`;
+          outputMessage += `${containerPath}${fileName}`;
+          
+          return res.json({
+            error: false,
+            containerExists,
+            elapsedTime,
+            originalError: copyError,
+            output: outputMessage
+          });
         }
-        
-        outputMessage += `MANUAL FILE TRANSFER OPTIONS:\n\n`;
-        outputMessage += `1. Direct Docker Copy (recommended for Umbrel):\n`;
-        outputMessage += `   docker cp "${filePath}" ${containerName}:${containerPath}${fileName}\n\n`;
-        
-        outputMessage += `2. Using shared volumes (if available):\n`;
-        outputMessage += `   Copy the file to a location that's mounted in the container.\n`;
-        outputMessage += `   Source file: ${filePath}\n\n`;
-        
-        outputMessage += `Once you've transferred the file, use this path in your inscription command:\n`;
-        outputMessage += `${containerPath}${fileName}`;
-        
-        return res.json({
-          error: false,
-          containerExists,
-          elapsedTime,
-          originalError: copyError,
-          output: outputMessage
-        });
       }
     } catch (error) {
-      console.error('Error serving file:', error);
-      res.status(500).json({ 
-        error: true,
-        output: String(error),
-        stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
-      });
+      // Only send error response if one hasn't been sent yet
+      if (!responseSent) {
+        responseSent = true;
+        console.error('Error serving file:', error);
+        errorLogger.logApiError(error, req, res);
+        res.status(500).json({ 
+          error: true,
+          output: String(error),
+          stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
+        });
+      }
     }
   });
   
@@ -1018,7 +1215,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Inscribe the file
   app.post('/api/execute/inscribe', async (req, res) => {
     try {
-      const { command, fileName, fileType, satoshiType } = req.body;
+      const { 
+        command, 
+        fileName, 
+        fileType, 
+        satoshiType, 
+        includeMetadata, 
+        metadataJson, 
+        parentId,
+        destination 
+      } = req.body;
       
       // Create a new inscription status entry first
       let inscriptionStatusId = '';
@@ -1047,38 +1253,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue with the inscription even if status creation fails
       }
       
-      // Execute the inscription command
-      const result = await execCommand(command);
+      // If metadata is provided, handle it
+      let metadataPath = '';
+      let modifiedCommand = command;
       
-      // Try to parse the output for inscription details
-      let inscriptionId = '';
-      let transactionId = '';
-      let feePaid = '';
-      let success = !result.error;
-      let errorMessage = result.error ? result.output : '';
+      if (includeMetadata && metadataJson) {
+        try {
+          // Create a unique name for the metadata file
+          const metadataFileName = `metadata-${Date.now()}.json`;
+          metadataPath = path.join(os.tmpdir(), metadataFileName);
+          
+          // Write metadata to a temporary file
+          await fsPromises.writeFile(metadataPath, metadataJson);
+          console.log(`Metadata written to temporary file: ${metadataPath}`);
+          
+          // Modify the command to include the metadata flag
+          modifiedCommand = modifiedCommand.replace(
+            /ord wallet inscribe/,
+            `ord wallet inscribe --metadata="${metadataPath}"`
+          );
+        } catch (err) {
+          console.error('Error handling metadata:', err);
+        }
+      }
       
-      const outputLines = result.output.split('\n');
-      for (const line of outputLines) {
-        if (line.includes('inscription')) {
-          const match = line.match(/inscription: ([a-f0-9]+i\d+)/i);
-          if (match && match[1]) inscriptionId = match[1];
-        }
-        
-        if (line.includes('transaction')) {
-          const match = line.match(/transaction: ([a-f0-9]+)/i);
-          if (match && match[1]) transactionId = match[1];
-        }
-        
-        if (line.includes('fee:') || line.includes('paid:')) {
-          const match = line.match(/(?:fee|paid): (\d+)/i);
-          if (match && match[1]) feePaid = `${parseInt(match[1]).toLocaleString()} sats`;
-        }
+      // Add parent ID if provided and not already in the command
+      if (parentId && !modifiedCommand.includes('--parent')) {
+        modifiedCommand = modifiedCommand.replace(
+          /ord wallet inscribe/,
+          `ord wallet inscribe --parent=${parentId}`
+        );
+      }
+      
+      // Add destination if provided and not already in the command
+      if (destination && !modifiedCommand.includes('--destination')) {
+        modifiedCommand = modifiedCommand.replace(
+          /ord wallet inscribe/,
+          `ord wallet inscribe --destination=${destination}`
+        );
+      }
+      
+      // Execute the inscription command with metadata if provided
+      const result = await execCommand(modifiedCommand);
+      
+      // Clean up temporary metadata file if created
+      if (metadataPath) {
+        fsPromises.unlink(metadataPath).catch(err => {
+          console.error('Error removing temporary metadata file:', err);
+        });
       }
       
       // Update the inscription status if we created one
       if (inscriptionStatusId) {
         try {
-          const status = success ? (transactionId ? 'pending' : 'success') : 'failed';
+          const status = result.error ? 'failed' : (result.output.includes('transaction') ? 'pending' : 'success');
+          
+          // Parse inscription details
+          let txid = undefined;
+          const txMatch = result.output.match(/transaction: ([a-f0-9]+)/i);
+          if (txMatch && txMatch[1]) txid = txMatch[1];
+          
+          let ordinalId = undefined;
+          const ordMatch = result.output.match(/inscription: ([a-f0-9]+i\d+)/i);
+          if (ordMatch && ordMatch[1]) ordinalId = ordMatch[1];
           
           // Update the inscription status
           await fetch(`http://localhost:${process.env.PORT || 3000}/api/inscriptions/${inscriptionStatusId}`, {
@@ -1088,9 +1325,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             },
             body: JSON.stringify({
               status,
-              txid: transactionId || undefined,
-              ordinalId: inscriptionId || undefined,
-              error: errorMessage || undefined,
+              txid: txid,
+              ordinalId: ordinalId,
+              error: result.error ? result.output : undefined,
             }),
           });
         } catch (updateError) {
@@ -1108,6 +1345,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           output: result.output,
           inscriptionStatusId,
         });
+      }
+      
+      // Parse results for response
+      let inscriptionId = '';
+      let transactionId = '';
+      let feePaid = '';
+      
+      const outputLines = result.output.split('\n');
+      for (const line of outputLines) {
+        if (line.includes('inscription')) {
+          const match = line.match(/inscription: ([a-f0-9]+i\d+)/i);
+          if (match && match[1]) inscriptionId = match[1];
+        }
+        
+        if (line.includes('transaction')) {
+          const match = line.match(/transaction: ([a-f0-9]+)/i);
+          if (match && match[1]) transactionId = match[1];
+        }
+        
+        if (line.includes('fee:') || line.includes('paid:')) {
+          const match = line.match(/(?:fee|paid): (\d+)/i);
+          if (match && match[1]) feePaid = `${parseInt(match[1]).toLocaleString()} sats`;
+        }
       }
       
       res.json({
@@ -1385,20 +1645,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // Direct file copy to container (for Umbrel)
+  // Direct file transfer for Umbrel
   app.post('/api/umbrel/copy-to-container', upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
       
-      console.log(`Direct file copy request for: ${req.file.originalname} (${req.file.size} bytes)`);
-      const containerName = req.body.containerName || getOrdContainerName();
-      const containerPath = req.body.containerPath || '/ord/data/';
-      const filePath = req.file.path;
+      console.log('======= UMBREL FILE COPY START =======');
+      const file = req.file;
+      let filePath = file.path;
+      const originalFileName = path.basename(file.path);
+      
+      console.log(`File: ${originalFileName} (${file.size} bytes)`);
+      console.log(`MIME type: ${file.mimetype}`);
+      
+      // Parse config if present
+      const config = req.body.config ? JSON.parse(req.body.config) : {};
+      
+      // Optimize image if needed
+      if (config.optimizeImage && 
+          file.mimetype.match(/^image\/(jpeg|jpg|png)$/) && 
+          file.size > (46 * 1024)) {
+        try {
+          const newFileName = path.basename(file.path, path.extname(file.path)) + '.webp';
+          const newFilePath = path.join(path.dirname(file.path), newFileName);
+          
+          console.log(`Optimizing image to WebP: ${newFilePath}`);
+          await sharp(file.path)
+            .resize(1000)
+            .webp({ 
+              quality: 80,
+              lossless: false,
+              nearLossless: false,
+              effort: 6
+            })
+            .toFile(newFilePath);
+          
+          const optimizedStats = await fsPromises.stat(newFilePath);
+          
+          if (optimizedStats.size < file.size) {
+            filePath = newFilePath;
+            console.log(`Optimized ${originalFileName} from ${formatByteSize(file.size)} to ${formatByteSize(optimizedStats.size)}`);
+          } else {
+            await fsPromises.unlink(newFilePath).catch(() => {});
+            console.log(`Optimization did not reduce file size, using original`);
+          }
+        } catch (err) {
+          console.error('Error optimizing image:', err);
+        }
+      }
+      
       const fileName = path.basename(filePath);
       
-      console.log(`Copying file to container ${containerName}:${containerPath}${fileName}`);
+      // Get container name and path from request or use defaults
+      const containerName = req.body.containerName || getOrdContainerName();
+      const containerPath = req.body.containerPath || '/ord/data/';
+      
+      console.log(`Container: ${containerName}, Path: ${containerPath}`);
       
       // Execute the docker cp command
       const copyResult = await execCommand(`docker cp "${filePath}" ${containerName}:${containerPath}${fileName}`);
@@ -1417,20 +1721,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Verify the file exists in the container
-      const verifyResult = await execCommand(`docker exec ${containerName} ls -la ${containerPath}${fileName}`);
+      // Verify file exists in container
+      const verifyResult = await execCommand(`docker exec ${containerName} ls -la ${containerPath}${fileName} 2>/dev/null || echo "File not found"`);
+      const fileExists = !verifyResult.error && !verifyResult.output.includes('File not found');
       
+      // Return success
       res.json({
         error: false,
-        filePath: `${containerPath}${fileName}`,
-        containerName,
-        output: verifyResult.error ? 
-          "File copied but verification failed. The file might still be usable." : 
-          `File successfully copied to ${containerName}:${containerPath}${fileName}`,
-        verifyOutput: verifyResult.output
+        output: `File successfully copied to container at ${containerPath}${fileName}`,
+        containerPath: `${containerPath}${fileName}`,
+        verified: fileExists,
+        nextStep: "You can now use this path in your inscription command"
       });
     } catch (error) {
-      console.error('Error in direct file copy:', error);
+      console.error('Error in file copy:', error);
       res.status(500).json({ 
         error: true,
         output: String(error)
@@ -1438,66 +1742,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // One-step file upload and inscription for Umbrel
+  // Direct umbrel inscribe endpoint that handles all steps
   app.post('/api/umbrel/inscribe-direct', upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
       
-      // Parse config
+      console.log('======= UMBREL DIRECT INSCRIBE START =======');
+      const file = req.file;
+      let filePath = file.path;
+      const originalFileName = path.basename(file.path);
+      
+      console.log(`File: ${originalFileName} (${file.size} bytes)`);
+      console.log(`MIME type: ${file.mimetype}`);
+      
+      // Parse config if present
       const config = req.body.config ? JSON.parse(req.body.config) : {};
       
-      const containerName = getOrdContainerName();
-      const containerPath = '/ord/data/';
-      const filePath = req.file.path;
-      const fileName = path.basename(filePath);
-      
-      console.log(`Direct inscription request for: ${fileName} (${req.file.size} bytes)`);
-      
-      // 1. Copy file to container
-      const copyResult = await execCommand(`docker cp "${filePath}" ${containerName}:${containerPath}${fileName}`);
-      
-      if (copyResult.error) {
-        return res.status(500).json({
-          error: true,
-          output: `Failed to copy file to container: ${copyResult.output}`
-        });
-      }
-      
-      // 2. Handle metadata if provided
-      let metadataPath = null;
-      if (config.includeMetadata && config.metadataJson) {
+      // Optimize image if needed
+      if (config.optimizeImage && 
+          file.mimetype.match(/^image\/(jpeg|jpg|png)$/) && 
+          file.size > (46 * 1024)) {
         try {
-          const metadataFileName = `metadata_${Date.now()}.json`;
-          const metadataFilePath = path.join(os.tmpdir(), metadataFileName);
+          const newFileName = path.basename(file.path, path.extname(file.path)) + '.webp';
+          const newFilePath = path.join(path.dirname(file.path), newFileName);
           
-          // Write the metadata JSON to a temporary file
-          await fs.writeFile(metadataFilePath, config.metadataJson, 'utf8');
+          console.log(`Optimizing image to WebP: ${newFilePath}`);
+          await sharp(file.path)
+            .resize(1000)
+            .webp({ 
+              quality: 80,
+              lossless: false,
+              nearLossless: false,
+              effort: 6
+            })
+            .toFile(newFilePath);
           
-          // Copy metadata file to container
-          await execCommand(`docker cp "${metadataFilePath}" ${containerName}:${containerPath}${metadataFileName}`);
+          const optimizedStats = await fsPromises.stat(newFilePath);
           
-          metadataPath = `${containerPath}${metadataFileName}`;
-          console.log(`Metadata copied to container: ${metadataPath}`);
-        } catch (metadataErr) {
-          console.error('Error handling metadata:', metadataErr);
-          // Continue without metadata if there's an error
+          if (optimizedStats.size < file.size) {
+            filePath = newFilePath;
+            console.log(`Optimized ${originalFileName} from ${formatByteSize(file.size)} to ${formatByteSize(optimizedStats.size)}`);
+          } else {
+            await fsPromises.unlink(newFilePath).catch(() => {});
+            console.log(`Optimization did not reduce file size, using original`);
+          }
+        } catch (err) {
+          console.error('Error optimizing image:', err);
         }
       }
       
-      // 3. Build the inscription command
+      const fileName = path.basename(filePath);
+      
+      // Get container name and path from request or use defaults
+      const containerName = req.body.containerName || getOrdContainerName();
+      const containerPath = req.body.containerPath || '/ord/data/';
+      
+      console.log(`Container: ${containerName}, Path: ${containerPath}`);
+      
+      // Execute the docker cp command
+      const copyResult = await execCommand(`docker cp "${filePath}" ${containerName}:${containerPath}${fileName}`);
+      
+      if (copyResult.error) {
+        console.error('Error copying file to container:', copyResult.output);
+        
+        // Try to get more debugging information
+        const containerExists = await execCommand(`docker ps -q -f name=${containerName}`);
+        
+        return res.status(500).json({
+          error: true,
+          output: copyResult.output,
+          containerExists: !containerExists.error && containerExists.output.trim() !== '',
+          suggestion: "Container might not exist or path might not be accessible"
+        });
+      }
+      
+      // Handle metadata if needed
+      let metadataPath = null;
+      
+      if (config.includeMetadata && config.metadataJson) {
+        try {
+          // Create metadata file
+          const metadataFileName = `metadata_${Date.now()}.json`;
+          const metadataFilePath = path.join(os.tmpdir(), metadataFileName);
+          
+          // Write metadata to file
+          await fsPromises.writeFile(metadataFilePath, config.metadataJson, 'utf8');
+          
+          // Copy to container
+          await execCommand(`docker cp "${metadataFilePath}" ${containerName}:${containerPath}${metadataFileName}`);
+          
+          metadataPath = `${containerPath}${metadataFileName}`;
+          console.log(`Metadata file copied to: ${metadataPath}`);
+        } catch (err) {
+          console.error('Error handling metadata:', err);
+        }
+      }
+      
+      // Build inscription command
       let inscribeCommand = `docker exec -it ${containerName} ord wallet inscribe --fee-rate ${config.feeRate || 10} --file ${containerPath}${fileName}`;
       
-      // Add optional parameters
+      // Add options
       if (config.destination) inscribeCommand += ` --destination ${config.destination}`;
-      if (config.noLimitCheck) inscribeCommand += ` --no-limit-check`;
-      if (config.satPoint) inscribeCommand += ` --sat-point ${config.satPoint}`;
-      if (config.useSatRarity && config.selectedSatoshi) inscribeCommand += ` --sat ${config.selectedSatoshi}`;
       if (config.parentId) inscribeCommand += ` --parent ${config.parentId}`;
-      if (config.dryRun) inscribeCommand += ` --dry-run`;
-      if (config.mimeType) inscribeCommand += ` --content-type "${config.mimeType}"`;
       if (metadataPath) inscribeCommand += ` --metadata ${metadataPath}`;
+      if (config.useSatRarity && config.selectedSatoshi) inscribeCommand += ` --sat ${config.selectedSatoshi}`;
       
       // Return the command to be executed by the user
       res.json({
@@ -1526,16 +1876,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`===== DIRECT DOCKER INSCRIBE =====`);
       const file = req.file;
-      const filePath = file.path;
+      let filePath = file.path;
+      const originalFileName = path.basename(file.path);
+      
+      console.log(`File: ${originalFileName} (${file.size} bytes)`);
+      
+      // Parse config
+      const config = req.body.config ? JSON.parse(req.body.config) : {};
+      
+      // Optimize image if needed
+      if (config.optimizeImage && 
+          file.mimetype.match(/^image\/(jpeg|jpg|png)$/) && 
+          file.size > (46 * 1024)) {
+        try {
+          const newFileName = path.basename(file.path, path.extname(file.path)) + '.webp';
+          const newFilePath = path.join(path.dirname(file.path), newFileName);
+          
+          console.log(`Optimizing image to WebP: ${newFilePath}`);
+          await sharp(file.path)
+            .resize(1000)
+            .webp({ 
+              quality: 80,
+              lossless: false,
+              nearLossless: false,
+              effort: 6
+            })
+            .toFile(newFilePath);
+          
+          const optimizedStats = await fsPromises.stat(newFilePath);
+          
+          if (optimizedStats.size < file.size) {
+            filePath = newFilePath;
+            console.log(`Optimized ${originalFileName} from ${formatByteSize(file.size)} to ${formatByteSize(optimizedStats.size)}`);
+          } else {
+            await fsPromises.unlink(newFilePath).catch(() => {});
+            console.log(`Optimization did not reduce file size, using original`);
+          }
+        } catch (err) {
+          console.error('Error optimizing image:', err);
+        }
+      }
+      
       const fileName = path.basename(filePath);
       const containerName = getOrdContainerName();
       const containerPath = '/ord/data/';
       
-      console.log(`File: ${fileName} (${file.size} bytes)`);
       console.log(`Container: ${containerName}`);
-      
-      // Parse config
-      const config = req.body.config ? JSON.parse(req.body.config) : {};
       
       // Step 1: Copy file to container
       console.log(`Copying file to container: ${containerName}:${containerPath}${fileName}`);
@@ -1568,90 +1954,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const metadataFilePath = path.join(os.tmpdir(), metadataFileName);
           
           // Write the metadata JSON to a temporary file
-          await fs.writeFile(metadataFilePath, config.metadataJson, 'utf8');
+          await fsPromises.writeFile(metadataFilePath, config.metadataJson, 'utf8');
           
           // Copy metadata file to container
           console.log(`Copying metadata to container: ${containerName}:${containerPath}${metadataFileName}`);
           const metadataCopyResult = await execCommand(`docker cp "${metadataFilePath}" ${containerName}:${containerPath}${metadataFileName}`);
           
-          if (metadataCopyResult.error) {
-            console.error(`Error copying metadata to container: ${metadataCopyResult.output}`);
-          } else {
-            metadataPath = `${containerPath}${metadataFileName}`;
-            console.log(`Metadata copied to container: ${metadataPath}`);
-          }
-        } catch (metadataErr) {
-          console.error('Error handling metadata:', metadataErr);
-          // Continue without metadata if there's an error
+          metadataPath = `${containerPath}${metadataFileName}`;
+          console.log(`Metadata file copied to: ${metadataPath}`);
+        } catch (err) {
+          console.error('Error handling metadata:', err);
         }
       }
       
-      // Step 3: Build the inscription command
+      // Build inscription command
       let inscribeCommand = `docker exec -it ${containerName} ord wallet inscribe --fee-rate ${config.feeRate || 10} --file ${containerPath}${fileName}`;
       
+      // Add options
       if (config.destination) inscribeCommand += ` --destination ${config.destination}`;
-      if (config.noLimitCheck) inscribeCommand += ` --no-limit-check`;
-      if (config.satPoint) inscribeCommand += ` --sat-point ${config.satPoint}`;
-      if (config.useSatRarity && config.selectedSatoshi) inscribeCommand += ` --sat ${config.selectedSatoshi}`;
       if (config.parentId) inscribeCommand += ` --parent ${config.parentId}`;
-      if (config.dryRun) inscribeCommand += ` --dry-run`;
-      if (config.mimeType) inscribeCommand += ` --content-type "${config.mimeType}"`;
       if (metadataPath) inscribeCommand += ` --metadata ${metadataPath}`;
+      if (config.useSatRarity && config.selectedSatoshi) inscribeCommand += ` --sat ${config.selectedSatoshi}`;
       
-      console.log(`Prepared inscription command: ${inscribeCommand}`);
+      // Check if we should auto-inscribe
+      const shouldAutoInscribe = config.autoInscribe === 'true' || config.autoInscribe === true;
       
-      // If auto-inscribe is requested, execute the command
-      if (req.body.autoInscribe === 'true') {
-        console.log(`Auto-inscribe requested, executing command...`);
+      if (shouldAutoInscribe) {
+        console.log('Auto-inscription requested, executing command...');
         
-        const inscribeResult = await execCommand(inscribeCommand);
+        // Create a version of the command without -it to avoid TTY errors
+        const execInscribeCommand = inscribeCommand.replace('-it', '');
+        
+        // Execute the inscription command
+        const inscribeResult = await execCommand(execInscribeCommand);
+        
         if (inscribeResult.error) {
+          console.error('Error executing inscription command:', inscribeResult.output);
           return res.status(500).json({
             error: true,
             stage: 'inscription',
             output: inscribeResult.output,
-            message: `Failed to inscribe file. Error details: ${inscribeResult.output}`
+            message: 'Failed to execute inscription command.'
           });
         }
         
-        // Parse the output for inscription details
-        let inscriptionId = '';
-        let transactionId = '';
+        console.log('Inscription output:', inscribeResult.output);
         
-        const outputLines = inscribeResult.output.split('\n');
-        for (const line of outputLines) {
-          if (line.includes('inscription')) {
-            const match = line.match(/inscription: ([a-f0-9]+i\d+)/i);
-            if (match && match[1]) inscriptionId = match[1];
-          }
-          
-          if (line.includes('transaction')) {
-            const match = line.match(/transaction: ([a-f0-9]+)/i);
-            if (match && match[1]) transactionId = match[1];
-          }
+        // Parse inscription output to extract important information
+        let inscriptionId = null;
+        let transactionId = null;
+        let feePaid = null;
+        
+        // Extract inscription ID (format: "inscription_id: <id>")
+        const inscriptionMatch = inscribeResult.output.match(/inscription[_\s]+id:?\s+([a-f0-9]+i\d+)/i);
+        if (inscriptionMatch) {
+          inscriptionId = inscriptionMatch[1];
         }
         
+        // Extract transaction ID (format: "transaction_id: <id>")
+        const txidMatch = inscribeResult.output.match(/transaction[_\s]+id:?\s+([a-f0-9]+)/i);
+        if (txidMatch) {
+          transactionId = txidMatch[1];
+        }
+        
+        // Extract fee paid (format: "fee: <amount> sats")
+        const feeMatch = inscribeResult.output.match(/fee:?\s+([0-9,]+)\s*sats/i);
+        if (feeMatch) {
+          feePaid = feeMatch[1].replace(/,/g, '');
+        }
+        
+        // Return success with auto-inscription details
         return res.json({
           error: false,
-          auto_inscribed: true,
           output: inscribeResult.output,
+          auto_inscribed: true,
           inscriptionId,
           transactionId,
-          message: `File successfully inscribed`
-        });
-      } else {
-        // Otherwise, just return the command for the user to execute manually
-        return res.json({
-          error: false,
-          fileTransferred: true,
+          feePaid,
           containerFilePath: `${containerPath}${fileName}`,
-          metadataPath,
-          inscribeCommand,
-          message: `File successfully copied to container. Use the provided inscription command to complete the process.`
+          metadataPath
         });
       }
+      
+      // If not auto-inscribing, return the command for manual execution
+      res.json({
+        error: false,
+        output: `File successfully copied to container at ${containerPath}${fileName}`,
+        auto_inscribed: false,
+        inscribeCommand,
+        containerFilePath: `${containerPath}${fileName}`,
+        metadataPath,
+        nextStep: "Execute the inscription command in your terminal"
+      });
     } catch (error) {
-      console.error('Error in docker-inscribe:', error);
+      console.error('Error in direct inscription:', error);
       res.status(500).json({ 
         error: true,
         output: String(error)
@@ -1659,5 +2055,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  return httpServer;
+  // Add error logs endpoint
+  app.get('/api/logs/errors', (req, res) => {
+    try {
+      const logs = errorLogger.getRecentLogs();
+      const logFilePath = errorLogger.getLogFilePath();
+      
+      res.json({
+        success: true,
+        logs,
+        logFilePath,
+        count: logs.length
+      });
+    } catch (error) {
+      errorLogger.log(error, 'logs_api_error');
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve error logs',
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Add global error handling middleware
+  app.use((err, req, res, next) => {
+    if (err) {
+      // Log the error
+      errorLogger.logApiError(err, req, res);
+      
+      // Send error response
+      res.status(err.status || 500).json({
+        success: false,
+        error: err.message || 'Internal Server Error',
+        errorId: new Date().getTime()
+      });
+    } else {
+      next();
+    }
+  });
 }

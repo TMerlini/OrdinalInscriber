@@ -13,6 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import SectionTitle from "./SectionTitle";
 import RareSatSelector from "./RareSatSelector";
 import { fetchRareSatsFromWallet } from "@/lib/rareSats";
+import FeeSelector from "./FeeSelector";
 
 const formSchema = z.object({
   feeRate: z.coerce.number().min(1, {
@@ -157,11 +158,15 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
     },
   });
 
+  // Add state for auto-execution toggle
+  const [autoExecute, setAutoExecute] = useState(true);
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // Add the fixed container path to the values but not containerName or port
     const configWithPath: ConfigOptions = {
       ...values,
       containerPath: DEFAULT_CONTAINER_PATH,
+      autoExecute: autoExecute // Pass the auto-execution preference
     };
     onGenerateCommands(configWithPath);
   };
@@ -293,60 +298,13 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-orange-800 dark:text-orange-400">Fee Rate <span className="font-normal text-sm text-gray-500 dark:text-gray-400">(Transaction Fee - sats/vB)</span></FormLabel>
-                  <div className="grid grid-cols-3 gap-2 mb-3">
-                    <button
-                      type="button"
-                      className={`py-2 px-3 rounded-md text-center transition-colors ${
-                        Number(field.value) <= 2 
-                          ? 'bg-orange-200 dark:bg-blue-800 border border-orange-400 dark:border-blue-600 text-orange-800 dark:text-blue-100 font-medium' 
-                          : 'bg-white dark:bg-navy-900 border border-gray-200 dark:border-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-navy-800'
-                      }`}
-                      onClick={() => field.onChange(1)}
-                    >
-                      <div className="font-medium text-gray-900 dark:text-gray-100">Economy</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Multiple Days</div>
-                      <div className="text-sm text-gray-900 dark:text-gray-100">1 sat/vB</div>
-                    </button>
-                    <button
-                      type="button"
-                      className={`py-2 px-3 rounded-md text-center transition-colors ${
-                        Number(field.value) >= 3 && Number(field.value) <= 5
-                          ? 'bg-orange-200 dark:bg-blue-800 border border-orange-400 dark:border-blue-600 text-orange-800 dark:text-blue-100 font-medium' 
-                          : 'bg-white dark:bg-navy-900 border border-gray-200 dark:border-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-navy-800'
-                      }`}
-                      onClick={() => field.onChange(4)}
-                    >
-                      <div className="font-medium text-gray-900 dark:text-gray-100">Normal</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">~1 hour</div>
-                      <div className="text-sm text-gray-900 dark:text-gray-100">4 sat/vB</div>
-                    </button>
-                    <button
-                      type="button"
-                      className={`py-2 px-3 rounded-md text-center transition-colors ${
-                        Number(field.value) >= 6 
-                          ? 'bg-orange-200 dark:bg-blue-800 border border-orange-400 dark:border-blue-600 text-orange-800 dark:text-blue-100 font-medium' 
-                          : 'bg-white dark:bg-navy-900 border border-gray-200 dark:border-navy-700 text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-navy-800'
-                      }`}
-                      onClick={() => field.onChange(8)}
-                    >
-                      <div className="font-medium text-gray-900 dark:text-gray-100">Custom</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Choose fee</div>
-                      <div className="text-sm text-gray-900 dark:text-gray-100">8 sat/vB</div>
-                    </button>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-sm text-gray-500 dark:text-gray-400 mr-2">Custom:</span>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min={1} 
-                        value={field.value} 
-                        onChange={field.onChange}
-                        className="max-w-[100px] text-center" 
-                      />
-                    </FormControl>
-                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">sats/vB</span>
-                  </div>
+                  
+                  {/* Replace the existing fee selection UI with our new FeeSelector component */}
+                  <FeeSelector 
+                    value={field.value.toString()} 
+                    onChange={(value) => field.onChange(Number(value))}
+                  />
+                  
                   <div className="mt-4 p-4 bg-white dark:bg-navy-700 rounded-lg border border-orange-100 dark:border-navy-600">
                     <div className="flex items-start">
                       <Info className="w-4 h-4 text-orange-500 dark:text-orange-400 mt-0.5 mr-2 flex-shrink-0" />
@@ -502,8 +460,33 @@ export default function ConfigForm({ onGenerateCommands, uploadedFile = null, is
           </div>
           
           <div className="pt-2">
+            {/* Add the auto-execute toggle UI */}
+            <div className="flex items-center justify-between mb-4 bg-white dark:bg-navy-700 p-3 rounded-lg border border-orange-100 dark:border-navy-600">
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="auto-execute-toggle"
+                  checked={autoExecute}
+                  onCheckedChange={setAutoExecute}
+                />
+                <label
+                  htmlFor="auto-execute-toggle"
+                  className="text-sm font-medium leading-none text-orange-800 dark:text-orange-400"
+                >
+                  Auto-execute inscription
+                </label>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                {autoExecute 
+                  ? 'Inscription will begin immediately after clicking the button' 
+                  : 'You\'ll see the commands first, then execute manually'}
+              </div>
+            </div>
+            
             <Button type="submit" className="w-full bg-orange-600 dark:bg-orange-700 hover:bg-orange-700 dark:hover:bg-orange-600">
-              {isBatchMode ? 'Prepare Batch Processing' : 'Confirm Ordinal Inscription'}
+              {isBatchMode 
+                ? autoExecute ? 'Start Batch Inscription' : 'Prepare Batch Processing' 
+                : autoExecute ? 'Inscribe Now' : 'Confirm Ordinal Inscription'
+              }
             </Button>
           </div>
         </form>

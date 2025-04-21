@@ -36,7 +36,7 @@ interface NetworkDiagnosticResult {
 /**
  * Execute a shell command
  */
-export async function execCommand(command: string): Promise<CommandResult> {
+export async function execCommand(command: string, customTimeout: number = 120000): Promise<CommandResult> {
   try {
     // Check if we're trying to run a docker command in an environment without docker
     if (command.startsWith('docker ')) {
@@ -51,13 +51,27 @@ export async function execCommand(command: string): Promise<CommandResult> {
       }
     }
 
-    const { stdout, stderr } = await execPromise(command, { timeout: 30000 });
+    console.log(`Executing command with ${customTimeout/1000}s timeout: ${command}`);
+    const { stdout, stderr } = await execPromise(command, { timeout: customTimeout });
 
     return {
       error: false,
       output: stdout || stderr
     };
   } catch (error) {
+    // Check if this is a timeout error
+    const isTimeoutError = error instanceof Error && 
+                          (error.message.includes('timed out') || 
+                           error.message.includes('ETIMEDOUT'));
+    
+    if (isTimeoutError) {
+      console.error(`Command timed out after ${customTimeout/1000}s: ${command}`);
+      return {
+        error: true,
+        output: `Command timed out after ${customTimeout/1000} seconds. This may happen with large files or slow systems. Try again with a smaller file or disable image optimization.`
+      };
+    }
+    
     console.error(`Command execution failed: ${command}`, error);
     return {
       error: true,

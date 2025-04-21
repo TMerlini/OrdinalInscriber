@@ -63,6 +63,7 @@ export interface ConfigOptions {
   includeMetadata?: boolean;
   metadataStorage?: string;
   metadataJson?: string;
+  autoExecute?: boolean;
 }
 
 export interface BatchProcessingItem {
