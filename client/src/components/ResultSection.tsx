@@ -1,4 +1,4 @@
-import { CheckCircle, AlertTriangle } from "lucide-react";
+import { CheckCircle, AlertTriangle, Info, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InscriptionResult } from "@/lib/types";
 
@@ -20,19 +20,50 @@ export default function ResultSection({ result, onReset, onTryAgain }: ResultSec
             <h2 className="text-xl font-medium text-gray-900">Inscription Complete!</h2>
           </div>
 
-          <div className="bg-gray-50 p-4 rounded-md">
-            <h3 className="font-medium text-gray-700 mb-2">Inscription Details</h3>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <dt className="text-gray-500">Inscription ID:</dt>
-              <dd className="text-gray-800 font-mono">{result.inscriptionId || '-'}</dd>
+          {result.message && (
+            <div className="bg-blue-50 p-4 rounded-md mb-4 flex items-start">
+              <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
+              <p className="text-sm text-blue-700">{result.message}</p>
+            </div>
+          )}
 
-              <dt className="text-gray-500">Transaction ID:</dt>
-              <dd className="text-gray-800 font-mono">{result.transactionId || '-'}</dd>
+          {result.manualCommand ? (
+            // Show manual command section
+            <div className="bg-amber-50 p-4 rounded-md mb-4">
+              <h3 className="font-medium text-amber-700 mb-2 flex items-center">
+                <Terminal className="h-4 w-4 mr-2" />
+                Manual Execution Required
+              </h3>
+              <p className="text-sm text-amber-700 mb-2">
+                The file has been copied successfully to the container. To complete the inscription, 
+                please run the following command in your terminal:
+              </p>
+              <pre className="text-amber-800 text-sm whitespace-pre-wrap font-mono bg-amber-100 p-3 rounded overflow-x-auto">
+                {result.manualCommand}
+              </pre>
+              
+              {result.containerFilePath && (
+                <div className="mt-2 text-sm text-amber-700">
+                  <strong>File location:</strong> {result.containerFilePath}
+                </div>
+              )}
+            </div>
+          ) : (
+            // Show standard inscription details
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium text-gray-700 mb-2">Inscription Details</h3>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <dt className="text-gray-500">Inscription ID:</dt>
+                <dd className="text-gray-800 font-mono">{result.inscriptionId || '-'}</dd>
 
-              <dt className="text-gray-500">Fee Paid:</dt>
-              <dd className="text-gray-800">{result.feePaid || '-'}</dd>
-            </dl>
-          </div>
+                <dt className="text-gray-500">Transaction ID:</dt>
+                <dd className="text-gray-800 font-mono">{result.transactionId || '-'}</dd>
+
+                <dt className="text-gray-500">Fee Paid:</dt>
+                <dd className="text-gray-800">{result.feePaid || '-'}</dd>
+              </dl>
+            </div>
+          )}
 
           <div className="mt-6 flex flex-col sm:flex-row gap-4">
             <Button onClick={onReset}>

@@ -177,9 +177,42 @@ const SIZE_FEE = FEE_TIERS.normal.sizeFee; // Size-based fee in satoshis
  * Check if we're running in Umbrel environment with direct connections to Bitcoin/Ord
  */
 function isUmbrelEnvironment(): boolean {
-  return process.env.DIRECT_CONNECT === 'true' && 
-         process.env.BTC_SERVER_AVAILABLE === 'true' &&
-         process.env.ORD_SERVER_AVAILABLE === 'true';
+  // First check direct environment variables (most reliable)
+  const hasDirectConnectEnv = process.env.DIRECT_CONNECT === 'true' && 
+                             process.env.BTC_SERVER_AVAILABLE === 'true' &&
+                             process.env.ORD_SERVER_AVAILABLE === 'true';
+  
+  if (hasDirectConnectEnv) {
+    console.log('Umbrel environment detected through environment variables');
+    return true;
+  }
+  
+  // Second, check for Umbrel-specific paths or files
+  try {
+    const { existsSync } = require('fs');
+    if (existsSync('/umbrel') || existsSync('/home/umbrel')) {
+      console.log('Umbrel environment detected through filesystem checks');
+      return true;
+    }
+  } catch (err) {
+    // Ignore errors from file checks
+  }
+  
+  // Third, check if ORD_RPC_HOST is set to a known Umbrel container name
+  if (process.env.ORD_RPC_HOST && 
+     (process.env.ORD_RPC_HOST.includes('ordinals_ord_1') || 
+      process.env.ORD_RPC_HOST.includes('ordinals_app_proxy_1'))) {
+    console.log('Umbrel environment detected through container name');
+    return true;
+  }
+  
+  // Finally check UMBREL_ENV environment variable
+  if (process.env.UMBREL_ENV === 'true') {
+    console.log('Umbrel environment detected through UMBREL_ENV variable');
+    return true;
+  }
+  
+  return false;
 }
 
 // Get the container name based on environment
@@ -240,23 +273,49 @@ function getBitcoinRpcUrl(): string {
  * Get Ord API endpoint URL
  */
 export function getOrdApiUrl(): string {
+  // If direct URL is provided, use it
+  if (process.env.ORD_API_URL) {
+    return process.env.ORD_API_URL;
+  }
+  
   const host = process.env.ORD_RPC_HOST || 'ord.embassy';
   const port = process.env.ORD_RPC_PORT || '8080';
   
-  // If we're using app_proxy, use port 4000 by default unless specifically configured
-  if (host === 'ordinals_app_proxy_1' && process.env.USE_APP_PROXY === 'true' && !process.env.ORD_RPC_PORT) {
-    console.log(`Using app_proxy configuration (${host}:4000)`);
-    return `http://${host}:4000`;
+  // Special handling for Umbrel environments
+  if (isUmbrelEnvironment()) {
+    console.log('Configuring Ord API URL for Umbrel environment');
+    
+    // If we're using app_proxy, use port 4000 by default
+    if (process.env.USE_APP_PROXY === 'true') {
+      if (process.env.ORD_RPC_HOST) {
+        // Use specified host with port 4000
+        console.log(`Using Umbrel app_proxy configuration with host: ${process.env.ORD_RPC_HOST}:4000`);
+        return `http://${process.env.ORD_RPC_HOST}:4000`;
+      } else {
+        // Use default app_proxy container name
+        console.log('Using Umbrel app_proxy configuration with default container: ordinals_app_proxy_1:4000');
+        return 'http://ordinals_app_proxy_1:4000';
+      }
+    }
+    
+    // Standard Umbrel ord container names and ports
+    if (host === 'ordinals_ord_1' || 
+        host === 'ord.embassy' || 
+        host.includes('ordinals_ord')) {
+      const umbrelOrdPort = process.env.ORD_RPC_PORT || '8080';
+      console.log(`Using Umbrel Ordinals configuration (${host}:${umbrelOrdPort})`);
+      return `http://${host}:${umbrelOrdPort}`;
+    }
   }
   
-  // Otherwise use the configured port
+  // If we have a host with port 80, don't append port
+  if (port === '80') {
+    return `http://${host}`;
+  }
+  
+  // Default case - use configured host and port
   const baseUrl = `http://${host}:${port}`;
-  
-  // Check if we're in Umbrel environment with ordinals containers
-  if (host === 'ordinals_ord_1' || host === 'ordinals_app_proxy_1') {
-    console.log(`Using Umbrel Ordinals configuration (${host}:${port})`);
-  }
-  
+  console.log(`Using Ord API URL: ${baseUrl}`);
   return baseUrl;
 }
 
@@ -466,38 +525,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const config = JSON.parse(req.body.config);
       const file = req.file;
       const fileName = path.basename(file.path);
-      const localIp = process.env.ORD_NODE_IP || getLocalIpAddress();
-      const containerPath = config.containerPath || '/ord/data/';
-      const containerFilePath = `${containerPath}${fileName}`;
-      const port = config.port || 8000;
+      const containerName = getOrdContainerName();
+      const containerPath = '/ord/data/';
       
-      // Generate web server and download commands
-      const commands = [
-        `python3 -m http.server ${port}`,
-        `docker exec -it ${config.containerName} sh -c "curl -o ${containerFilePath} http://${localIp}:${port}/${fileName}"`
-      ];
+      // Log information for debugging
+      console.log(`Generating commands for file: ${fileName} (${file.size} bytes)`);
+      console.log(`Is Umbrel environment: ${isUmbrelEnvironment()}`);
+      console.log(`Container name: ${containerName}`);
+      
+      // Generate commands - focus exclusively on docker cp (avoid curl)
+      const commands = [];
+      
+      // First command: Copy the file to the container
+      commands.push(`# Step 1: Copy the file to the container`);
+      commands.push(`docker cp "${file.path}" ${containerName}:${containerPath}${fileName}`);
       
       // Handle metadata JSON if requested
       let metadataFilePath = '';
+      let metadataFileName = '';
       if (config.includeMetadata && config.metadataJson) {
         try {
           // Generate a unique file name based on timestamp
-          const metadataFileName = `metadata_${Date.now()}.json`;
+          metadataFileName = `metadata_${Date.now()}.json`;
           metadataFilePath = path.join(os.tmpdir(), metadataFileName);
           
           // Write the metadata JSON to a temporary file
           await fs.writeFile(metadataFilePath, config.metadataJson, 'utf8');
           
-          // Command to transfer metadata file to container
-          const metadataContainerPath = `${containerPath}${metadataFileName}`;
-          commands.push(`docker exec -it ${config.containerName} sh -c "curl -o ${metadataContainerPath} http://${localIp}:${port}/${metadataFileName}"`);
+          // Command to copy metadata file to container
+          commands.push(`\n# Step 2: Copy metadata file to container`);
+          commands.push(`docker cp "${metadataFilePath}" ${containerName}:${containerPath}${metadataFileName}`);
         } catch (error) {
           console.error('Error creating metadata file:', error);
         }
       }
       
       // Build the inscription command with options
-      let inscribeCommand = `docker exec -it ${config.containerName} ord wallet inscribe --fee-rate ${config.feeRate} --file ${containerFilePath}`;
+      commands.push(`\n# Step 3: Run the inscription command`);
+      let inscribeCommand = `docker exec -it ${containerName} ord wallet inscribe --fee-rate ${config.feeRate} --file ${containerPath}${fileName}`;
       
       // Add optional parameters based on config      
       if (config.destination) {
@@ -532,7 +597,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Add metadata if provided
       if (config.includeMetadata && metadataFilePath) {
-        const metadataFileName = path.basename(metadataFilePath);
         const metadataContainerPath = `${containerPath}${metadataFileName}`;
         inscribeCommand += ` --metadata ${metadataContainerPath}`;
       }
@@ -540,9 +604,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add the inscription command to the array
       commands.push(inscribeCommand);
       
+      // Summary info
+      commands.push(`\n# File will be located at: ${containerPath}${fileName}`);
+      
       res.json({
         commands,
-        fileName
+        fileName,
+        filePath: file.path,
+        containerName,
+        containerPath
       });
     } catch (error) {
       console.error('Error generating commands:', error);
@@ -550,7 +620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Start a web server to serve the file
+  // Execute the serve command (run a local web server)
   app.post('/api/execute/serve', upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
@@ -560,68 +630,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const file = req.file;
       let filePath = file.path;
       const originalFileName = path.basename(file.path);
-      const port = req.body.port ? parseInt(req.body.port) : 8000;
+      
+      // Enhanced logging for debugging purposes
+      console.log('======= DEBUG: SERVE REQUEST START =======');
+      console.log(`File uploaded: ${originalFileName} (${file.size} bytes)`);
+      console.log(`Temp file path: ${filePath}`);
+      console.log(`isUmbrelEnvironment(): ${isUmbrelEnvironment()}`);
+      console.log(`Environment variables: DIRECT_CONNECT=${process.env.DIRECT_CONNECT}, BTC_SERVER_AVAILABLE=${process.env.BTC_SERVER_AVAILABLE}, ORD_SERVER_AVAILABLE=${process.env.ORD_SERVER_AVAILABLE}`);
+      console.log(`Additional debug: OS=${process.platform}, NodeJS=${process.version}`);
+      
+      // Parse config
       const config = req.body.config ? JSON.parse(req.body.config) : {};
       
-      // Check if we need to optimize the image
+      // Optimize image if needed
       if (config.optimizeImage && 
           file.mimetype.match(/^image\/(jpeg|jpg|png)$/) && 
           file.size > (46 * 1024)) {
-        // Create a new filename with webp extension
-        const newFileName = path.basename(file.path, path.extname(file.path)) + '.webp';
-        const newFilePath = path.join(path.dirname(file.path), newFileName);
-        
         try {
-          // Optimize the image using sharp
+          const newFileName = path.basename(file.path, path.extname(file.path)) + '.webp';
+          const newFilePath = path.join(path.dirname(file.path), newFileName);
+          
+          console.log(`Optimizing image to WebP: ${newFilePath}`);
           await sharp(file.path)
-            .resize(1000) // Resize to max width of 1000px if larger
+            .resize(1000)
             .webp({ 
               quality: 80,
               lossless: false,
               nearLossless: false,
-              effort: 6 // 0-6, 6 is highest compression effort
+              effort: 6
             })
             .toFile(newFilePath);
           
-          // Check if the optimized file exists and is smaller
           const optimizedStats = await fs.stat(newFilePath);
           
           if (optimizedStats.size < file.size) {
-            // Use the optimized file instead
             filePath = newFilePath;
             console.log(`Optimized ${originalFileName} from ${formatByteSize(file.size)} to ${formatByteSize(optimizedStats.size)}`);
           } else {
-            // The optimized file is not smaller, stick with the original
-            await fs.unlink(newFilePath).catch(() => {}); // Remove the optimized file
-            console.log(`Optimization did not reduce file size for ${originalFileName}, using original`);
+            await fs.unlink(newFilePath).catch(() => {});
+            console.log(`Optimization did not reduce file size, using original`);
           }
         } catch (err) {
           console.error('Error optimizing image:', err);
-          // Continue with the original file if optimization fails
         }
       }
       
-      const dirPath = path.dirname(filePath);
+      const containerName = getOrdContainerName();
+      const containerPath = '/ord/data/';
+      const fileName = path.basename(filePath);
       
-      // Start local web server in the directory with the file
-      const result = await startWebServer(dirPath, port);
+      // ALWAYS USE DIRECT COPY TO CONTAINER - more reliable in all environments
+      console.log(`Attempting direct file copy to container ${containerName}:${containerPath}${fileName}`);
       
-      if (result.error) {
-        return res.status(500).json({
-          error: true,
-          output: result.output
-        });
+      // Add timestamp for performance tracking
+      const startTime = Date.now();
+      let copySuccess = false;
+      let copyError = '';
+      
+      try {
+        // First verify the container exists
+        console.log('Verifying container exists...');
+        const containerCheck = await execCommand(`docker ps -q -f name=${containerName}`);
+        const containerExists = !containerCheck.error && containerCheck.output.trim() !== '';
+        
+        if (!containerExists) {
+          // Try alternative container names if the primary one doesn't exist
+          const alternativeNames = ['ordinals_ord_1', 'ordinals_app_proxy_1', 'bitcoin-ordinals', 'ord-server'];
+          console.log(`Container ${containerName} not found, trying alternatives: ${alternativeNames.join(', ')}`);
+          
+          let foundAlternative = false;
+          for (const altName of alternativeNames) {
+            if (altName === containerName) continue; // Skip the one we already tried
+            
+            const altCheck = await execCommand(`docker ps -q -f name=${altName}`);
+            if (!altCheck.error && altCheck.output.trim() !== '') {
+              console.log(`Found alternative container: ${altName}`);
+              foundAlternative = true;
+              
+              // Try copying to the alternative container
+              const copyResult = await execCommand(`docker cp "${filePath}" ${altName}:${containerPath}${fileName}`);
+              if (!copyResult.error) {
+                copySuccess = true;
+                console.log(`File successfully copied to alternative container ${altName}`);
+                break;
+              }
+            }
+          }
+          
+          if (!foundAlternative) {
+            copyError = `Container ${containerName} not found, and no alternatives are available.`;
+            console.error(copyError);
+          }
+        } else {
+          // Copy to the primary container
+          console.log(`Container ${containerName} found, copying file...`);
+          const copyResult = await execCommand(`docker cp "${filePath}" ${containerName}:${containerPath}${fileName}`);
+          
+          if (!copyResult.error) {
+            copySuccess = true;
+            console.log('File successfully copied to container');
+          } else {
+            copyError = copyResult.output;
+            console.error('Error copying file to container:', copyError);
+          }
+        }
+      } catch (err) {
+        copyError = String(err);
+        console.error('Exception during file copy:', err);
       }
       
-      res.json({
-        error: false,
-        output: `Serving HTTP on 0.0.0.0 port ${port}...\nFile available at: http://${getLocalIpAddress()}:${port}/${path.basename(filePath)}`
-      });
+      // Track completion time for performance monitoring
+      const elapsedTime = Date.now() - startTime;
+      console.log(`File copy operation completed in ${elapsedTime}ms, success: ${copySuccess}`);
+      
+      // Prepare response based on copy success
+      if (copySuccess) {
+        // Successfully copied - return container path
+        console.log('======= DEBUG: SERVE REQUEST END (SUCCESS) =======');
+        return res.json({
+          error: false,
+          direct_copy: true,
+          elapsedTime,
+          output: `File successfully copied to ord container.\nContainer path: ${containerPath}${fileName}\n\nYou can now use this path in your inscription command.`
+        });
+      } else {
+        // Failed to copy - provide full diagnostic info and alternatives
+        console.log('======= DEBUG: SERVE REQUEST END (MANUAL ALTERNATIVES) =======');
+        
+        // Check if container exists again
+        const containerCheck = await execCommand(`docker ps -q -f name=${containerName}`);
+        const containerExists = !containerCheck.error && containerCheck.output.trim() !== '';
+        
+        let outputMessage = `Unable to automatically copy file to container.\n\n`;
+        
+        if (!containerExists) {
+          outputMessage += `The container "${containerName}" doesn't seem to be running. Please check your Umbrel setup.\n\n`;
+          outputMessage += `Available containers: `;
+          
+          try {
+            const listContainers = await execCommand(`docker ps --format "{{.Names}}"`);
+            if (!listContainers.error) {
+              outputMessage += listContainers.output.split('\n').join(', ') + '\n\n';
+            } else {
+              outputMessage += 'Unable to list containers.\n\n';
+            }
+          } catch (err) {
+            outputMessage += `Unable to list containers: ${err}\n\n`;
+          }
+        } else if (copyError.includes("executable file not found in $PATH")) {
+          outputMessage += `The container is missing required tools. This is expected in minimal containers.\n\n`;
+        } else {
+          outputMessage += `Error: ${copyError}\n\n`;
+        }
+        
+        outputMessage += `MANUAL FILE TRANSFER OPTIONS:\n\n`;
+        outputMessage += `1. Direct Docker Copy (recommended for Umbrel):\n`;
+        outputMessage += `   docker cp "${filePath}" ${containerName}:${containerPath}${fileName}\n\n`;
+        
+        outputMessage += `2. Using shared volumes (if available):\n`;
+        outputMessage += `   Copy the file to a location that's mounted in the container.\n`;
+        outputMessage += `   Source file: ${filePath}\n\n`;
+        
+        outputMessage += `Once you've transferred the file, use this path in your inscription command:\n`;
+        outputMessage += `${containerPath}${fileName}`;
+        
+        return res.json({
+          error: false,
+          containerExists,
+          elapsedTime,
+          originalError: copyError,
+          output: outputMessage
+        });
+      }
     } catch (error) {
       console.error('Error serving file:', error);
       res.status(500).json({ 
         error: true,
-        output: String(error)
+        output: String(error),
+        stack: process.env.NODE_ENV === 'development' ? (error as Error).stack : undefined
       });
     }
   });
@@ -1007,6 +1193,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get Umbrel environment information
+  app.get('/api/umbrel/info', async (req, res) => {
+    try {
+      const isUmbrel = isUmbrelEnvironment();
+      const umbrelFileLocation = process.env.UMBREL_FILE_LOCATION || null;
+      const ordContainerName = getOrdContainerName();
+      const ordApiUrl = getOrdApiUrl();
+      const localIp = getLocalIpAddress();
+      
+      // Try to detect Umbrel version and setup
+      let umbrelVersion = 'unknown';
+      let fileAccessMethod = 'unknown';
+      
+      // Check if we can access common Umbrel environment locations
+      try {
+        const { execSync } = require('child_process');
+        // Try to detect Umbrel version
+        const versionCheck = execSync('cat /umbrel/info.json 2>/dev/null || echo "not found"').toString();
+        if (!versionCheck.includes('not found')) {
+          try {
+            const umbrelInfo = JSON.parse(versionCheck);
+            umbrelVersion = umbrelInfo.version || 'detected';
+          } catch (e) {
+            umbrelVersion = 'detected';
+          }
+        }
+      } catch (err) {
+        // Ignore errors
+      }
+      
+      // Determine file access method
+      if (umbrelFileLocation) {
+        fileAccessMethod = 'shared_volume';
+      } else if (isUmbrel) {
+        fileAccessMethod = 'direct_container';
+      } else {
+        fileAccessMethod = 'web_server';
+      }
+      
+      res.json({
+        isUmbrel,
+        umbrelVersion,
+        umbrelFileLocation,
+        fileAccessMethod,
+        ordContainerName,
+        ordApiUrl,
+        localIp,
+        env: {
+          DIRECT_CONNECT: process.env.DIRECT_CONNECT === 'true',
+          BTC_SERVER_AVAILABLE: process.env.BTC_SERVER_AVAILABLE === 'true',
+          ORD_SERVER_AVAILABLE: process.env.ORD_SERVER_AVAILABLE === 'true',
+          USE_APP_PROXY: process.env.USE_APP_PROXY === 'true',
+          ORD_RPC_HOST: process.env.ORD_RPC_HOST || 'not set',
+          ORD_RPC_PORT: process.env.ORD_RPC_PORT || 'not set',
+        },
+        recommendations: {
+          setupUmbrelFileLocation: !umbrelFileLocation && isUmbrel,
+          useAppProxy: process.env.USE_APP_PROXY !== 'true' && isUmbrel,
+        }
+      });
+    } catch (error) {
+      console.error('Error getting Umbrel environment info:', error);
+      res.status(500).json({ 
+        error: true, 
+        message: String(error)
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // If we're in Umbrel environment, add a health check endpoint for Bitcoin and Ord services
@@ -1129,6 +1384,280 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
   }
+
+  // Direct file copy to container (for Umbrel)
+  app.post('/api/umbrel/copy-to-container', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      console.log(`Direct file copy request for: ${req.file.originalname} (${req.file.size} bytes)`);
+      const containerName = req.body.containerName || getOrdContainerName();
+      const containerPath = req.body.containerPath || '/ord/data/';
+      const filePath = req.file.path;
+      const fileName = path.basename(filePath);
+      
+      console.log(`Copying file to container ${containerName}:${containerPath}${fileName}`);
+      
+      // Execute the docker cp command
+      const copyResult = await execCommand(`docker cp "${filePath}" ${containerName}:${containerPath}${fileName}`);
+      
+      if (copyResult.error) {
+        console.error('Error copying file to container:', copyResult.output);
+        
+        // Try to get more debugging information
+        const containerExists = await execCommand(`docker ps -q -f name=${containerName}`);
+        
+        return res.status(500).json({
+          error: true,
+          output: copyResult.output,
+          containerExists: !containerExists.error && containerExists.output.trim() !== '',
+          suggestion: "Container might not exist or path might not be accessible"
+        });
+      }
+      
+      // Verify the file exists in the container
+      const verifyResult = await execCommand(`docker exec ${containerName} ls -la ${containerPath}${fileName}`);
+      
+      res.json({
+        error: false,
+        filePath: `${containerPath}${fileName}`,
+        containerName,
+        output: verifyResult.error ? 
+          "File copied but verification failed. The file might still be usable." : 
+          `File successfully copied to ${containerName}:${containerPath}${fileName}`,
+        verifyOutput: verifyResult.output
+      });
+    } catch (error) {
+      console.error('Error in direct file copy:', error);
+      res.status(500).json({ 
+        error: true,
+        output: String(error)
+      });
+    }
+  });
+  
+  // One-step file upload and inscription for Umbrel
+  app.post('/api/umbrel/inscribe-direct', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      // Parse config
+      const config = req.body.config ? JSON.parse(req.body.config) : {};
+      
+      const containerName = getOrdContainerName();
+      const containerPath = '/ord/data/';
+      const filePath = req.file.path;
+      const fileName = path.basename(filePath);
+      
+      console.log(`Direct inscription request for: ${fileName} (${req.file.size} bytes)`);
+      
+      // 1. Copy file to container
+      const copyResult = await execCommand(`docker cp "${filePath}" ${containerName}:${containerPath}${fileName}`);
+      
+      if (copyResult.error) {
+        return res.status(500).json({
+          error: true,
+          output: `Failed to copy file to container: ${copyResult.output}`
+        });
+      }
+      
+      // 2. Handle metadata if provided
+      let metadataPath = null;
+      if (config.includeMetadata && config.metadataJson) {
+        try {
+          const metadataFileName = `metadata_${Date.now()}.json`;
+          const metadataFilePath = path.join(os.tmpdir(), metadataFileName);
+          
+          // Write the metadata JSON to a temporary file
+          await fs.writeFile(metadataFilePath, config.metadataJson, 'utf8');
+          
+          // Copy metadata file to container
+          await execCommand(`docker cp "${metadataFilePath}" ${containerName}:${containerPath}${metadataFileName}`);
+          
+          metadataPath = `${containerPath}${metadataFileName}`;
+          console.log(`Metadata copied to container: ${metadataPath}`);
+        } catch (metadataErr) {
+          console.error('Error handling metadata:', metadataErr);
+          // Continue without metadata if there's an error
+        }
+      }
+      
+      // 3. Build the inscription command
+      let inscribeCommand = `docker exec -it ${containerName} ord wallet inscribe --fee-rate ${config.feeRate || 10} --file ${containerPath}${fileName}`;
+      
+      // Add optional parameters
+      if (config.destination) inscribeCommand += ` --destination ${config.destination}`;
+      if (config.noLimitCheck) inscribeCommand += ` --no-limit-check`;
+      if (config.satPoint) inscribeCommand += ` --sat-point ${config.satPoint}`;
+      if (config.useSatRarity && config.selectedSatoshi) inscribeCommand += ` --sat ${config.selectedSatoshi}`;
+      if (config.parentId) inscribeCommand += ` --parent ${config.parentId}`;
+      if (config.dryRun) inscribeCommand += ` --dry-run`;
+      if (config.mimeType) inscribeCommand += ` --content-type "${config.mimeType}"`;
+      if (metadataPath) inscribeCommand += ` --metadata ${metadataPath}`;
+      
+      // Return the command to be executed by the user
+      res.json({
+        error: false,
+        output: `File successfully copied to container at ${containerPath}${fileName}`,
+        inscribeCommand,
+        containerFilePath: `${containerPath}${fileName}`,
+        metadataPath,
+        nextStep: "Execute the inscription command in your terminal"
+      });
+    } catch (error) {
+      console.error('Error in direct inscription:', error);
+      res.status(500).json({ 
+        error: true,
+        output: String(error)
+      });
+    }
+  });
+
+  // Direct file copy and inscribe in one step
+  app.post('/api/docker-inscribe', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      console.log(`===== DIRECT DOCKER INSCRIBE =====`);
+      const file = req.file;
+      const filePath = file.path;
+      const fileName = path.basename(filePath);
+      const containerName = getOrdContainerName();
+      const containerPath = '/ord/data/';
+      
+      console.log(`File: ${fileName} (${file.size} bytes)`);
+      console.log(`Container: ${containerName}`);
+      
+      // Parse config
+      const config = req.body.config ? JSON.parse(req.body.config) : {};
+      
+      // Step 1: Copy file to container
+      console.log(`Copying file to container: ${containerName}:${containerPath}${fileName}`);
+      const copyResult = await execCommand(`docker cp "${filePath}" ${containerName}:${containerPath}${fileName}`);
+      
+      if (copyResult.error) {
+        console.error(`Error copying file to container: ${copyResult.output}`);
+        
+        // Check if container exists
+        const containerCheck = await execCommand(`docker ps -q -f name=${containerName}`);
+        const containerExists = !containerCheck.error && containerCheck.output.trim() !== '';
+        
+        // Return detailed error
+        return res.status(500).json({
+          error: true,
+          stage: 'file_copy',
+          containerExists,
+          output: copyResult.output,
+          message: `Failed to copy file to container. Please verify the container "${containerName}" is running.`
+        });
+      }
+      
+      console.log(`File successfully copied to container`);
+      
+      // Step 2: Handle metadata if provided
+      let metadataPath = null;
+      if (config.includeMetadata && config.metadataJson) {
+        try {
+          const metadataFileName = `metadata_${Date.now()}.json`;
+          const metadataFilePath = path.join(os.tmpdir(), metadataFileName);
+          
+          // Write the metadata JSON to a temporary file
+          await fs.writeFile(metadataFilePath, config.metadataJson, 'utf8');
+          
+          // Copy metadata file to container
+          console.log(`Copying metadata to container: ${containerName}:${containerPath}${metadataFileName}`);
+          const metadataCopyResult = await execCommand(`docker cp "${metadataFilePath}" ${containerName}:${containerPath}${metadataFileName}`);
+          
+          if (metadataCopyResult.error) {
+            console.error(`Error copying metadata to container: ${metadataCopyResult.output}`);
+          } else {
+            metadataPath = `${containerPath}${metadataFileName}`;
+            console.log(`Metadata copied to container: ${metadataPath}`);
+          }
+        } catch (metadataErr) {
+          console.error('Error handling metadata:', metadataErr);
+          // Continue without metadata if there's an error
+        }
+      }
+      
+      // Step 3: Build the inscription command
+      let inscribeCommand = `docker exec -it ${containerName} ord wallet inscribe --fee-rate ${config.feeRate || 10} --file ${containerPath}${fileName}`;
+      
+      if (config.destination) inscribeCommand += ` --destination ${config.destination}`;
+      if (config.noLimitCheck) inscribeCommand += ` --no-limit-check`;
+      if (config.satPoint) inscribeCommand += ` --sat-point ${config.satPoint}`;
+      if (config.useSatRarity && config.selectedSatoshi) inscribeCommand += ` --sat ${config.selectedSatoshi}`;
+      if (config.parentId) inscribeCommand += ` --parent ${config.parentId}`;
+      if (config.dryRun) inscribeCommand += ` --dry-run`;
+      if (config.mimeType) inscribeCommand += ` --content-type "${config.mimeType}"`;
+      if (metadataPath) inscribeCommand += ` --metadata ${metadataPath}`;
+      
+      console.log(`Prepared inscription command: ${inscribeCommand}`);
+      
+      // If auto-inscribe is requested, execute the command
+      if (req.body.autoInscribe === 'true') {
+        console.log(`Auto-inscribe requested, executing command...`);
+        
+        const inscribeResult = await execCommand(inscribeCommand);
+        if (inscribeResult.error) {
+          return res.status(500).json({
+            error: true,
+            stage: 'inscription',
+            output: inscribeResult.output,
+            message: `Failed to inscribe file. Error details: ${inscribeResult.output}`
+          });
+        }
+        
+        // Parse the output for inscription details
+        let inscriptionId = '';
+        let transactionId = '';
+        
+        const outputLines = inscribeResult.output.split('\n');
+        for (const line of outputLines) {
+          if (line.includes('inscription')) {
+            const match = line.match(/inscription: ([a-f0-9]+i\d+)/i);
+            if (match && match[1]) inscriptionId = match[1];
+          }
+          
+          if (line.includes('transaction')) {
+            const match = line.match(/transaction: ([a-f0-9]+)/i);
+            if (match && match[1]) transactionId = match[1];
+          }
+        }
+        
+        return res.json({
+          error: false,
+          auto_inscribed: true,
+          output: inscribeResult.output,
+          inscriptionId,
+          transactionId,
+          message: `File successfully inscribed`
+        });
+      } else {
+        // Otherwise, just return the command for the user to execute manually
+        return res.json({
+          error: false,
+          fileTransferred: true,
+          containerFilePath: `${containerPath}${fileName}`,
+          metadataPath,
+          inscribeCommand,
+          message: `File successfully copied to container. Use the provided inscription command to complete the process.`
+        });
+      }
+    } catch (error) {
+      console.error('Error in docker-inscribe:', error);
+      res.status(500).json({ 
+        error: true,
+        output: String(error)
+      });
+    }
+  });
 
   return httpServer;
 }

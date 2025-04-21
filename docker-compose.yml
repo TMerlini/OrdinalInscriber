@@ -5,21 +5,85 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ordinarinos-inscription-tool
+    container_name: ordinalinscriber-ordinarinos-1
     restart: unless-stopped
     ports:
       - "3500:3500"
     volumes:
-      - ./cache:/app/cache
+      - /volume1/docker/umbrel/app-data/OrdinalInscriber/cache:/app/cache
     environment:
       - NODE_ENV=production
       - PORT=3500
       - CACHE_LIMIT_BYTES=5368709120  # 5GB cache limit
-      - ORD_CONTAINER_NAME=ordinals_ord_1
-      - ORD_API_PORT=4000
-      - ORD_NODE_IP=10.21.21.4
+      
+      # Connect directly to the Ord server and Bitcoin Core
+      - DIRECT_CONNECT=true
+      - USE_API_ONLY=true
+      - ORD_SERVER_AVAILABLE=true
+      - BTC_SERVER_AVAILABLE=true
+      
+      # Ordinals server connection
+      - ORD_RPC_HOST=ordinals_ord_1
+      - ORD_API_PORT=80
+      - ORD_RPC_PORT=80
+      
+      # Bitcoin Core connection
+      - BTC_RPC_HOST=bitcoin_bitcoind_1
+      - BTC_RPC_PORT=8332
+      - BTC_RPC_USER=umbrel
+      - BTC_RPC_PASSWORD=umbrel
+      
+      # Disable the default command execution methods completely
+      - DISABLE_COMMAND_EXECUTION=true
+      
+      # Completely disable the web server to prevent timeout
+      - DISABLE_WEBSERVER=true
+      - SKIP_HTTP_SERVER=true
+      
+      # Override command generation to use API directly
+      - USE_WALLET_API=true
+      - COMMAND_OVERRIDE_METHOD=api
+      
+      # Special fix for temp file issues
+      - TEMP_DIR=/tmp
+      - USE_TMPDIR_FOR_UPLOADS=true
+      
+      # Web service timeout bypass
+      - BYPASS_SERVER_START=true
+      - NO_START_SERVER=true
+      
+      # Disable non-essential features
+      - DISABLE_SATS_NAMES=true
+      - DISABLE_SNS_RELAY=true
+      - SNS_ENABLED=false
+      
+      # Fallback options - try both container names and IPs
+      - CONTAINER_FALLBACKS=ordinals_ord_1,bitcoin-ordinals_ord_1,umbrel-ordinals_ord_1,10.21.0.12
+      - APP_PROXY_FALLBACKS=ordinals_app_proxy_1,bitcoin-ordinals_app_proxy_1,umbrel-ordinals_app_proxy_1,10.21.0.13:4000
+      - HOST_DOCKER_INTERNAL=10.21.0.12
+      - APP_PROXY_IP=10.21.0.13
+      - APP_PROXY_PORT=4000
+      
+      # Debug settings
+      - DEBUG_MODE=true
+      - VERBOSE_LOGGING=true
+      - LOG_LEVEL=debug
+      
     networks:
       - umbrel_main_network
+    # Increase Docker healthcheck timeout
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3500/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Add host mappings for container communication
+    extra_hosts:
+      - "ordinals_ord_1:10.21.0.12"
+      - "ordinals_app_proxy_1:10.21.0.13"
+      - "bitcoin_bitcoind_1:10.21.21.8"
+      - "bitcoin.embassy:10.21.21.8"
 
 networks:
   umbrel_main_network:

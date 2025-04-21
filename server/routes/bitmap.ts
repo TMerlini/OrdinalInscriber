@@ -14,6 +14,9 @@ import { getOrdApiUrl } from '../routes';
 const GENIIDATA_API = 'https://api.geniidata.com';
 const GENIIDATA_BITMAP_API = `${GENIIDATA_API}/ordinals/bitmaps`;
 
+// Default container name for Bitcoin Ordinals
+const DEFAULT_ORD_CONTAINER = process.env.ORD_RPC_HOST || "ordinals_ord_1";
+
 /**
  * Endpoints to be registered in the routes.ts file
  */
@@ -176,7 +179,8 @@ export function registerBitmapRoutes(app: any) {
    */
   app.post('/api/bitmap/generate-command', (req: Request, res: Response) => {
     try {
-      const { bitmapNumber, feeRate, destinationAddress, containerName } = req.body;
+      // Remove containerName from destructuring and use our default container
+      const { bitmapNumber, feeRate, destinationAddress } = req.body;
       
       // Validate inputs
       if (!bitmapNumber || !feeRate) {
@@ -186,8 +190,8 @@ export function registerBitmapRoutes(app: any) {
         });
       }
       
-      // Get the container name (use the provided one or default)
-      const container = containerName || 'bitcoin-ordinals';
+      // Use the default container name
+      const container = DEFAULT_ORD_CONTAINER;
       
       // Build the ord command for bitmap inscription
       let command = `docker exec -it ${container} sh -c 'ord wallet inscribe --fee-rate ${feeRate} --file - --content-type text/plain `;

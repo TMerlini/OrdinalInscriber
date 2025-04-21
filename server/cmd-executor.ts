@@ -9,8 +9,6 @@ const execPromise = promisify(exec);
 // To keep track of our web server process
 let serverProcess: ReturnType<typeof spawn> | null = null;
 let activeServerPid: number | null = null; // Added to track the server PID
-// Rename to be consistent with our variable names
-let webServerProcess: ReturnType<typeof spawn> | null = null;
 
 interface CommandResult {
   error: boolean;
@@ -174,61 +172,137 @@ export async function checkNetworkConnectivity(containerName?: string): Promise<
  * Start a Python HTTP server in the specified directory
  */
 export async function startWebServer(directory: string, port: number = 8000): Promise<CommandResult> {
+  // Check if web server is disabled via environment variables
+  if (process.env.DISABLE_WEBSERVER === 'true' || 
+      process.env.SKIP_HTTP_SERVER === 'true' || 
+      process.env.BYPASS_SERVER_START === 'true' ||
+      process.env.NO_START_SERVER === 'true') {
+    console.log('Web server startup bypassed due to environment configuration');
+    return {
+      error: false,
+      output: 'BYPASSED: Web server startup skipped due to configuration'
+    };
+  }
+
+  // Check if we're in Umbrel environment
+  const isUmbrel = process.env.DIRECT_CONNECT === 'true' && 
+                   process.env.BTC_SERVER_AVAILABLE === 'true' &&
+                   process.env.ORD_SERVER_AVAILABLE === 'true';
+  
+  if (isUmbrel) {
+    console.log('Detected Umbrel environment - bypassing web server startup');
+    return {
+      error: false,
+      output: `UMBREL MODE: Web server startup bypassed. Files can be accessed directly by the ord container.`
+    };
+  }
+
   try {
-    // Kill any existing python web server or process on the same port
-    await execCommand(`lsof -t -i:${port} | xargs kill -9 2>/dev/null || true`);
-    await execCommand(`pkill -f "python3 -m http.server ${port}" || true`);
-    await execCommand(`pkill -f "serve -s -p ${port}" || true`);
+    console.log(`Starting web server in directory: ${directory} on port: ${port}`);
+    
+    // Kill any existing processes using the port
+    try {
+      await execCommand(`lsof -t -i:${port} | xargs kill -9 2>/dev/null || true`);
+      await execCommand(`pkill -f "python3 -m http.server ${port}" || true`);
+      await execCommand(`pkill -f "serve -s -p ${port}" || true`);
+    } catch (err) {
+      // Ignore errors, just trying to clean up any existing processes
+      console.log('Note: Could not kill processes on port (might not exist):', err);
+    }
 
-    // Check if Python3 is available
-    const pythonCheck = await execCommand('which python3 || which python');
-    const pythonCommand = pythonCheck.error ? 'npx serve' : 'python3 -m http.server';
-
-    // Change to the directory and start a HTTP server
-    const args = pythonCheck.error 
-      ? ['-s', '-p', port.toString()] 
-      : ['-m', 'http.server', port.toString()];
-
-    const command = pythonCheck.error ? 'npx' : 'python3';
-
+    // First try using npx serve (more reliable)
+    let command = 'npx';
+    let args = ['serve', '--listen', port.toString(), '--no-clipboard', '--no-compression'];
+    
+    // Log the command we're trying to execute
     console.log(`Starting web server with command: ${command} ${args.join(' ')} in directory ${directory}`);
 
-    const process = spawn(command, args, {
+    // Create process - rename to serverProc to avoid shadowing the global variable
+    const serverProc = spawn(command, args, {
       cwd: directory,
-      detached: false, // Changed to false to avoid process detachment issues
+      detached: false,
       stdio: 'pipe'
     });
 
-    // Store the process for later use
-    serverProcess = process;
-    webServerProcess = process;
+    // Store the process for later use - use the global variable
+    serverProcess = serverProc;
 
-    if (process.pid) {
-      activeServerPid = process.pid;
+    if (serverProc.pid) {
+      activeServerPid = serverProc.pid;
+      console.log(`Started web server with PID ${serverProc.pid}`);
     }
 
     // Add error handler
-    process.on('error', (err) => {
+    serverProc.on('error', (err) => {
       console.error('Web server process error:', err);
+      // If npx serve fails, try Python HTTP server instead as fallback
+      tryPythonServer(directory, port);
     });
+
+    // Capture stdout/stderr for logging
+    if (serverProc.stdout) {
+      serverProc.stdout.on('data', (data) => {
+        console.log(`Server stdout: ${data}`);
+      });
+    }
+    
+    if (serverProc.stderr) {
+      serverProc.stderr.on('data', (data) => {
+        console.error(`Server stderr: ${data}`);
+      });
+    }
 
     // Check if server started successfully
     return new Promise((resolve) => {
-      // Set a timeout for server startup
+      // Set a longer timeout for server startup
       const timeout = setTimeout(() => {
+        console.error('Timeout waiting for server to start');
+        // Kill the server process if it's still running after timeout
+        if (serverProcess && serverProcess.pid) {
+          console.log(`Killing timed out server process with PID ${serverProcess.pid}`);
+          serverProcess.kill('SIGTERM');
+          serverProcess = null;
+          activeServerPid = null;
+        }
         resolve({
           error: true,
-          output: "Timeout starting server"
+          output: "Timeout starting server. Make sure port 8000 is available and not blocked by another application or firewall."
         });
-      }, 5000); // 5 second timeout
+      }, 15000); // Increase timeout from 10 to 15 seconds
+
+      let retryCount = 0;
+      const maxRetries = 10; // Maximum number of retries
 
       // Check if server is up by attempting to connect to it
       const checkServerUp = () => {
+        // Exit early if max retries reached
+        if (retryCount >= maxRetries) {
+          console.error(`Max retry attempts (${maxRetries}) reached. Server startup failed.`);
+          clearTimeout(timeout);
+          
+          // Kill the server process if it's still running after max retries
+          if (serverProcess && serverProcess.pid) {
+            console.log(`Killing server after max retries with PID ${serverProcess.pid}`);
+            serverProcess.kill('SIGTERM');
+            serverProcess = null;
+            activeServerPid = null;
+          }
+          
+          resolve({
+            error: true,
+            output: `Failed to start server after ${maxRetries} attempts. Please check if anything is blocking port ${port}.`
+          });
+          return;
+        }
+
+        retryCount++;
+        console.log(`Checking if server is up on port ${port}... (Attempt ${retryCount}/${maxRetries})`);
         const client = new net.Socket();
 
-        client.setTimeout(500);
+        client.setTimeout(1000);
 
         client.on('connect', () => {
+          console.log('Server is up and running!');
           clearTimeout(timeout);
           client.destroy();
           resolve({
@@ -237,27 +311,94 @@ export async function startWebServer(directory: string, port: number = 8000): Pr
           });
         });
 
-        client.on('error', () => {
-          // Try again in 500ms if still within timeout window
-          setTimeout(checkServerUp, 500);
+        client.on('error', (err) => {
+          console.log(`Server not up yet, retrying... (${err.message})`);
+          client.destroy();
+          // Try again in 1 second
+          setTimeout(checkServerUp, 1000);
         });
 
         client.on('timeout', () => {
+          console.log('Socket connection timed out, retrying...');
           client.destroy();
+          // Continue to next retry
+          setTimeout(checkServerUp, 1000);
         });
 
-        client.connect(port, '127.0.0.1');
+        // Handle unexpected client-side errors
+        client.on('close', () => {
+          // This will be called when client is destroyed
+          // Don't need to handle separately as we're destroying manually
+        });
+
+        try {
+          client.connect(port, '127.0.0.1');
+        } catch (err) {
+          console.error('Error connecting to server:', err);
+          client.destroy();
+          setTimeout(checkServerUp, 1000);
+        }
       };
 
-      // Start checking if server is up
-      setTimeout(checkServerUp, 500);
+      // Start checking if server is up after a small delay
+      setTimeout(checkServerUp, 1000);
     });
   } catch (error) {
     console.error('Error starting web server:', error);
     return {
       error: true,
-      output: String(error)
+      output: `Error starting web server: ${String(error)}`
     };
+  }
+}
+
+// Helper function to try Python server as fallback
+async function tryPythonServer(directory: string, port: number): Promise<void> {
+  try {
+    console.log('Trying Python HTTP server as fallback...');
+    
+    // Check if Python 3 is available
+    const pythonCheck = await execCommand('command -v python3 || command -v python');
+    const pythonCommand = !pythonCheck.error && pythonCheck.output.trim() ? 
+                         (pythonCheck.output.includes('python3') ? 'python3' : 'python') : 
+                         null;
+    
+    if (pythonCommand) {
+      console.log(`Found Python: ${pythonCommand}`);
+      const serverProc = spawn(pythonCommand, ['-m', 'http.server', port.toString()], {
+        cwd: directory,
+        detached: false,
+        stdio: 'pipe'
+      });
+      
+      // Store the process for later use - use the global variable
+      serverProcess = serverProc;
+      
+      if (serverProc.pid) {
+        activeServerPid = serverProc.pid;
+        console.log(`Started Python HTTP server with PID ${serverProc.pid}`);
+      }
+      
+      serverProc.on('error', (err) => {
+        console.error('Python server process error:', err);
+      });
+      
+      if (serverProc.stdout) {
+        serverProc.stdout.on('data', (data) => {
+          console.log(`Python server stdout: ${data}`);
+        });
+      }
+      
+      if (serverProc.stderr) {
+        serverProc.stderr.on('data', (data) => {
+          console.error(`Python server stderr: ${data}`);
+        });
+      }
+    } else {
+      console.error('Could not find Python3 or Python');
+    }
+  } catch (error) {
+    console.error('Error starting Python fallback server:', error);
   }
 }
 
@@ -296,7 +437,6 @@ export async function stopWebServer(): Promise<void> {
       console.error('Error stopping server:', error);
     } finally {
       serverProcess = null;
-      webServerProcess = null;
       activeServerPid = null; // Reset activeServerPid
     }
   } else {

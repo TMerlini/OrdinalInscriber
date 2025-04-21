@@ -9,6 +9,9 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci --production
 
+# Install ALL dependencies (including dev dependencies)
+RUN npm install
+
 # Copy built application
 COPY dist/ ./dist/
 COPY assets/ ./assets/

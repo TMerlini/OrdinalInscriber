@@ -36,38 +36,51 @@ export interface InscriptionResult {
   success: boolean;
   inscriptionId?: string;
   txid?: string;
+  transactionId?: string;
+  feePaid?: string;
   message?: string;
   error?: string;
+  errorMessage?: string;
   satPoint?: string;
   satName?: string;
+  manualCommand?: string;
+  containerFilePath?: string;
 }
 
 export interface ConfigOptions {
   containerPath: string;
-  feeRate: string;
-  metadataJson?: string;
-  parentInscriptionId?: string;
-  destinationAddress?: string;
+  feeRate: number;
+  destination?: string;
+  noLimitCheck?: boolean;
+  satPoint?: string;
+  selectedSatoshi?: string;
+  selectedSatoshis?: string[];
   useSatRarity?: boolean;
-  selectedSat?: string;
+  parentId?: string;
+  dryRun?: boolean;
+  mimeType?: string;
+  optimizeImage?: boolean;
+  includeMetadata?: boolean;
+  metadataStorage?: string;
+  metadataJson?: string;
 }
 
 export interface BatchProcessingItem {
   fileId: string;
   fileName: string;
-  status: 'pending' | 'processing' | 'complete' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   progress?: number;
   result?: InscriptionResult;
   steps?: ExecutionStep[];
   error?: string;
+  commands?: string[];
+  parentId?: string;
 }
 
 export interface BatchProcessingState {
-  isProcessing: boolean;
-  currentItem: BatchProcessingItem | null;
-  progress: number;
-  total: number;
-  startTime: Date | null;
-  errors: string[];
-  items?: BatchProcessingItem[];
+  inProgress: boolean;
+  items: BatchProcessingItem[];
+  currentItemIndex: number;
+  completedCount: number;
+  failedCount: number;
 }

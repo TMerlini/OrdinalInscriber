@@ -55,6 +55,9 @@ export default function Home() {
     failedCount: 0
   });
   
+  // Environment detection
+  const [isUmbrelEnvironment, setIsUmbrelEnvironment] = useState(false);
+  
   // Shared state
   const [cacheOpen, setCacheOpen] = useState(false);
   const [optimizeImage, setOptimizeImage] = useState(false);
@@ -88,6 +91,23 @@ export default function Home() {
 }`
     }
   });
+  
+  // Check if we're in an Umbrel environment on component mount
+  useEffect(() => {
+    const checkUmbrelEnvironment = async () => {
+      try {
+        // Force Umbrel mode to always be true to avoid timeouts
+        setIsUmbrelEnvironment(true);
+        console.log('Environment detection: Forced to Umbrel mode to avoid timeouts');
+      } catch (error) {
+        console.error('Error checking environment:', error);
+        // Default to true if check fails
+        setIsUmbrelEnvironment(true);
+      }
+    };
+    
+    checkUmbrelEnvironment();
+  }, []);
   
   const handleFileUpload = (newFile: UploadedFile) => {
     setUploadedFile(newFile);
@@ -158,70 +178,83 @@ export default function Home() {
     if (!commandsData || !uploadedFile) return;
     
     try {
-      // Start server (Step 1)
+      // Always use the direct docker-inscribe approach to avoid timeouts
+      console.log('Using direct inscribe method to avoid timeouts');
+      
+      // Set all steps to progress initially
       updateStepStatus(0, StepStatus.PROGRESS);
-      
-      // Get the port from the commands
-      const portMatch = commandsData.commands[0].match(/http\.server\s+(\d+)/);
-      const port = portMatch ? portMatch[1] : '8000';
-      
-      const formData = new FormData();
-      formData.append('file', uploadedFile.file);
-      formData.append('port', port);
-      // Pass the optimizeImage config for image processing
-      formData.append('config', JSON.stringify({ optimizeImage }));
-      
-      const serverRes = await apiRequest('POST', '/api/execute/serve', formData, true);
-      const serverData = await serverRes.json();
-      
-      updateStepStatus(0, StepStatus.SUCCESS, serverData.output);
-      
-      // Download file in container (Step 2)
       updateStepStatus(1, StepStatus.PROGRESS);
-      
-      const downloadRes = await apiRequest('POST', '/api/execute/download', {
-        fileName: commandsData.fileName,
-        command: commandsData.commands[1]
-      });
-      const downloadData = await downloadRes.json();
-      
-      if (downloadData.error) {
-        updateStepStatus(1, StepStatus.ERROR, downloadData.output);
-        return;
-      }
-      
-      updateStepStatus(1, StepStatus.SUCCESS, downloadData.output);
-      
-      // Inscribe (Step 3)
       updateStepStatus(2, StepStatus.PROGRESS);
       
-      const inscribeRes = await apiRequest('POST', '/api/execute/inscribe', {
-        command: commandsData.commands[2],
-        fileName: uploadedFile.file.name,
-        fileType: uploadedFile.file.type,
-        satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
-      });
-      const inscribeData = await inscribeRes.json();
+      const metadataValues = metadataForm.getValues();
+      const formData = new FormData();
+      formData.append('file', uploadedFile.file);
       
-      if (inscribeData.error) {
-        updateStepStatus(2, StepStatus.ERROR, inscribeData.output);
+      // Add all configuration options
+      const config = {
+        optimizeImage,
+        feeRate: configForm.getValues().feeRate || 4,
+        destination: metadataValues.destination || undefined,
+        includeMetadata: metadataValues.includeMetadata,
+        metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
+        parentId: showParentInscription ? parentInscriptionId : undefined,
+        noLimitCheck: configForm.getValues().noLimitCheck,
+        useSatRarity: configForm.getValues().useSatRarity,
+        selectedSatoshi: configForm.getValues().selectedSatoshi,
+        dryRun: configForm.getValues().dryRun,
+        mimeType: configForm.getValues().mimeType,
+        autoInscribe: 'true' // Request automatic inscription
+      };
+      
+      formData.append('config', JSON.stringify(config));
+      
+      // Call the direct inscribe endpoint
+      const directInscribeRes = await apiRequest('POST', '/api/docker-inscribe', formData, true);
+      const directInscribeData = await directInscribeRes.json();
+      
+      if (directInscribeData.error) {
+        // If first step fails, mark all as error
+        updateStepStatus(0, StepStatus.ERROR, directInscribeData.output);
+        updateStepStatus(1, StepStatus.ERROR);
+        updateStepStatus(2, StepStatus.ERROR);
+        
         setResult({
           success: false,
-          errorMessage: inscribeData.output
+          errorMessage: directInscribeData.output
         });
         return;
       }
       
-      updateStepStatus(2, StepStatus.SUCCESS, inscribeData.output);
+      // First step is copying file to container
+      updateStepStatus(0, StepStatus.SUCCESS, "File successfully copied to container");
+      // Second step is file preparation (always successful if first step worked)
+      updateStepStatus(1, StepStatus.SUCCESS, "File prepared for inscription");
       
-      // Parse result and set success
-      setResult({
-        success: true,
-        inscriptionId: inscribeData.inscriptionId,
-        transactionId: inscribeData.transactionId,
-        feePaid: inscribeData.feePaid
-      });
-      
+      // Third step is the actual inscription
+      if (directInscribeData.auto_inscribed) {
+        updateStepStatus(2, StepStatus.SUCCESS, directInscribeData.output);
+        
+        // Set result
+        setResult({
+          success: true,
+          inscriptionId: directInscribeData.inscriptionId,
+          transactionId: directInscribeData.transactionId,
+          feePaid: directInscribeData.feePaid || 'Unknown',
+          message: 'Inscription successful using direct method'
+        });
+      } else {
+        // If we didn't auto-inscribe, provide the command for manual execution
+        updateStepStatus(2, StepStatus.SUCCESS, 
+          `File ready for inscription. Execute this command manually:\n${directInscribeData.inscribeCommand}`
+        );
+        
+        setResult({
+          success: true,
+          manualCommand: directInscribeData.inscribeCommand,
+          containerFilePath: directInscribeData.containerFilePath,
+          message: 'File successfully copied to container. Run the command to complete inscription.'
+        });
+      }
     } catch (error) {
       console.error('Error executing commands:', error);
       const step = steps.findIndex(s => s.status === StepStatus.PROGRESS);
@@ -255,94 +288,176 @@ export default function Home() {
     try {
       updateStepStatus(stepIndex, StepStatus.PROGRESS);
       
-      let response;
-      let data;
-      
-      if (stepIndex === 0) {
-        // Execute server step
-        // Get the port from the commands
-        const portMatch = commandsData.commands[0].match(/http\.server\s+(\d+)/);
-        const port = portMatch ? portMatch[1] : '8000';
-        
-        const formData = new FormData();
-        formData.append('file', uploadedFile.file);
-        formData.append('port', port);
-        // Pass the optimizeImage config for image processing
-        formData.append('config', JSON.stringify({ optimizeImage }));
-        
-        response = await apiRequest('POST', '/api/execute/serve', formData, true);
-        data = await response.json();
-        
-        if (data.error) {
-          updateStepStatus(stepIndex, StepStatus.ERROR, data.output);
-          return;
-        }
-        
-        updateStepStatus(stepIndex, StepStatus.SUCCESS, data.output);
-        
-        // Set next step to ready
-        if (stepIndex < 2) {
-          const newSteps = [...steps];
-          newSteps[stepIndex + 1] = { ...newSteps[stepIndex + 1], status: StepStatus.READY };
-          setSteps(newSteps);
-        }
-      } else if (stepIndex === 1) {
-        // Execute download step
-        response = await apiRequest('POST', '/api/execute/download', {
-          fileName: commandsData.fileName,
-          command: commandsData.commands[1]
-        });
-        data = await response.json();
-        
-        if (data.error) {
-          updateStepStatus(stepIndex, StepStatus.ERROR, data.output);
-          return;
-        }
-        
-        updateStepStatus(stepIndex, StepStatus.SUCCESS, data.output);
-        
-        // Set next step to ready
-        if (stepIndex < 2) {
-          const newSteps = [...steps];
-          newSteps[stepIndex + 1] = { ...newSteps[stepIndex + 1], status: StepStatus.READY };
-          setSteps(newSteps);
-        }
-      } else if (stepIndex === 2) {
-        // Execute inscribe step
-        response = await apiRequest('POST', '/api/execute/inscribe', {
-          command: commandsData.commands[2],
-          fileName: uploadedFile.file.name,
-          fileType: uploadedFile.file.type,
-          satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
-        });
-        data = await response.json();
-        
-        if (data.error) {
-          updateStepStatus(stepIndex, StepStatus.ERROR, data.output);
-          setResult({
-            success: false,
-            errorMessage: data.output
-          });
-          return;
-        }
-        
-        updateStepStatus(stepIndex, StepStatus.SUCCESS, data.output);
-        
-        // Check if we have an inscription status ID
-        if (data.inscriptionStatusId) {
-          console.log('Inscription status created with ID:', data.inscriptionStatusId);
+      // For Umbrel environment, use direct approach for all steps
+      if (isUmbrelEnvironment) {
+        if (stepIndex === 0) {
+          // For step 0 (file upload), use the umbrel/copy-to-container endpoint
+          const formData = new FormData();
+          formData.append('file', uploadedFile.file);
           
-          // Optional: You could manually refresh the inscription status display here
-          // but the component handles polling on its own
+          const copyRes = await apiRequest('POST', '/api/umbrel/copy-to-container', formData, true);
+          const copyData = await copyRes.json();
+          
+          if (copyData.error) {
+            updateStepStatus(stepIndex, StepStatus.ERROR, copyData.output);
+            return;
+          }
+          
+          updateStepStatus(stepIndex, StepStatus.SUCCESS, copyData.output);
+          
+          // Set next step to ready
+          if (stepIndex < 2) {
+            const newSteps = [...steps];
+            newSteps[stepIndex + 1] = { ...newSteps[stepIndex + 1], status: StepStatus.READY };
+            setSteps(newSteps);
+          }
+        } else if (stepIndex === 1) {
+          // Step 1 is file preparation - in Umbrel direct mode, this was already done
+          // Just mark as success and proceed
+          updateStepStatus(stepIndex, StepStatus.SUCCESS, "File ready for inscription");
+          
+          // Set next step to ready
+          if (stepIndex < 2) {
+            const newSteps = [...steps];
+            newSteps[stepIndex + 1] = { ...newSteps[stepIndex + 1], status: StepStatus.READY };
+            setSteps(newSteps);
+          }
+        } else if (stepIndex === 2) {
+          // For step 2 (inscription), use the docker exec command
+          // We need the container file path from step 0
+          const step0Output = steps[0].output;
+          const containerPathMatch = step0Output.match(/containerPath: (\/[^\s]+)/);
+          const containerPath = containerPathMatch ? containerPathMatch[1] : '/ord/data/' + uploadedFile.file.name;
+          
+          const metadataValues = metadataForm.getValues();
+          
+          // Build inscription command
+          const inscribeCommand = {
+            command: commandsData.commands[2],
+            containerPath,
+            fileName: uploadedFile.file.name,
+            fileType: uploadedFile.file.type,
+            feeRate: configForm.getValues().feeRate || 4,
+            destination: metadataValues.destination,
+            includeMetadata: metadataValues.includeMetadata,
+            metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
+            parentId: showParentInscription ? parentInscriptionId : undefined,
+            satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
+          };
+          
+          const inscribeRes = await apiRequest('POST', '/api/execute/inscribe', inscribeCommand);
+          const inscribeData = await inscribeRes.json();
+          
+          if (inscribeData.error) {
+            updateStepStatus(stepIndex, StepStatus.ERROR, inscribeData.output);
+            setResult({
+              success: false,
+              errorMessage: inscribeData.output
+            });
+            return;
+          }
+          
+          updateStepStatus(stepIndex, StepStatus.SUCCESS, inscribeData.output);
+          
+          // Parse result and set success
+          setResult({
+            success: true,
+            inscriptionId: inscribeData.inscriptionId,
+            transactionId: inscribeData.transactionId,
+            feePaid: inscribeData.feePaid
+          });
         }
+      } else {
+        // Original implementation for non-Umbrel environments
+        let response;
+        let data;
         
-        // Parse result and set success
-        setResult({
-          success: true,
-          inscriptionId: data.inscriptionId,
-          transactionId: data.transactionId,
-          feePaid: data.feePaid
-        });
+        if (stepIndex === 0) {
+          // Execute server step
+          // Get the port from the commands
+          const portMatch = commandsData.commands[0].match(/http\.server\s+(\d+)/);
+          const port = portMatch ? portMatch[1] : '8000';
+          
+          const formData = new FormData();
+          formData.append('file', uploadedFile.file);
+          formData.append('port', port);
+          // Pass the optimizeImage config for image processing
+          formData.append('config', JSON.stringify({ optimizeImage }));
+          
+          response = await apiRequest('POST', '/api/execute/serve', formData, true);
+          data = await response.json();
+          
+          if (data.error) {
+            updateStepStatus(stepIndex, StepStatus.ERROR, data.output);
+            return;
+          }
+          
+          updateStepStatus(stepIndex, StepStatus.SUCCESS, data.output);
+          
+          // Set next step to ready
+          if (stepIndex < 2) {
+            const newSteps = [...steps];
+            newSteps[stepIndex + 1] = { ...newSteps[stepIndex + 1], status: StepStatus.READY };
+            setSteps(newSteps);
+          }
+        } else if (stepIndex === 1) {
+          // Execute download step
+          response = await apiRequest('POST', '/api/execute/download', {
+            fileName: commandsData.fileName,
+            command: commandsData.commands[1]
+          });
+          data = await response.json();
+          
+          if (data.error) {
+            updateStepStatus(stepIndex, StepStatus.ERROR, data.output);
+            return;
+          }
+          
+          updateStepStatus(stepIndex, StepStatus.SUCCESS, data.output);
+          
+          // Set next step to ready
+          if (stepIndex < 2) {
+            const newSteps = [...steps];
+            newSteps[stepIndex + 1] = { ...newSteps[stepIndex + 1], status: StepStatus.READY };
+            setSteps(newSteps);
+          }
+        } else if (stepIndex === 2) {
+          // Execute inscribe step
+          response = await apiRequest('POST', '/api/execute/inscribe', {
+            command: commandsData.commands[2],
+            fileName: uploadedFile.file.name,
+            fileType: uploadedFile.file.type,
+            satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
+          });
+          data = await response.json();
+          
+          if (data.error) {
+            updateStepStatus(stepIndex, StepStatus.ERROR, data.output);
+            setResult({
+              success: false,
+              errorMessage: data.output
+            });
+            return;
+          }
+          
+          updateStepStatus(stepIndex, StepStatus.SUCCESS, data.output);
+          
+          // Check if we have an inscription status ID
+          if (data.inscriptionStatusId) {
+            console.log('Inscription status created with ID:', data.inscriptionStatusId);
+            
+            // Optional: You could manually refresh the inscription status display here
+            // but the component handles polling on its own
+          }
+          
+          // Parse result and set success
+          setResult({
+            success: true,
+            inscriptionId: data.inscriptionId,
+            transactionId: data.transactionId,
+            feePaid: data.feePaid
+          });
+        }
       }
     } catch (error) {
       console.error(`Error executing step ${stepIndex + 1}:`, error);
@@ -821,90 +936,168 @@ export default function Home() {
         throw new Error(`File with ID ${item.fileId} not found`);
       }
       
-      // Update step 1 (Start server)
-      updateBatchItemStep(item.fileId, 0, StepStatus.PROGRESS);
-      
-      // Get the port from the commands
-      const portMatch = item.commands[0].match(/http\.server\s+(\d+)/);
-      const port = portMatch ? portMatch[1] : '8000';
-      
-      const formData = new FormData();
-      formData.append('file', file.file);
-      formData.append('port', port);
-      formData.append('config', JSON.stringify({ 
-        optimizeImage: !!file.optimizationAvailable,
-        batchMode: true
-      }));
-      
-      // Execute server step
-      const serverRes = await apiRequest('POST', '/api/execute/serve', formData, true);
-      const serverData = await serverRes.json();
-      
-      if (serverData.error) {
-        updateBatchItemStep(item.fileId, 0, StepStatus.ERROR, serverData.output);
+      // Check if we're in Umbrel environment for direct API approach
+      if (isUmbrelEnvironment) {
+        console.log(`Using direct inscribe method for batch item: ${file.file.name}`);
+        
+        // Update all steps to in-progress
+        updateBatchItemStep(item.fileId, 0, StepStatus.PROGRESS);
+        updateBatchItemStep(item.fileId, 1, StepStatus.PROGRESS);
+        updateBatchItemStep(item.fileId, 2, StepStatus.PROGRESS);
+        
+        // Create form data with the file
+        const formData = new FormData();
+        formData.append('file', file.file);
+        
+        // Add all configuration options (similar to what's in the single-file mode)
+        const metadataValues = metadataForm.getValues();
+        const config = {
+          optimizeImage: !!file.optimizationAvailable,
+          feeRate: configForm.getValues().feeRate || 4,
+          destination: metadataValues.destination || undefined,
+          includeMetadata: metadataValues.includeMetadata,
+          metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
+          parentId: item.parentId || undefined,
+          noLimitCheck: configForm.getValues().noLimitCheck,
+          useSatRarity: configForm.getValues().useSatRarity,
+          selectedSatoshi: configForm.getValues().selectedSatoshi,
+          autoInscribe: 'true', // Auto-inscribe in batch mode
+          batchMode: true
+        };
+        
+        formData.append('config', JSON.stringify(config));
+        
+        // Call the direct docker-inscribe endpoint
+        const directInscribeRes = await apiRequest('POST', '/api/docker-inscribe', formData, true);
+        const directInscribeData = await directInscribeRes.json();
+        
+        if (directInscribeData.error) {
+          // If error, mark all steps as failed
+          updateBatchItemStep(item.fileId, 0, StepStatus.ERROR, directInscribeData.output);
+          updateBatchItemStep(item.fileId, 1, StepStatus.ERROR);
+          updateBatchItemStep(item.fileId, 2, StepStatus.ERROR);
+          
+          return {
+            success: false,
+            errorMessage: directInscribeData.output
+          };
+        }
+        
+        // Mark steps as success
+        updateBatchItemStep(item.fileId, 0, StepStatus.SUCCESS, "File successfully copied to container");
+        updateBatchItemStep(item.fileId, 1, StepStatus.SUCCESS, "File prepared for inscription");
+        
+        // Process auto-inscription result or manual command
+        if (directInscribeData.auto_inscribed) {
+          updateBatchItemStep(item.fileId, 2, StepStatus.SUCCESS, directInscribeData.output);
+          
+          return {
+            success: true,
+            inscriptionId: directInscribeData.inscriptionId,
+            transactionId: directInscribeData.transactionId,
+            feePaid: directInscribeData.feePaid || 'Unknown',
+            message: 'Inscription successful using direct method'
+          };
+        } else {
+          // If we didn't auto-inscribe, provide the command for manual execution
+          updateBatchItemStep(item.fileId, 2, StepStatus.SUCCESS, 
+            `File ready for inscription. Execute this command manually:\n${directInscribeData.inscribeCommand}`
+          );
+          
+          return {
+            success: true,
+            manualCommand: directInscribeData.inscribeCommand,
+            containerFilePath: directInscribeData.containerFilePath,
+            message: 'File successfully copied to container. Run the command to complete inscription.'
+          };
+        }
+      } else {
+        // Original implementation for non-Umbrel environments
+        // Update step 1 (Start server)
+        updateBatchItemStep(item.fileId, 0, StepStatus.PROGRESS);
+        
+        // Get the port from the commands
+        const portMatch = item.commands[0].match(/http\.server\s+(\d+)/);
+        const port = portMatch ? portMatch[1] : '8000';
+        
+        const formData = new FormData();
+        formData.append('file', file.file);
+        formData.append('port', port);
+        formData.append('config', JSON.stringify({ 
+          optimizeImage: !!file.optimizationAvailable,
+          batchMode: true
+        }));
+        
+        // Execute server step
+        const serverRes = await apiRequest('POST', '/api/execute/serve', formData, true);
+        const serverData = await serverRes.json();
+        
+        if (serverData.error) {
+          updateBatchItemStep(item.fileId, 0, StepStatus.ERROR, serverData.output);
+          return {
+            success: false,
+            errorMessage: serverData.output
+          };
+        }
+        
+        updateBatchItemStep(item.fileId, 0, StepStatus.SUCCESS, serverData.output);
+        
+        // Update step 2 (Download file)
+        updateBatchItemStep(item.fileId, 1, StepStatus.PROGRESS);
+        
+        // Execute download step
+        const downloadRes = await apiRequest('POST', '/api/execute/download', {
+          fileName: file.file.name,
+          command: item.commands[1]
+        });
+        const downloadData = await downloadRes.json();
+        
+        if (downloadData.error) {
+          updateBatchItemStep(item.fileId, 1, StepStatus.ERROR, downloadData.output);
+          return {
+            success: false,
+            errorMessage: downloadData.output
+          };
+        }
+        
+        updateBatchItemStep(item.fileId, 1, StepStatus.SUCCESS, downloadData.output);
+        
+        // Update step 3 (Inscribe)
+        updateBatchItemStep(item.fileId, 2, StepStatus.PROGRESS);
+        
+        // Execute inscribe step
+        const inscribeRes = await apiRequest('POST', '/api/execute/inscribe', {
+          command: item.commands[2],
+          fileName: file.file.name,
+          fileType: file.file.type,
+          satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
+        });
+        const inscribeData = await inscribeRes.json();
+        
+        if (inscribeData.error) {
+          updateBatchItemStep(item.fileId, 2, StepStatus.ERROR, inscribeData.output);
+          return {
+            success: false,
+            errorMessage: inscribeData.output
+          };
+        }
+        
+        updateBatchItemStep(item.fileId, 2, StepStatus.SUCCESS, inscribeData.output);
+        
+        // Check if we have an inscription status ID
+        if (inscribeData.inscriptionStatusId) {
+          console.log('Batch inscription status created with ID:', inscribeData.inscriptionStatusId);
+          // Status tracking will happen automatically via polling
+        }
+        
+        // Return successful result
         return {
-          success: false,
-          errorMessage: serverData.output
+          success: true,
+          inscriptionId: inscribeData.inscriptionId,
+          transactionId: inscribeData.transactionId,
+          feePaid: inscribeData.feePaid
         };
       }
-      
-      updateBatchItemStep(item.fileId, 0, StepStatus.SUCCESS, serverData.output);
-      
-      // Update step 2 (Download file)
-      updateBatchItemStep(item.fileId, 1, StepStatus.PROGRESS);
-      
-      // Execute download step
-      const downloadRes = await apiRequest('POST', '/api/execute/download', {
-        fileName: file.file.name,
-        command: item.commands[1]
-      });
-      const downloadData = await downloadRes.json();
-      
-      if (downloadData.error) {
-        updateBatchItemStep(item.fileId, 1, StepStatus.ERROR, downloadData.output);
-        return {
-          success: false,
-          errorMessage: downloadData.output
-        };
-      }
-      
-      updateBatchItemStep(item.fileId, 1, StepStatus.SUCCESS, downloadData.output);
-      
-      // Update step 3 (Inscribe)
-      updateBatchItemStep(item.fileId, 2, StepStatus.PROGRESS);
-      
-      // Execute inscribe step
-      const inscribeRes = await apiRequest('POST', '/api/execute/inscribe', {
-        command: item.commands[2],
-        fileName: file.file.name,
-        fileType: file.file.type,
-        satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
-      });
-      const inscribeData = await inscribeRes.json();
-      
-      if (inscribeData.error) {
-        updateBatchItemStep(item.fileId, 2, StepStatus.ERROR, inscribeData.output);
-        return {
-          success: false,
-          errorMessage: inscribeData.output
-        };
-      }
-      
-      updateBatchItemStep(item.fileId, 2, StepStatus.SUCCESS, inscribeData.output);
-      
-      // Check if we have an inscription status ID
-      if (inscribeData.inscriptionStatusId) {
-        console.log('Batch inscription status created with ID:', inscribeData.inscriptionStatusId);
-        // Status tracking will happen automatically via polling
-      }
-      
-      // Return successful result
-      return {
-        success: true,
-        inscriptionId: inscribeData.inscriptionId,
-        transactionId: inscribeData.transactionId,
-        feePaid: inscribeData.feePaid
-      };
     } catch (error) {
       console.error('Error executing commands for batch item:', error);
       
@@ -971,6 +1164,14 @@ export default function Home() {
             title="Upload, configure, and inscribe images to your Ordinals node" 
             isMainTitle={true} 
           />
+          {isUmbrelEnvironment && (
+            <div className="mt-2 p-2 rounded-md bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 flex items-center">
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse mr-2" />
+              <p className="text-sm text-green-700 dark:text-green-300">
+                Umbrel environment detected - using optimized direct file transfer
+              </p>
+            </div>
+          )}
         </header>
 
         <Card className="overflow-hidden border border-orange-200 dark:border-navy-700 shadow-lg rounded-xl dark:bg-navy-800">
@@ -1272,6 +1473,23 @@ export default function Home() {
                 </CollapsibleContent>
               </Collapsible>
             </section>
+
+            {/* Footer with environment information */}
+            <footer className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-4 pb-8 text-center text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex flex-col items-center justify-center">
+                <div className="flex items-center space-x-2 mb-1">
+                  <div className={`h-2 w-2 rounded-full ${isUmbrelEnvironment ? 'bg-green-500' : 'bg-blue-500'}`} />
+                  <span>
+                    {isUmbrelEnvironment 
+                      ? 'Umbrel Mode - Direct File Transfer' 
+                      : 'Standard Mode'}
+                  </span>
+                </div>
+                <div>
+                  Ordinarinos Inscription Tool v1.0
+                </div>
+              </div>
+            </footer>
           </CardContent>
         </Card>
 

@@ -12,6 +12,9 @@ import { getOrdApiUrl } from '../routes';
 const GENIIDATA_API = 'https://api.geniidata.com';
 const GENIIDATA_BRC20_API = `${GENIIDATA_API}/ordinals/brc20`;
 
+// Default container name for Bitcoin Ordinals
+const DEFAULT_ORD_CONTAINER = process.env.ORD_RPC_HOST || "ordinals_ord_1";
+
 // Valid BRC-20 operations
 type Brc20Operation = 'deploy' | 'mint' | 'transfer';
 
@@ -187,8 +190,7 @@ export function registerBrc20Routes(app: any) {
         maxSupply, 
         mintLimit, 
         feeRate, 
-        destinationAddress,
-        containerName
+        destinationAddress
       } = req.body;
       
       // Validate required parameters
@@ -231,8 +233,8 @@ export function registerBrc20Routes(app: any) {
         });
       }
       
-      // Get container name (use provided or default)
-      const container = containerName || 'bitcoin-ordinals';
+      // Use the default container name
+      const container = DEFAULT_ORD_CONTAINER;
       
       // Generate JSON content for inscription
       let inscriptionContent: any = {
