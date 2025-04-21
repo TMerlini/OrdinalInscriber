@@ -29,7 +29,7 @@ import BitmapInscriptionSection from "@/components/BitmapInscriptionSection";
 import Brc20InscriptionSection from "@/components/Brc20InscriptionSection";
 import RecursiveInscriptionSection from "@/components/RecursiveInscriptionSection";
 import InscriptionStatusDisplay from "@/components/InscriptionStatusDisplay";
-import { ChevronDown, RefreshCw, Info, FileText, FileCode, Image, Grid, Bitcoin, Link2 } from "lucide-react";
+import { ChevronDown, RefreshCw, Info, FileText, FileCode, Image, Grid, Bitcoin, Link2, CheckCircle, XCircle } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -62,8 +62,11 @@ export default function Home() {
   const [cacheOpen, setCacheOpen] = useState(false);
   const [optimizeImage, setOptimizeImage] = useState(false);
   const [showParentInscription, setShowParentInscription] = useState(false);
-  const [parentInscriptionId, setParentInscriptionId] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Add tracking for auto-execution
+  const [isAutoExecuting, setIsAutoExecuting] = useState(false);
+  
   const configForm = useForm<ConfigOptions>({
     defaultValues: {
       containerPath: "/ord/data/",
@@ -79,6 +82,7 @@ export default function Home() {
       includeMetadata: false,
       metadataStorage: "on-chain" as const,
       destination: "",
+      parentInscriptionId: "",
       metadataJson: `{
   "name": "My Ordinals Inscription",
   "description": "A unique digital artifact on Bitcoin",
@@ -158,7 +162,7 @@ export default function Home() {
         metadataStorage: "on-chain" as const,
         metadataJson: metadataValues.metadataJson,
         destination: metadataValues.destination,
-        parentId: showParentInscription ? parentInscriptionId : undefined
+        parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined
       };
       
       const formData = new FormData();
@@ -169,8 +173,20 @@ export default function Home() {
       const data = await response.json();
       
       setCommandsData(data);
+      
+      // If autoExecute is enabled, automatically run the commands
+      if (config.autoExecute) {
+        // Set auto-executing state to true
+        setIsAutoExecuting(true);
+        
+        // Wait for commandsData to be set in state
+        setTimeout(() => {
+          runAllCommands();
+        }, 100);
+      }
     } catch (error) {
       console.error('Error generating commands:', error);
+      setIsAutoExecuting(false);
     }
   };
   
@@ -197,19 +213,20 @@ export default function Home() {
         destination: metadataValues.destination || undefined,
         includeMetadata: metadataValues.includeMetadata,
         metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
-        parentId: showParentInscription ? parentInscriptionId : undefined,
+        parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
         noLimitCheck: configForm.getValues().noLimitCheck,
         useSatRarity: configForm.getValues().useSatRarity,
         selectedSatoshi: configForm.getValues().selectedSatoshi,
         dryRun: configForm.getValues().dryRun,
         mimeType: configForm.getValues().mimeType,
-        autoInscribe: 'true' // Request automatic inscription
+        // Use the auto execution preference from config form
+        autoInscribe: 'true' // Always auto-inscribe when running all commands
       };
       
       formData.append('config', JSON.stringify(config));
       
       // Call the direct inscribe endpoint
-      const directInscribeRes = await apiRequest('POST', '/api/docker-inscribe', formData, true);
+      const directInscribeRes = await apiRequest('POST', '/api/docker-inscribe', formData, true, 120000);
       const directInscribeData = await directInscribeRes.json();
       
       if (directInscribeData.error) {
@@ -222,6 +239,9 @@ export default function Home() {
           success: false,
           errorMessage: directInscribeData.output
         });
+        
+        // Reset auto-executing state on error
+        setIsAutoExecuting(false);
         return;
       }
       
@@ -242,6 +262,9 @@ export default function Home() {
           feePaid: directInscribeData.feePaid || 'Unknown',
           message: 'Inscription successful using direct method'
         });
+        
+        // Reset auto-executing state
+        setIsAutoExecuting(false);
       } else {
         // If we didn't auto-inscribe, provide the command for manual execution
         updateStepStatus(2, StepStatus.SUCCESS, 
@@ -254,6 +277,9 @@ export default function Home() {
           containerFilePath: directInscribeData.containerFilePath,
           message: 'File successfully copied to container. Run the command to complete inscription.'
         });
+        
+        // Reset auto-executing state
+        setIsAutoExecuting(false);
       }
     } catch (error) {
       console.error('Error executing commands:', error);
@@ -266,6 +292,9 @@ export default function Home() {
         success: false,
         errorMessage: String(error)
       });
+      
+      // Reset auto-executing state on error
+      setIsAutoExecuting(false);
     }
   };
   
@@ -300,6 +329,7 @@ export default function Home() {
           
           if (copyData.error) {
             updateStepStatus(stepIndex, StepStatus.ERROR, copyData.output);
+            setIsAutoExecuting(false);
             return;
           }
           
@@ -341,7 +371,7 @@ export default function Home() {
             destination: metadataValues.destination,
             includeMetadata: metadataValues.includeMetadata,
             metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
-            parentId: showParentInscription ? parentInscriptionId : undefined,
+            parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
             satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
           };
           
@@ -354,6 +384,7 @@ export default function Home() {
               success: false,
               errorMessage: inscribeData.output
             });
+            setIsAutoExecuting(false);
             return;
           }
           
@@ -366,6 +397,9 @@ export default function Home() {
             transactionId: inscribeData.transactionId,
             feePaid: inscribeData.feePaid
           });
+          
+          // Reset auto-executing state after successful completion
+          setIsAutoExecuting(false);
         }
       } else {
         // Original implementation for non-Umbrel environments
@@ -384,7 +418,7 @@ export default function Home() {
           // Pass the optimizeImage config for image processing
           formData.append('config', JSON.stringify({ optimizeImage }));
           
-          response = await apiRequest('POST', '/api/execute/serve', formData, true);
+          response = await apiRequest('POST', '/api/execute/serve', formData, true, 120000);
           data = await response.json();
           
           if (data.error) {
@@ -423,11 +457,18 @@ export default function Home() {
           }
         } else if (stepIndex === 2) {
           // Execute inscribe step
+          const metadataValues = metadataForm.getValues();
+          
           response = await apiRequest('POST', '/api/execute/inscribe', {
             command: commandsData.commands[2],
             fileName: uploadedFile.file.name,
             fileType: uploadedFile.file.type,
-            satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
+            satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined,
+            // Add metadata parameters
+            includeMetadata: metadataValues.includeMetadata,
+            metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
+            parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
+            destination: metadataValues.destination || undefined
           });
           data = await response.json();
           
@@ -437,6 +478,7 @@ export default function Home() {
               success: false,
               errorMessage: data.output
             });
+            setIsAutoExecuting(false);
             return;
           }
           
@@ -457,6 +499,9 @@ export default function Home() {
             transactionId: data.transactionId,
             feePaid: data.feePaid
           });
+          
+          // Reset auto-executing state after successful completion
+          setIsAutoExecuting(false);
         }
       }
     } catch (error) {
@@ -469,6 +514,9 @@ export default function Home() {
           errorMessage: String(error)
         });
       }
+      
+      // Reset auto-executing state on error
+      setIsAutoExecuting(false);
     }
   };
   
@@ -487,6 +535,7 @@ export default function Home() {
       { status: StepStatus.DEFAULT, output: "" }
     ]);
     setResult(null);
+    setIsAutoExecuting(false);
   };
   
   const tryAgain = () => {
@@ -605,6 +654,20 @@ export default function Home() {
         failedCount: 0
       });
       
+      // If autoExecute is enabled, set tracking state and start processing
+      if (config.autoExecute) {
+        setIsAutoExecuting(true);
+        
+        // Start batch processing automatically after a short delay
+        setTimeout(() => {
+          setBatchProcessingState(prev => ({
+            ...prev,
+            inProgress: true
+          }));
+          processBatchItem();
+        }, 100);
+      }
+      
       // Generate commands for each file and prepare them for processing
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
@@ -616,7 +679,7 @@ export default function Home() {
           includeMetadata: metadataValues.includeMetadata,
           metadataStorage: "on-chain" as const,
           destination: metadataValues.destination,
-          parentId: showParentInscription ? parentInscriptionId : undefined,
+          parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
           batchMode: true,
           // Apply rare sats in batch mode (keep the selected satoshi for each file)
           useSatRarity: config.useSatRarity,
@@ -673,22 +736,14 @@ export default function Home() {
           const data = await response.json();
           
           // Update the batch item with the generated commands
-          setBatchProcessingState(prev => {
-            const updatedItems = [...prev.items];
-            const itemIndex = updatedItems.findIndex(item => item.fileId === file.id);
-            
-            if (itemIndex !== -1) {
-              updatedItems[itemIndex] = {
-                ...updatedItems[itemIndex],
-                commands: data.commands
-              };
-            }
-            
-            return {
-              ...prev,
-              items: updatedItems
-            };
-          });
+          setBatchProcessingState(prev => ({
+            ...prev,
+            items: prev.items.map(i => 
+              i.fileId === item.fileId ? { ...i, commands: data.commands } : i
+            )
+          }));
+          
+          return data;
         } catch (error) {
           console.error(`Error preparing file ${file.file.name}:`, error);
           
@@ -734,6 +789,9 @@ export default function Home() {
       inProgress: true
     }));
     
+    // Set auto-executing to true when manually starting batch processing
+    setIsAutoExecuting(true);
+    
     // Process the next item
     await processBatchItem();
   };
@@ -743,6 +801,9 @@ export default function Home() {
       ...prev,
       inProgress: false
     }));
+    
+    // Reset auto-executing state when stopping batch processing
+    setIsAutoExecuting(false);
   };
   
   const resetBatchProcessing = () => {
@@ -764,6 +825,9 @@ export default function Home() {
       completedCount: 0,
       failedCount: 0
     }));
+    
+    // Reset auto-executing state
+    setIsAutoExecuting(false);
   };
   
   // Process a single item in the batch
@@ -777,6 +841,9 @@ export default function Home() {
         ...prev,
         inProgress: false
       }));
+      
+      // Reset auto-executing state when all items are complete
+      setIsAutoExecuting(false);
       return;
     }
     
@@ -860,7 +927,7 @@ export default function Home() {
       includeMetadata: metadataValues.includeMetadata,
       metadataStorage: "on-chain" as const,
       destination: metadataValues.destination,
-      parentId: showParentInscription ? parentInscriptionId : undefined,
+      parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
       batchMode: true,
       // Apply rare sats in batch mode (keep the selected satoshi for each file)
       useSatRarity: config.useSatRarity,
@@ -957,18 +1024,18 @@ export default function Home() {
           destination: metadataValues.destination || undefined,
           includeMetadata: metadataValues.includeMetadata,
           metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
-          parentId: item.parentId || undefined,
+          parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
           noLimitCheck: configForm.getValues().noLimitCheck,
           useSatRarity: configForm.getValues().useSatRarity,
           selectedSatoshi: configForm.getValues().selectedSatoshi,
-          autoInscribe: 'true', // Auto-inscribe in batch mode
+          autoInscribe: 'true', // Always auto-inscribe in batch mode
           batchMode: true
         };
         
         formData.append('config', JSON.stringify(config));
         
         // Call the direct docker-inscribe endpoint
-        const directInscribeRes = await apiRequest('POST', '/api/docker-inscribe', formData, true);
+        const directInscribeRes = await apiRequest('POST', '/api/docker-inscribe', formData, true, 120000);
         const directInscribeData = await directInscribeRes.json();
         
         if (directInscribeData.error) {
@@ -1029,7 +1096,7 @@ export default function Home() {
         }));
         
         // Execute server step
-        const serverRes = await apiRequest('POST', '/api/execute/serve', formData, true);
+        const serverRes = await apiRequest('POST', '/api/execute/serve', formData, true, 120000);
         const serverData = await serverRes.json();
         
         if (serverData.error) {
@@ -1066,12 +1133,20 @@ export default function Home() {
         updateBatchItemStep(item.fileId, 2, StepStatus.PROGRESS);
         
         // Execute inscribe step
-        const inscribeRes = await apiRequest('POST', '/api/execute/inscribe', {
+        const inscribeCommand = {
           command: item.commands[2],
+          containerPath,
           fileName: file.file.name,
           fileType: file.file.type,
+          feeRate: configForm.getValues().feeRate || 4,
+          destination: metadataValues.destination,
+          includeMetadata: metadataValues.includeMetadata,
+          metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
+          parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
           satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
-        });
+        };
+        
+        const inscribeRes = await apiRequest('POST', '/api/execute/inscribe', inscribeCommand);
         const inscribeData = await inscribeRes.json();
         
         if (inscribeData.error) {
@@ -1308,8 +1383,8 @@ export default function Home() {
                       placeholder="Enter Bitcoin address to receive the inscription"
                       className="w-full p-2 border border-orange-200 dark:border-navy-600 rounded-md 
                                 bg-white dark:bg-navy-900 text-gray-800 dark:text-gray-200"
-                      value={metadataForm.getValues().destination || ''} 
-                      onChange={(e) => metadataForm.setValue('destination', e.target.value)}
+                      value={metadataForm.watch('destination') || ''} 
+                      onChange={(e) => metadataForm.setValue('destination', e.target.value, { shouldValidate: true, shouldDirty: true })}
                     />
                     <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
                       If left empty, the {batchMode ? "inscriptions" : "inscription"} will be sent to the wallet's default address.
@@ -1340,8 +1415,8 @@ export default function Home() {
                           placeholder="Enter parent inscription ID"
                           className="w-full p-2 border border-orange-200 dark:border-navy-600 rounded-md 
                                     bg-white dark:bg-navy-900 text-gray-800 dark:text-gray-200"
-                          value={parentInscriptionId} 
-                          onChange={(e) => setParentInscriptionId(e.target.value)}
+                          value={metadataForm.watch('parentInscriptionId') || ''}
+                          onChange={(e) => metadataForm.setValue('parentInscriptionId', e.target.value, { shouldValidate: true, shouldDirty: true })}
                         />
                         <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
                           Create {batchMode ? "child inscriptions" : "a child inscription"} under this parent inscription
@@ -1390,7 +1465,7 @@ export default function Home() {
             )}
             
             {/* Show batch processing progress only after batch is prepared */}
-            {batchMode && batchProcessingState.items.length > 0 && (
+            {batchMode && batchProcessingState.items.length > 0 && !isAutoExecuting && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-white dark:bg-navy-900">
                 <SectionTitle title="Batch Processing" />
                 <div className="mb-4">
@@ -1404,6 +1479,104 @@ export default function Home() {
                   onStopProcessing={stopBatchProcessing}
                   onResetProcessing={resetBatchProcessing}
                 />
+              </section>
+            )}
+
+            {/* Show auto-processing indicator for batch mode */}
+            {batchMode && batchProcessingState.items.length > 0 && isAutoExecuting && (
+              <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
+                <SectionTitle title="Processing Batch Inscriptions" />
+                <div className="mt-4">
+                  <div className="p-4 rounded-lg border border-orange-200 dark:border-navy-600 bg-white dark:bg-navy-900">
+                    <div className="flex items-center mb-4">
+                      <div className="h-2.5 w-2.5 rounded-full bg-orange-500 animate-pulse mr-2"></div>
+                      <p className="font-medium text-orange-700 dark:text-orange-300">
+                        Automatically processing {batchProcessingState.items.length} inscriptions...
+                      </p>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>Progress:</span>
+                        <span>
+                          {batchProcessingState.completedCount + batchProcessingState.failedCount} of {batchProcessingState.items.length} 
+                          ({Math.round(((batchProcessingState.completedCount + batchProcessingState.failedCount) / batchProcessingState.items.length) * 100)}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 dark:bg-navy-700 rounded-full h-2.5">
+                        <div 
+                          className="bg-orange-500 h-2.5 rounded-full" 
+                          style={{ 
+                            width: `${Math.round(((batchProcessingState.completedCount + batchProcessingState.failedCount) / batchProcessingState.items.length) * 100)}%` 
+                          }}>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Current item being processed */}
+                    {batchProcessingState.inProgress && batchProcessingState.currentItemIndex < batchProcessingState.items.length && (
+                      <div className="p-3 rounded-md bg-orange-50 dark:bg-navy-800 border border-orange-100 dark:border-navy-700 mb-4">
+                        <h4 className="text-sm font-medium mb-2">Currently Processing:</h4>
+                        <div className="flex items-center">
+                          <div className="h-2 w-2 rounded-full bg-orange-500 animate-pulse mr-2"></div>
+                          <p className="text-sm">
+                            {batchProcessingState.items[batchProcessingState.currentItemIndex].fileName}
+                          </p>
+                        </div>
+                        
+                        {/* Display the current step status for the item */}
+                        {batchProcessingState.items[batchProcessingState.currentItemIndex].steps?.map((step, stepIndex) => (
+                          <div key={stepIndex} className="ml-4 mt-2 text-xs flex items-center">
+                            <div className={`h-1.5 w-1.5 rounded-full mr-2 ${
+                              step.status === StepStatus.SUCCESS ? "bg-green-500" :
+                              step.status === StepStatus.ERROR ? "bg-red-500" :
+                              step.status === StepStatus.PROGRESS ? "bg-orange-500 animate-pulse" :
+                              "bg-gray-300 dark:bg-gray-600"
+                            }`}></div>
+                            <span>
+                              {stepIndex === 0 ? "Uploading File" : 
+                               stepIndex === 1 ? "Preparing File" : 
+                               "Creating Inscription"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Summary of processed items */}
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div className="p-2 rounded-md bg-gray-50 dark:bg-navy-800">
+                        <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{batchProcessingState.items.length}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+                      </div>
+                      <div className="p-2 rounded-md bg-green-50 dark:bg-green-900/20">
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">{batchProcessingState.completedCount}</p>
+                        <p className="text-xs text-green-600 dark:text-green-400">Completed</p>
+                      </div>
+                      <div className="p-2 rounded-md bg-red-50 dark:bg-red-900/20">
+                        <p className="text-2xl font-bold text-red-600 dark:text-red-400">{batchProcessingState.failedCount}</p>
+                        <p className="text-xs text-red-600 dark:text-red-400">Failed</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-start">
+                        <Info className="h-4 w-4 text-orange-500 mt-0.5 mr-2 flex-shrink-0" />
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          Your files are being processed automatically. You can view detailed results when processing is complete.
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={stopBatchProcessing} 
+                        variant="outline" 
+                        size="sm"
+                        className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20"
+                      >
+                        Stop Processing
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </section>
             )}
 
@@ -1426,14 +1599,75 @@ export default function Home() {
 
             {commandsData && (
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
-                <SectionTitle title="Execute Commands" />
-                <CommandSection 
-                  commands={commandsData.commands.join('\n')} 
-                  steps={steps}
-                  onRunAll={runAllCommands}
-                  onRunStepByStep={runStepByStep}
-                  onExecuteStep={executeStep}
-                />
+                {isAutoExecuting ? (
+                  <>
+                    <SectionTitle title="Processing Inscription" />
+                    <div className="mt-4">
+                      <div className="p-4 rounded-lg border border-orange-200 dark:border-navy-600 bg-white dark:bg-navy-900">
+                        <div className="flex items-center mb-4">
+                          <div className="h-2.5 w-2.5 rounded-full bg-orange-500 animate-pulse mr-2"></div>
+                          <p className="font-medium text-orange-700 dark:text-orange-300">
+                            Automatically processing your inscription...
+                          </p>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          {steps.map((step, index) => (
+                            <div key={index} className="p-3 rounded-md bg-orange-50 dark:bg-navy-800 border border-orange-100 dark:border-navy-700">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="font-medium text-sm">
+                                  {index === 0 ? "Step 1: Uploading File" : 
+                                   index === 1 ? "Step 2: Preparing File" : 
+                                   "Step 3: Creating Inscription"}
+                                </p>
+                                <div className={`flex items-center ${
+                                  step.status === StepStatus.SUCCESS ? "text-green-500" :
+                                  step.status === StepStatus.ERROR ? "text-red-500" :
+                                  step.status === StepStatus.PROGRESS ? "text-orange-500" :
+                                  "text-gray-400"
+                                }`}>
+                                  {step.status === StepStatus.SUCCESS ? (
+                                    <CheckCircle className="h-4 w-4" />
+                                  ) : step.status === StepStatus.ERROR ? (
+                                    <XCircle className="h-4 w-4" />
+                                  ) : step.status === StepStatus.PROGRESS ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <div className="h-4 w-4 rounded-full border-2 border-gray-300 dark:border-gray-600"></div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {step.output && (step.status === StepStatus.SUCCESS || step.status === StepStatus.ERROR) && (
+                                <div className="mt-2 p-2 rounded bg-gray-50 dark:bg-navy-900 text-xs font-mono overflow-x-auto max-h-24 overflow-y-auto">
+                                  {step.output}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="mt-4 flex items-start">
+                          <Info className="h-4 w-4 text-orange-500 mt-0.5 mr-2 flex-shrink-0" />
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
+                            Your file is being processed automatically. You'll see the results as soon as the inscription is complete.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <SectionTitle title="Execute Commands" />
+                    <CommandSection 
+                      commands={commandsData.commands.join('\n')} 
+                      steps={steps}
+                      onRunAll={runAllCommands}
+                      onRunStepByStep={runStepByStep}
+                      onExecuteStep={executeStep}
+                    />
+                  </>
+                )}
               </section>
             )}
 

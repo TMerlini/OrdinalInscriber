@@ -1,8 +1,9 @@
 import { createRoot } from "react-dom/client";
-import App from "./App";
+import App from "./App.tsx";
 import "./index.css";
 import { disableViteErrorOverlay } from "./lib/disableViteOverlay";
 import ErrorBoundary from "./components/ErrorBoundary";
+import React from 'react'
 
 // Check if we're likely in an external browser vs. Replit environment
 const isExternalBrowser = !window.location.hostname.includes('replit') && 
@@ -369,9 +370,147 @@ if (isExternalBrowser) {
   };
 }
 
+// Add error logging that persists even when overlay is suppressed
+window.addEventListener('error', (event) => {
+  // Log to console in a way that won't be intercepted
+  console.warn('APPLICATION ERROR (Not Suppressed):', {
+    message: event.error?.message || event.message,
+    stack: event.error?.stack,
+    source: event.filename,
+    line: event.lineno,
+    column: event.colno
+  });
+  
+  // You could also send to a logging service here
+});
+
+// Add similar handler for promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+  console.warn('UNHANDLED PROMISE REJECTION (Not Suppressed):', {
+    reason: event.reason,
+    message: event.reason?.message,
+    stack: event.reason?.stack
+  });
+});
+
+// Create an error boundary component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.warn('REACT ERROR BOUNDARY (Not Suppressed):', { error, errorInfo });
+    this.setState({ errorInfo });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', backgroundColor: '#ffefef', border: '1px solid #f0c0c0', borderRadius: '5px', margin: '20px' }}>
+          <h2>An error occurred in the application</h2>
+          <details style={{ whiteSpace: 'pre-wrap' }}>
+            <summary>Show error details</summary>
+            <p>{this.state.error?.toString()}</p>
+            <p>{this.state.errorInfo?.componentStack}</p>
+          </details>
+          <button onClick={() => window.location.reload()} style={{ padding: '8px 16px', marginTop: '10px' }}>
+            Reload Application
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // Don't let error overlay interfere with our app by wrapping with ErrorBoundary
 createRoot(document.getElementById("root")!).render(
   <ErrorBoundary disableViteOverlay={true}>
     <App />
   </ErrorBoundary>
 );
+
+// Add proper error logging without suppression
+if (typeof window !== 'undefined') {
+  // Preserve original console methods
+  const originalConsoleError = console.error;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleLog = console.log;
+
+  // Create an array to store error logs
+  window.__ERROR_LOGS = [];
+  
+  // Record errors instead of just hiding them
+  window.addEventListener('error', (event) => {
+    const errorInfo = {
+      type: 'runtime_error',
+      timestamp: new Date().toISOString(),
+      message: event.error?.message || event.message,
+      stack: event.error?.stack,
+      source: event.filename,
+      line: event.lineno,
+      column: event.colno
+    };
+    
+    // Store error in our logs array
+    if (window.__ERROR_LOGS) {
+      window.__ERROR_LOGS.push(errorInfo);
+    }
+    
+    // Always log to console with original method
+    originalConsoleError.call(console, 'APPLICATION ERROR:', errorInfo);
+  }, true);
+  
+  // Record unhandled promise rejections
+  window.addEventListener('unhandledrejection', (event) => {
+    const errorInfo = {
+      type: 'unhandled_promise',
+      timestamp: new Date().toISOString(),
+      reason: event.reason,
+      message: event.reason?.message,
+      stack: event.reason?.stack
+    };
+    
+    // Store in logs array
+    if (window.__ERROR_LOGS) {
+      window.__ERROR_LOGS.push(errorInfo);
+    }
+    
+    // Always log to console with original method
+    originalConsoleError.call(console, 'UNHANDLED PROMISE REJECTION:', errorInfo);
+  }, true);
+  
+  // Add a global function to view error logs
+  window.showErrorLogs = function() {
+    if (window.__ERROR_LOGS && window.__ERROR_LOGS.length > 0) {
+      originalConsoleLog.call(console, '%c Application Error Logs ', 'background: #f44336; color: white; padding: 2px; border-radius: 2px;');
+      window.__ERROR_LOGS.forEach((log, index) => {
+        originalConsoleLog.call(console, `%c Error #${index + 1} (${log.type}) `, 'background: #f44336; color: white; padding: 2px; border-radius: 2px;', log);
+      });
+      return window.__ERROR_LOGS.length + ' errors found. See console for details.';
+    } else {
+      originalConsoleLog.call(console, '%c No errors logged ', 'background: #4caf50; color: white; padding: 2px; border-radius: 2px;');
+      return 'No errors logged.';
+    }
+  };
+  
+  // Add a function to toggle error overlay suppression
+  window.toggleErrorOverlays = function(enable = false) {
+    window.__DISABLE_ERROR_OVERLAYS__ = !enable;
+    window.__VITE_ERROR_HANDLERS_DISABLED__ = !enable;
+    window.__ERROR_OVERLAY_DISABLED__ = !enable;
+    window.__RUNTIME_ERROR_OVERLAY_DISABLED__ = !enable;
+    window.__PLUGIN_ERROR_OVERLAY_DISABLED__ = !enable;
+    
+    originalConsoleLog.call(console, `%c Error overlays ${enable ? 'ENABLED' : 'DISABLED'} `, 
+      `background: ${enable ? '#4caf50' : '#f44336'}; color: white; padding: 2px; border-radius: 2px;`);
+    
+    return `Error overlays are now ${enable ? 'enabled' : 'disabled'}.`;
+  };
+}

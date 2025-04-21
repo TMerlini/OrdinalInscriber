@@ -11,7 +11,8 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
-  isFormData: boolean = false
+  isFormData: boolean = false,
+  timeoutMs: number = 60000 // Default 60-second timeout
 ): Promise<Response> {
   const headers: Record<string, string> = {};
   let body: any = undefined;
@@ -26,15 +27,30 @@ export async function apiRequest(
     }
   }
   
-  const res = await fetch(url, {
-    method,
-    headers,
-    body,
-    credentials: "include",
-  });
+  // Add timeout handling
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const res = await fetch(url, {
+      method,
+      headers,
+      body,
+      credentials: "include",
+      signal: controller.signal
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error) {
+    // If AbortError, provide a clearer message
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error(`Request timeout after ${timeoutMs/1000} seconds. The operation took too long to complete.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

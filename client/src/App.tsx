@@ -8,6 +8,7 @@ import FaqPage from "@/pages/FaqPage";
 import { useEffect } from "react";
 import { disableViteErrorOverlay } from "./lib/disableViteOverlay";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import ErrorDebugger from './components/ErrorDebugger';
 
 function Router() {
   return (
@@ -62,6 +63,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <Router />
         <Toaster />
+        {import.meta.env.DEV && <ErrorDebugger />}
       </QueryClientProvider>
     </ErrorBoundary>
   );
