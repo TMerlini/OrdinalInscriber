@@ -17,7 +17,7 @@ dependencies:
   - ordinals
 repo: https://github.com/TMerlini/OrdinalInscriber.git
 support: https://github.com/TMerlini/OrdinalInscriber/issues
-icon: /icon.png
+icon: /icon.svg
 gallery:
   - https://raw.githubusercontent.com/TMerlini/OrdinalInscriber/main/screenshots/main.png
   - https://raw.githubusercontent.com/TMerlini/OrdinalInscriber/main/screenshots/batch.png

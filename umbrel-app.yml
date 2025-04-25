@@ -13,7 +13,7 @@ dependencies:
 repo: https://github.com/TMerlini/OrdinalInscriber.git
 support: https://github.com/TMerlini/OrdinalInscriber/issues
 port: 3500
-icon: /icon.svg
+icon: /icon.png
 platforms:
   - "linux/amd64"
   - "linux/arm64"
