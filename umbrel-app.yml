@@ -22,7 +22,7 @@ defaultUsername: ""
 defaultPassword: ""
 submitter: Ordinarinos
 submission: "https://github.com/TMerlini/OrdinalInscriber.git"
-donate: bc1qnr5datqu7hw53w8vdvdtkmhr8pmh4sj5a0v0yf
+donate: bc1pfwqlv0r7dragxrgl2d7w538npjqyvpjl4ckl22qlk4vyjlp5jtrswndww9
 
 containers:
   - image: "{APP_ID}"
