@@ -32,6 +32,10 @@ import InscriptionStatusDisplay from "@/components/InscriptionStatusDisplay";
 import { ChevronDown, RefreshCw, Info, FileText, FileCode, Image, Grid, Bitcoin, Link2, CheckCircle, XCircle } from "lucide-react";
 import { UploadedFile, ConfigOptions, CommandsData, ExecutionStep, StepStatus, InscriptionResult, BatchProcessingItem, BatchProcessingState } from "@/lib/types";
 import { apiRequest } from "@/lib/queryClient";
+import toast from "react-hot-toast";
+import TimeoutHelpDialog from "@/components/TimeoutHelpDialog";
+import CommandsOutput from "@/components/CommandsOutput";
+import { Input } from "@/components/ui/input";
 
 export default function Home() {
   // Single file mode state
@@ -63,6 +67,7 @@ export default function Home() {
   const [optimizeImage, setOptimizeImage] = useState(false);
   const [showParentInscription, setShowParentInscription] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [stepsComplete, setStepsComplete] = useState(false);
   
   // Add tracking for auto-execution
   const [isAutoExecuting, setIsAutoExecuting] = useState(false);
@@ -70,47 +75,30 @@ export default function Home() {
   const configForm = useForm<ConfigOptions>({
     defaultValues: {
       containerPath: "/ord/data/",
-      feeRate: "4",
+      feeRate: 4,
       useSatRarity: false,
-      selectedSat: "",
+      selectedSatoshi: "",
     }
   });
   
   // Form for metadata and destination
   const metadataForm = useForm({
     defaultValues: {
-      includeMetadata: false,
-      metadataStorage: "on-chain" as const,
       destination: "",
       parentInscriptionId: "",
-      metadataJson: `{
-  "name": "My Ordinals Inscription",
-  "description": "A unique digital artifact on Bitcoin",
-  "attributes": [
-    {
-      "trait_type": "Type",
-      "value": "Image"
-    }
-  ]
-}`
+      includeMetadata: false,
+      metadataJson: JSON.stringify({
+        name: "",
+        description: "",
+      }, null, 2),
     }
   });
   
   // Check if we're in an Umbrel environment on component mount
   useEffect(() => {
-    const checkUmbrelEnvironment = async () => {
-      try {
-        // Force Umbrel mode to always be true to avoid timeouts
-        setIsUmbrelEnvironment(true);
-        console.log('Environment detection: Forced to Umbrel mode to avoid timeouts');
-      } catch (error) {
-        console.error('Error checking environment:', error);
-        // Default to true if check fails
-        setIsUmbrelEnvironment(true);
-      }
-    };
-    
-    checkUmbrelEnvironment();
+    // Always use direct Docker access approach
+    setIsUmbrelEnvironment(true);
+    console.log('Environment detection: Using direct Docker access mode');
   }, []);
   
   const handleFileUpload = (newFile: UploadedFile) => {
@@ -148,153 +136,197 @@ export default function Home() {
   };
   
   const handleGenerateCommands = async (config: ConfigOptions) => {
-    if (!uploadedFile) return;
-    
     try {
-      const metadataValues = metadataForm.getValues();
+      setLoading(true);
       
-      // Include the optimize image setting from the file preview component
-      // and metadata from the metadata form
-      const mergedConfig: ConfigOptions = {
-        ...config,
-        optimizeImage: optimizeImage,
-        includeMetadata: metadataValues.includeMetadata,
-        metadataStorage: "on-chain" as const,
-        metadataJson: metadataValues.metadataJson,
-        destination: metadataValues.destination,
-        parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined
-      };
-      
-      const formData = new FormData();
-      formData.append('file', uploadedFile.file);
-      formData.append('config', JSON.stringify(mergedConfig));
-      
-      const response = await apiRequest('POST', '/api/commands/generate', formData, true);
-      const data = await response.json();
-      
-      setCommandsData(data);
-      
-      // If autoExecute is enabled, automatically run the commands
-      if (config.autoExecute) {
-        // Set auto-executing state to true
-        setIsAutoExecuting(true);
-        
-        // Wait for commandsData to be set in state
-        setTimeout(() => {
-          runAllCommands();
-        }, 100);
+      if (!uploadedFile) {
+        toast.error("Please upload a file first");
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error('Error generating commands:', error);
-      setIsAutoExecuting(false);
-    }
-  };
-  
-  const runAllCommands = async () => {
-    if (!commandsData || !uploadedFile) return;
-    
-    try {
+
       // Always use the direct docker-inscribe approach to avoid timeouts
-      console.log('Using direct inscribe method to avoid timeouts');
+      console.log('Using direct Docker inscribe method');
       
-      // Set all steps to progress initially
-      updateStepStatus(0, StepStatus.PROGRESS);
-      updateStepStatus(1, StepStatus.PROGRESS);
-      updateStepStatus(2, StepStatus.PROGRESS);
-      
-      const metadataValues = metadataForm.getValues();
+      // Create form data with file
       const formData = new FormData();
       formData.append('file', uploadedFile.file);
       
-      // Add all configuration options
-      const config = {
+      // Add all configuration options for direct Docker inscribe
+      const metadataValues = metadataForm.getValues();
+      const configOptions = {
         optimizeImage,
-        feeRate: configForm.getValues().feeRate || 4,
+        feeRate: config.feeRate || 4,
         destination: metadataValues.destination || undefined,
         includeMetadata: metadataValues.includeMetadata,
         metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
         parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
-        noLimitCheck: configForm.getValues().noLimitCheck,
-        useSatRarity: configForm.getValues().useSatRarity,
-        selectedSatoshi: configForm.getValues().selectedSatoshi,
-        dryRun: configForm.getValues().dryRun,
-        mimeType: configForm.getValues().mimeType,
-        // Use the auto execution preference from config form
-        autoInscribe: 'true' // Always auto-inscribe when running all commands
+        noLimitCheck: config.noLimitCheck,
+        useSatRarity: config.useSatRarity,
+        selectedSatoshi: config.selectedSatoshi,
+        autoInscribe: config.autoExecute ? 'true' : 'false'
       };
       
-      formData.append('config', JSON.stringify(config));
+      formData.append('config', JSON.stringify(configOptions));
       
-      // Call the direct inscribe endpoint
-      const directInscribeRes = await apiRequest('POST', '/api/docker-inscribe', formData, true, 120000);
-      const directInscribeData = await directInscribeRes.json();
+      // Use the direct Docker inscribe endpoint
+      const response = await apiRequest('POST', '/api/docker-inscribe', formData, true, 180000);
+      const data = await response.json();
       
-      if (directInscribeData.error) {
-        // If first step fails, mark all as error
-        updateStepStatus(0, StepStatus.ERROR, directInscribeData.output);
-        updateStepStatus(1, StepStatus.ERROR);
-        updateStepStatus(2, StepStatus.ERROR);
-        
-        setResult({
-          success: false,
-          errorMessage: directInscribeData.output
-        });
-        
-        // Reset auto-executing state on error
-        setIsAutoExecuting(false);
+      if (data.error) {
+        toast.error(`Error generating commands: ${data.output}`);
+        setLoading(false);
         return;
       }
       
-      // First step is copying file to container
-      updateStepStatus(0, StepStatus.SUCCESS, "File successfully copied to container");
-      // Second step is file preparation (always successful if first step worked)
-      updateStepStatus(1, StepStatus.SUCCESS, "File prepared for inscription");
+      // Process response
+      const commandsData: CommandsData = {
+        fileName: uploadedFile.file.name,
+        commands: [
+          'Docker file copy command (executed automatically)',
+          'File prepared in container (completed)',
+          data.inscribeCommand || 'Unknown command'
+        ],
+        fileUrl: data.containerFilePath || '',
+        port: '8000'
+      };
       
-      // Third step is the actual inscription
-      if (directInscribeData.auto_inscribed) {
-        updateStepStatus(2, StepStatus.SUCCESS, directInscribeData.output);
-        
-        // Set result
+      setCommandsData(commandsData);
+      
+      // Reset steps
+      setSteps([
+        { status: StepStatus.SUCCESS, output: "File copied to container successfully" },
+        { status: StepStatus.SUCCESS, output: "File prepared for inscription" },
+        { status: data.auto_inscribed ? StepStatus.SUCCESS : StepStatus.READY, output: data.auto_inscribed ? data.output : "" }
+      ]);
+      
+      // If auto-execution is enabled, handle the result
+      if (config.autoExecute && data.auto_inscribed) {
         setResult({
           success: true,
-          inscriptionId: directInscribeData.inscriptionId,
-          transactionId: directInscribeData.transactionId,
-          feePaid: directInscribeData.feePaid || 'Unknown',
-          message: 'Inscription successful using direct method'
+          inscriptionId: data.inscriptionId,
+          transactionId: data.transactionId,
+          feePaid: data.feePaid
         });
-        
-        // Reset auto-executing state
-        setIsAutoExecuting(false);
-      } else {
-        // If we didn't auto-inscribe, provide the command for manual execution
-        updateStepStatus(2, StepStatus.SUCCESS, 
-          `File ready for inscription. Execute this command manually:\n${directInscribeData.inscribeCommand}`
-        );
-        
-        setResult({
-          success: true,
-          manualCommand: directInscribeData.inscribeCommand,
-          containerFilePath: directInscribeData.containerFilePath,
-          message: 'File successfully copied to container. Run the command to complete inscription.'
-        });
-        
-        // Reset auto-executing state
-        setIsAutoExecuting(false);
       }
+      
+      setLoading(false);
     } catch (error) {
-      console.error('Error executing commands:', error);
-      const step = steps.findIndex(s => s.status === StepStatus.PROGRESS);
-      if (step !== -1) {
-        updateStepStatus(step, StepStatus.ERROR, String(error));
-      }
+      console.error('Error generating commands:', error);
+      toast.error(`Error: ${String(error)}`);
+      setLoading(false);
+    }
+  };
+  
+  const runAllCommands = async () => {
+    if (!batchProcessingState || batchProcessingState.status !== 'ready') {
+      console.error('Cannot run commands - batch processing is not ready');
+      return;
+    }
+
+    // Set batch processing state to 'running'
+    setBatchProcessingState(prev => ({
+      ...prev,
+      status: 'running'
+    }));
+
+    // Find the first pending item
+    const pendingItemIndex = batchProcessingState.items.findIndex(item => item.status === 'pending');
+    
+    if (pendingItemIndex === -1) {
+      console.log('No pending items to process');
+      setBatchProcessingState(prev => ({
+        ...prev,
+        status: 'completed'
+      }));
+      return;
+    }
+
+    // Start processing the first pending item
+    processNextBatchItem(pendingItemIndex);
+  };
+  
+  const processNextBatchItem = async (currentIndex: number) => {
+    // Get the current item
+    const currentItem = batchProcessingState.items[currentIndex];
+    
+    if (!currentItem) {
+      console.error(`No batch item found at index ${currentIndex}`);
+      return;
+    }
+
+    // Display which file we're processing
+    console.log(`Processing batch item ${currentIndex + 1}/${batchProcessingState.items.length}: ${currentItem.fileName}`);
+
+    try {
+      // Execute commands for this item
+      const result = await executeCommandsForBatchItem(currentItem, configForm.getValues());
       
-      setResult({
-        success: false,
-        errorMessage: String(error)
+      // Update the item status based on the execution result
+      setBatchProcessingState(prev => {
+        const updatedItems = [...prev.items];
+        updatedItems[currentIndex] = {
+          ...updatedItems[currentIndex],
+          status: result.success ? 'completed' : 'failed',
+          inscriptionId: result.inscriptionId,
+          error: result.error
+        };
+
+        // Count completed and failed items
+        const completedCount = updatedItems.filter(item => item.status === 'completed').length;
+        const failedCount = updatedItems.filter(item => item.status === 'failed').length;
+        const allProcessed = completedCount + failedCount === updatedItems.length;
+
+        // Find the next pending item
+        const nextItemIndex = updatedItems.findIndex((item, index) => index > currentIndex && item.status === 'pending');
+        
+        // If there's a next item, process it
+        if (nextItemIndex !== -1) {
+          // Process the next item after a short delay
+          setTimeout(() => processNextBatchItem(nextItemIndex), 1000);
+        }
+
+        // Return the updated state
+        return {
+          ...prev,
+          items: updatedItems,
+          status: allProcessed ? 'completed' : 'running'
+        };
       });
       
-      // Reset auto-executing state on error
-      setIsAutoExecuting(false);
+    } catch (error) {
+      console.error(`Error processing batch item ${currentItem.fileName}:`, error);
+      
+      // Mark the item as failed
+      setBatchProcessingState(prev => {
+        const updatedItems = [...prev.items];
+        updatedItems[currentIndex] = {
+          ...updatedItems[currentIndex],
+          status: 'failed',
+          error: error instanceof Error ? error.message : String(error)
+        };
+
+        // Count completed and failed items
+        const completedCount = updatedItems.filter(item => item.status === 'completed').length;
+        const failedCount = updatedItems.filter(item => item.status === 'failed').length;
+        const allProcessed = completedCount + failedCount === updatedItems.length;
+
+        // Find the next pending item
+        const nextItemIndex = updatedItems.findIndex((item, index) => index > currentIndex && item.status === 'pending');
+        
+        // If there's a next item, process it
+        if (nextItemIndex !== -1) {
+          // Process the next item after a short delay
+          setTimeout(() => processNextBatchItem(nextItemIndex), 1000);
+        }
+
+        // Return the updated state
+        return {
+          ...prev,
+          items: updatedItems,
+          status: allProcessed ? 'completed' : 'running'
+        };
+      });
     }
   };
   
@@ -311,212 +343,186 @@ export default function Home() {
     }
   };
   
-  const executeStep = async (stepIndex: number) => {
-    if (!commandsData || !uploadedFile || stepIndex < 0 || stepIndex > 2) return;
-    
+  // Add a function to check container status for diagnostics
+  const checkContainerStatus = async (): Promise<boolean> => {
     try {
-      updateStepStatus(stepIndex, StepStatus.PROGRESS);
+      const response = await fetch('/api/container/status');
+      if (!response.ok) {
+        console.error('Failed to check container status:', await response.text());
+        return false;
+      }
       
-      // For Umbrel environment, use direct approach for all steps
-      if (isUmbrelEnvironment) {
-        if (stepIndex === 0) {
-          // For step 0 (file upload), use the umbrel/copy-to-container endpoint
-          const formData = new FormData();
-          formData.append('file', uploadedFile.file);
-          
-          const copyRes = await apiRequest('POST', '/api/umbrel/copy-to-container', formData, true);
-          const copyData = await copyRes.json();
-          
-          if (copyData.error) {
-            updateStepStatus(stepIndex, StepStatus.ERROR, copyData.output);
-            setIsAutoExecuting(false);
-            return;
-          }
-          
-          updateStepStatus(stepIndex, StepStatus.SUCCESS, copyData.output);
-          
-          // Set next step to ready
-          if (stepIndex < 2) {
-            const newSteps = [...steps];
-            newSteps[stepIndex + 1] = { ...newSteps[stepIndex + 1], status: StepStatus.READY };
-            setSteps(newSteps);
-          }
-        } else if (stepIndex === 1) {
-          // Step 1 is file preparation - in Umbrel direct mode, this was already done
-          // Just mark as success and proceed
-          updateStepStatus(stepIndex, StepStatus.SUCCESS, "File ready for inscription");
-          
-          // Set next step to ready
-          if (stepIndex < 2) {
-            const newSteps = [...steps];
-            newSteps[stepIndex + 1] = { ...newSteps[stepIndex + 1], status: StepStatus.READY };
-            setSteps(newSteps);
-          }
-        } else if (stepIndex === 2) {
-          // For step 2 (inscription), use the docker exec command
-          // We need the container file path from step 0
-          const step0Output = steps[0].output;
-          const containerPathMatch = step0Output.match(/containerPath: (\/[^\s]+)/);
-          const containerPath = containerPathMatch ? containerPathMatch[1] : '/ord/data/' + uploadedFile.file.name;
-          
-          const metadataValues = metadataForm.getValues();
-          
-          // Build inscription command
-          const inscribeCommand = {
-            command: commandsData.commands[2],
-            containerPath,
-            fileName: uploadedFile.file.name,
-            fileType: uploadedFile.file.type,
-            feeRate: configForm.getValues().feeRate || 4,
-            destination: metadataValues.destination,
-            includeMetadata: metadataValues.includeMetadata,
-            metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
-            parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
-            satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
-          };
-          
-          const inscribeRes = await apiRequest('POST', '/api/execute/inscribe', inscribeCommand);
-          const inscribeData = await inscribeRes.json();
-          
-          if (inscribeData.error) {
-            updateStepStatus(stepIndex, StepStatus.ERROR, inscribeData.output);
-            setResult({
-              success: false,
-              errorMessage: inscribeData.output
-            });
-            setIsAutoExecuting(false);
-            return;
-          }
-          
-          updateStepStatus(stepIndex, StepStatus.SUCCESS, inscribeData.output);
-          
-          // Parse result and set success
-          setResult({
-            success: true,
-            inscriptionId: inscribeData.inscriptionId,
-            transactionId: inscribeData.transactionId,
-            feePaid: inscribeData.feePaid
+      const data = await response.json();
+      console.log('Container status check result:', data);
+      
+      // If there are serious issues with the container, show a helpful message
+      if (data.status === 'error' || !data.exists) {
+        console.error('Container issue detected:', data.message);
+        toast.error(`Container issue detected: ${data.message}`, { 
+          duration: 8000,
+          icon: '⚠️'
+        });
+        return false;
+      }
+      
+      if (!data.containerResponsive) {
+        toast.error('The Ordinals container is not responding. It might be overloaded or experiencing issues.', {
+          duration: 8000,
+          icon: '⚠️'
+        });
+        return false;
+      }
+      
+      if (!data.dataDirWritable) {
+        toast.error('Cannot write to the data directory in the Ordinals container. Check container permissions.', {
+          duration: 8000,
+          icon: '⚠️'
+        });
+        return false;
+      }
+      
+      // Show resource warnings if usage is high
+      if (data.resources.cpuUsage && data.resources.cpuUsage.includes('%')) {
+        const cpuValue = parseFloat(data.resources.cpuUsage);
+        if (!isNaN(cpuValue) && cpuValue > 80) {
+          toast.warning(`Container CPU usage is high (${data.resources.cpuUsage}). This may cause timeouts.`, {
+            duration: 5000
           });
-          
-          // Reset auto-executing state after successful completion
-          setIsAutoExecuting(false);
-        }
-      } else {
-        // Original implementation for non-Umbrel environments
-        let response;
-        let data;
-        
-        if (stepIndex === 0) {
-          // Execute server step
-          // Get the port from the commands
-          const portMatch = commandsData.commands[0].match(/http\.server\s+(\d+)/);
-          const port = portMatch ? portMatch[1] : '8000';
-          
-          const formData = new FormData();
-          formData.append('file', uploadedFile.file);
-          formData.append('port', port);
-          // Pass the optimizeImage config for image processing
-          formData.append('config', JSON.stringify({ optimizeImage }));
-          
-          response = await apiRequest('POST', '/api/execute/serve', formData, true, 120000);
-          data = await response.json();
-          
-          if (data.error) {
-            updateStepStatus(stepIndex, StepStatus.ERROR, data.output);
-            return;
-          }
-          
-          updateStepStatus(stepIndex, StepStatus.SUCCESS, data.output);
-          
-          // Set next step to ready
-          if (stepIndex < 2) {
-            const newSteps = [...steps];
-            newSteps[stepIndex + 1] = { ...newSteps[stepIndex + 1], status: StepStatus.READY };
-            setSteps(newSteps);
-          }
-        } else if (stepIndex === 1) {
-          // Execute download step
-          response = await apiRequest('POST', '/api/execute/download', {
-            fileName: commandsData.fileName,
-            command: commandsData.commands[1]
-          });
-          data = await response.json();
-          
-          if (data.error) {
-            updateStepStatus(stepIndex, StepStatus.ERROR, data.output);
-            return;
-          }
-          
-          updateStepStatus(stepIndex, StepStatus.SUCCESS, data.output);
-          
-          // Set next step to ready
-          if (stepIndex < 2) {
-            const newSteps = [...steps];
-            newSteps[stepIndex + 1] = { ...newSteps[stepIndex + 1], status: StepStatus.READY };
-            setSteps(newSteps);
-          }
-        } else if (stepIndex === 2) {
-          // Execute inscribe step
-          const metadataValues = metadataForm.getValues();
-          
-          response = await apiRequest('POST', '/api/execute/inscribe', {
-            command: commandsData.commands[2],
-            fileName: uploadedFile.file.name,
-            fileType: uploadedFile.file.type,
-            satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined,
-            // Add metadata parameters
-            includeMetadata: metadataValues.includeMetadata,
-            metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
-            parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
-            destination: metadataValues.destination || undefined
-          });
-          data = await response.json();
-          
-          if (data.error) {
-            updateStepStatus(stepIndex, StepStatus.ERROR, data.output);
-            setResult({
-              success: false,
-              errorMessage: data.output
-            });
-            setIsAutoExecuting(false);
-            return;
-          }
-          
-          updateStepStatus(stepIndex, StepStatus.SUCCESS, data.output);
-          
-          // Check if we have an inscription status ID
-          if (data.inscriptionStatusId) {
-            console.log('Inscription status created with ID:', data.inscriptionStatusId);
-            
-            // Optional: You could manually refresh the inscription status display here
-            // but the component handles polling on its own
-          }
-          
-          // Parse result and set success
-          setResult({
-            success: true,
-            inscriptionId: data.inscriptionId,
-            transactionId: data.transactionId,
-            feePaid: data.feePaid
-          });
-          
-          // Reset auto-executing state after successful completion
-          setIsAutoExecuting(false);
         }
       }
-    } catch (error) {
-      console.error(`Error executing step ${stepIndex + 1}:`, error);
-      updateStepStatus(stepIndex, StepStatus.ERROR, String(error));
       
-      if (stepIndex === 2) {
+      // Container is healthy
+      return true;
+    } catch (error) {
+      console.error('Error checking container status:', error);
+      return false;
+    }
+  };
+  
+  // Modify the executeStep function to check container status before processing
+  const executeStep = async (stepIndex: number) => {
+    setLoading(true);
+    
+    try {
+      console.log(`Executing step ${stepIndex}`);
+      
+      // Update current step status
+      updateStepStatus(stepIndex, StepStatus.PROGRESS);
+      
+      if (stepIndex === 0) {
+        // Check container status before proceeding
+        await checkContainerStatus();
+        
+        // Step 1: Upload the file
+        if (!uploadedFile) {
+          throw new Error('No file selected');
+        }
+        
+        // Handle file upload directly
+        const formData = new FormData();
+        formData.append('file', uploadedFile.file);
+        
+        // Add all configuration options
+        const config = {
+          feeRate: configForm.getValues().feeRate,
+          destination: metadataForm.watch('destination'),
+          parentId: metadataForm.watch('parentInscriptionId'),
+          optimizeImage: optimizeImage,
+          noLimitCheck: configForm.getValues().noLimitCheck,
+          dryRun: configForm.getValues().dryRun,
+          mimeType: configForm.getValues().mimeType,
+          useSatRarity: configForm.getValues().useSatRarity,
+          selectedSatoshi: configForm.getValues().selectedSatoshi,
+          // Only include metadata if the checkbox is checked
+          includeMetadata: metadataForm.getValues().includeMetadata,
+        };
+        
+        // Add metadata if needed
+        if (config.includeMetadata) {
+          config.metadataJson = metadataForm.getValues().metadataJson;
+        }
+        
+        // Add configuration to the form data
+        Object.entries(config).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            formData.append(key, value.toString());
+          }
+        });
+        
+        // Set up AbortController for timeout handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 240000); // 4 minute client-side timeout
+        
+        try {
+          // Use docker-inscribe endpoint directly
+          const response = await fetch('/api/docker-inscribe', {
+            method: 'POST',
+            body: formData,
+            signal: controller.signal
+          });
+          
+          // Clear the timeout since we got a response
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to upload file');
+          }
+          
+          const result = await response.json();
+          
+          // Store command results
+          setResult({
+            success: true,
+            inscriptionId: result.inscriptionId,
+            transactionId: result.transactionId,
+            feePaid: result.feePaid
+          });
+          
+          // Mark this step as successful
+          updateStepStatus(stepIndex, StepStatus.SUCCESS, 'File uploaded successfully');
+          
+          // Also mark subsequent steps as successful since we've completed the entire process
+          updateStepStatus(1, StepStatus.SUCCESS, 'File prepared successfully');
+          updateStepStatus(2, StepStatus.SUCCESS, result.output || 'Inscription successful');
+          
+          // Reset auto-executing state
+          setIsAutoExecuting(false);
+          
+          // Complete the wizard
+          setStepsComplete(true);
+        } catch (fetchError) {
+          // Check if this was an abort error (timeout)
+          if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
+            // Check container status to provide more specific error message
+            await checkContainerStatus();
+            throw new Error(`Request timed out after 4 minutes. The file might be too large or the server might be busy. Try optimizing the image or reducing file size.`);
+          }
+          throw fetchError; // Re-throw other errors
+        } finally {
+          clearTimeout(timeoutId); // Ensure timeout is cleared in all cases
+        }
+      } 
+      else {
+        // If we reach here, something went wrong
+        throw new Error('Unexpected step index');
+      }
+    } catch (error) {
+      console.error(`Error in step ${stepIndex}:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      updateStepStatus(stepIndex, StepStatus.ERROR, errorMessage);
+      
+      if (stepIndex === 0) {
         setResult({
           success: false,
-          errorMessage: String(error)
+          errorMessage: errorMessage
         });
       }
       
       // Reset auto-executing state on error
       setIsAutoExecuting(false);
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -617,166 +623,65 @@ export default function Home() {
     );
   };
   
-  const prepareBatchProcessing = async (config: ConfigOptions) => {
-    // Get only selected files for processing
-    const selectedFiles = batchFiles.filter(file => file.selected);
-    
-    if (selectedFiles.length === 0) {
-      alert('Please select at least one file for batch processing');
-      return;
-    }
-    
-    try {
-      // Start loading
-      setLoading(true);
-      
-      // Get metadata values
-      const metadataValues = metadataForm.getValues();
-      
-      // Create batch processing items for each selected file
-      const batchItems: BatchProcessingItem[] = selectedFiles.map(file => ({
-        fileId: file.id || '',
-        fileName: file.file.name,
+  // Helper function to find batch item by file ID
+  const getBatchItemByFileId = (fileId: string) => {
+    return batchProcessingState.items.find(item => item.fileId === fileId);
+  };
+  
+  const prepareBatchProcessing = async (config: ConfigOptions, metadataValues: any) => {
+    // Initialize batch processing state
+    setBatchProcessingState({
+      status: 'preparing',
+      items: batchFiles.map(file => ({
+        fileId: file.id,
         status: 'pending',
+        fileName: file.file.name,
+        commands: [],
         steps: [
-          { status: StepStatus.DEFAULT, output: '' },
-          { status: StepStatus.DEFAULT, output: '' },
-          { status: StepStatus.DEFAULT, output: '' }
+          { status: StepStatus.DEFAULT, output: "" },
+          { status: StepStatus.DEFAULT, output: "" },
+          { status: StepStatus.DEFAULT, output: "" }
         ]
+      }))
+    });
+
+    console.log('Preparing batch processing with direct Docker approach');
+
+    // Generate commands for each file
+    const results = await Promise.all(
+      batchFiles.map(file => {
+        const item = getBatchItemByFileId(file.id);
+        if (!item) {
+          console.error(`No batch item found for file ID ${file.id}`);
+          return Promise.resolve(false);
+        }
+        
+        return generateCommandsForBatchItem(file, item, config, metadataValues);
+      })
+    );
+
+    // Check if all commands were generated successfully
+    const allSuccessful = results.every(Boolean);
+    
+    if (allSuccessful) {
+      setBatchProcessingState(prev => ({
+        ...prev,
+        status: 'ready'
       }));
       
-      // Initialize batch processing state
-      setBatchProcessingState({
-        inProgress: false,
-        items: batchItems,
-        currentItemIndex: 0,
-        completedCount: 0,
-        failedCount: 0
-      });
-      
-      // If autoExecute is enabled, set tracking state and start processing
+      // Run all commands if auto-execute is enabled
       if (config.autoExecute) {
-        setIsAutoExecuting(true);
-        
-        // Start batch processing automatically after a short delay
-        setTimeout(() => {
-          setBatchProcessingState(prev => ({
-            ...prev,
-            inProgress: true
-          }));
-          processBatchItem();
-        }, 100);
+        runAllCommands();
       }
       
-      // Generate commands for each file and prepare them for processing
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
-        
-        // Create a complete config that includes metadata and optimization settings
-        const mergedConfig: ConfigOptions = {
-          ...config,
-          optimizeImage: file.optimizationAvailable || false,
-          includeMetadata: metadataValues.includeMetadata,
-          metadataStorage: "on-chain" as const,
-          destination: metadataValues.destination,
-          parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
-          batchMode: true,
-          // Apply rare sats in batch mode (keep the selected satoshi for each file)
-          useSatRarity: config.useSatRarity,
-          selectedSatoshi: config.selectedSatoshi
-        };
-        
-        // Handle individual metadata per file if in batch mode
-        if (metadataValues.includeMetadata && metadataValues.metadataJson) {
-          try {
-            // Find the index of this file in the selectedFiles array
-            const fileIndex = selectedFiles.findIndex(f => f.id === file.id);
-            
-            // Parse the metadata JSON to check if it's an array
-            const parsedMetadata = JSON.parse(metadataValues.metadataJson);
-            
-            if (Array.isArray(parsedMetadata) && fileIndex >= 0) {
-              if (parsedMetadata.length > fileIndex) {
-                // Extract the specific metadata for this file and use it
-                mergedConfig.metadataJson = JSON.stringify(parsedMetadata[fileIndex]);
-                console.log(`Batch prepare: Using metadata at index ${fileIndex} for file ${file.file.name}`);
-              } else {
-                // Not enough metadata entries, use the last one as fallback
-                const lastIndex = parsedMetadata.length - 1;
-                mergedConfig.metadataJson = JSON.stringify(parsedMetadata[lastIndex >= 0 ? lastIndex : 0]);
-                console.warn(`Batch prepare: Not enough metadata entries for file ${fileIndex + 1}. Using entry ${lastIndex >= 0 ? lastIndex + 1 : 1}.`);
-              }
-            } else {
-              // If it's not an array, use the metadata as is for all files
-              mergedConfig.metadataJson = metadataValues.metadataJson;
-            }
-          } catch (e) {
-            console.error('Error parsing metadata JSON in prepareBatchProcessing:', e);
-            // In case of error, use the original metadata
-            mergedConfig.metadataJson = metadataValues.metadataJson;
-          }
-        } else {
-          mergedConfig.metadataJson = metadataValues.metadataJson;
-        }
-        
-        try {
-          // First upload the file
-          const uploadFormData = new FormData();
-          uploadFormData.append('file', file.file);
-          uploadFormData.append('config', JSON.stringify(mergedConfig));
-          
-          await apiRequest('POST', '/api/upload', uploadFormData, true);
-          
-          // Then generate commands
-          const commandsFormData = new FormData();
-          commandsFormData.append('file', file.file);
-          commandsFormData.append('config', JSON.stringify(mergedConfig));
-          
-          const response = await apiRequest('POST', '/api/commands/generate', commandsFormData, true);
-          const data = await response.json();
-          
-          // Update the batch item with the generated commands
-          setBatchProcessingState(prev => ({
-            ...prev,
-            items: prev.items.map(i => 
-              i.fileId === item.fileId ? { ...i, commands: data.commands } : i
-            )
-          }));
-          
-          return data;
-        } catch (error) {
-          console.error(`Error preparing file ${file.file.name}:`, error);
-          
-          // Mark this item as failed
-          setBatchProcessingState(prev => {
-            const updatedItems = [...prev.items];
-            const itemIndex = updatedItems.findIndex(item => item.fileId === file.id);
-            
-            if (itemIndex !== -1) {
-              updatedItems[itemIndex] = {
-                ...updatedItems[itemIndex],
-                status: 'failed',
-                steps: [
-                  { status: StepStatus.ERROR, output: `Failed to prepare file: ${error}` },
-                  { status: StepStatus.DEFAULT, output: '' },
-                  { status: StepStatus.DEFAULT, output: '' }
-                ]
-              };
-            }
-            
-            return {
-              ...prev,
-              items: updatedItems,
-              failedCount: prev.failedCount + 1
-            };
-          });
-        }
-      }
+      return true;
+    } else {
+      setBatchProcessingState(prev => ({
+        ...prev,
+        status: 'failed'
+      }));
       
-    } catch (error) {
-      console.error('Error preparing batch processing:', error);
-    } finally {
-      setLoading(false);
+      return false;
     }
   };
   
@@ -830,85 +735,84 @@ export default function Home() {
     setIsAutoExecuting(false);
   };
   
-  // Process a single item in the batch
+  // Also modify the processBatchItem function to check container status
   const processBatchItem = async () => {
-    if (!batchProcessingState.inProgress) return;
+    const { currentItemIndex, items } = batchProcessingState;
     
-    const { items, currentItemIndex } = batchProcessingState;
+    // Check if we've processed all items
     if (currentItemIndex >= items.length) {
-      // All items are processed
+      console.log('All batch items processed');
       setBatchProcessingState(prev => ({
         ...prev,
         inProgress: false
       }));
-      
-      // Reset auto-executing state when all items are complete
-      setIsAutoExecuting(false);
       return;
     }
     
+    // Get the current batch item
     const currentItem = items[currentItemIndex];
-    if (currentItem.status !== 'pending') {
-      // Skip already processed items
+    
+    // Skip items that are not selected or already processed
+    if (!currentItem.selected || currentItem.status === 'completed' || currentItem.status === 'failed') {
+      console.log(`Skipping batch item ${currentItem.fileName} (selected: ${currentItem.selected}, status: ${currentItem.status})`);
+      // Move to the next item
       setBatchProcessingState(prev => ({
         ...prev,
         currentItemIndex: prev.currentItemIndex + 1
       }));
-      await processBatchItem();
+      setTimeout(() => processBatchItem(), 1000);
       return;
     }
     
-    // Update the current item status
-    updateBatchItemStatus(currentItem.fileId, 'processing');
+    console.log(`Processing batch item ${currentItemIndex + 1}/${items.length}: ${currentItem.fileName}`);
     
     try {
-      // Get the file from the batch files
-      const file = batchFiles.find(f => f.id === currentItem.fileId);
-      if (!file) {
-        throw new Error(`File with ID ${currentItem.fileId} not found`);
-      }
+      // Check container status before processing
+      await checkContainerStatus();
       
-      // Get global config
-      const config = configForm.getValues();
-      const metadataValues = metadataForm.getValues();
+      // Get the latest configuration
+      const config = {
+        ...configForm.getValues(),
+        optimizeImage: currentItem.optimizeImage,
+        destination: metadataForm.watch('destination'),
+        parentId: metadataForm.watch('parentInscriptionId'),
+        includeMetadata: metadataForm.getValues().includeMetadata,
+        metadataJson: metadataForm.getValues().includeMetadata ? metadataForm.getValues().metadataJson : undefined
+      };
       
-      // Generate commands for this file
-      await generateCommandsForBatchItem(file, currentItem, config, metadataValues);
+      // Execute commands for this batch item
+      const result = await executeCommandsForBatchItem(currentItem, config);
       
-      // Execute commands for this file
-      const result = await executeCommandsForBatchItem(currentItem);
-      
-      // Update the current item result
+      // Update the batch item with the result
       updateBatchItemResult(currentItem.fileId, result);
       
-      // Move to the next item
+      // Update stats
       setBatchProcessingState(prev => ({
         ...prev,
-        currentItemIndex: prev.currentItemIndex + 1,
-        completedCount: prev.completedCount + (result.success ? 1 : 0),
-        failedCount: prev.failedCount + (result.success ? 0 : 1)
+        completedCount: result.success ? prev.completedCount + 1 : prev.completedCount,
+        failedCount: !result.success ? prev.failedCount + 1 : prev.failedCount,
+        currentItemIndex: prev.currentItemIndex + 1
       }));
       
-      // Process the next item
+      // Continue with next item
       setTimeout(() => processBatchItem(), 1000);
     } catch (error) {
-      console.error('Error processing batch item:', error);
+      console.error(`Error processing batch item ${currentItem.fileName}:`, error);
       
-      // Update the current item as failed
-      updateBatchItemStatus(currentItem.fileId, 'failed');
+      // Update the batch item as failed
       updateBatchItemResult(currentItem.fileId, {
         success: false,
-        errorMessage: String(error)
+        errorMessage: error instanceof Error ? error.message : 'Unknown error'
       });
       
-      // Move to the next item
+      // Update stats and move to next item
       setBatchProcessingState(prev => ({
         ...prev,
-        currentItemIndex: prev.currentItemIndex + 1,
-        failedCount: prev.failedCount + 1
+        failedCount: prev.failedCount + 1,
+        currentItemIndex: prev.currentItemIndex + 1
       }));
       
-      // Process the next item
+      // Continue with next item
       setTimeout(() => processBatchItem(), 1000);
     }
   };
@@ -920,297 +824,258 @@ export default function Home() {
     config: ConfigOptions,
     metadataValues: any
   ) => {
-    // Create a merged config similar to the single file mode
-    const mergedConfig: ConfigOptions = {
-      ...config,
-      optimizeImage: !!file.optimizationAvailable,
-      includeMetadata: metadataValues.includeMetadata,
-      metadataStorage: "on-chain" as const,
-      destination: metadataValues.destination,
-      parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
-      batchMode: true,
-      // Apply rare sats in batch mode (keep the selected satoshi for each file)
-      useSatRarity: config.useSatRarity,
-      selectedSatoshi: config.selectedSatoshi
-    };
+    // Always use direct Docker approach
+    console.log(`Generating commands for batch item: ${file.file.name}`);
     
-    // Handle individual metadata per file if in batch mode and metadata is an array
-    if (metadataValues.includeMetadata && metadataValues.metadataJson) {
-      try {
-        // Find the index of this file in the batch files array
-        const fileIndex = batchFiles.findIndex(f => f.id === file.id);
-        
-        // Parse the metadata JSON to check if it's an array
-        const parsedMetadata = JSON.parse(metadataValues.metadataJson);
-        
-        if (Array.isArray(parsedMetadata) && fileIndex >= 0) {
-          if (parsedMetadata.length > fileIndex) {
-            // Extract the specific metadata for this file and use it
-            mergedConfig.metadataJson = JSON.stringify(parsedMetadata[fileIndex]);
-            console.log(`Using metadata at index ${fileIndex} for file ${file.file.name}`);
-          } else {
-            // Not enough metadata entries, use the last one as fallback
-            const lastIndex = parsedMetadata.length - 1;
-            mergedConfig.metadataJson = JSON.stringify(parsedMetadata[lastIndex >= 0 ? lastIndex : 0]);
-            console.warn(`Not enough metadata entries for file ${fileIndex + 1}. Using entry ${lastIndex >= 0 ? lastIndex + 1 : 1}.`);
-          }
-        } else {
-          // If it's not an array, use the metadata as is for all files
-          mergedConfig.metadataJson = metadataValues.metadataJson;
-        }
-      } catch (e) {
-        console.error('Error parsing metadata JSON:', e);
-        // In case of error, use the original metadata
-        mergedConfig.metadataJson = metadataValues.metadataJson;
-      }
-    } else {
-      mergedConfig.metadataJson = metadataValues.metadataJson;
-    }
-    
-    const formData = new FormData();
-    formData.append('file', file.file);
-    formData.append('config', JSON.stringify(mergedConfig));
+    // Update batch item status
+    updateBatchItemStatus(
+      { fileId: file.id } as BatchProcessingItem, 
+      'pending'
+    );
     
     try {
-      const response = await apiRequest('POST', '/api/commands/generate', formData, true);
-      const data = await response.json();
+      // Create a simplified command set for direct Docker operations
+      const commands = [
+        `docker cp "${file.file.name}" ordinals:/ord/data/`,
+        `# File preparation step`,
+        `docker exec -it ordinals ord wallet inscribe --fee-rate ${config.feeRate || 4} --file /ord/data/${file.file.name}`
+      ];
+      
+      // Add metadata and destination to the inscription command if needed
+      if (metadataValues.destination) {
+        commands[2] += ` --destination ${metadataValues.destination}`;
+      }
+      
+      if (metadataValues.includeMetadata && metadataValues.metadataJson) {
+        commands[2] += ` --metadata /ord/data/metadata_${file.id}.json`;
+      }
+      
+      if (showParentInscription && metadataValues.parentInscriptionId) {
+        commands[2] += ` --parent ${metadataValues.parentInscriptionId}`;
+      }
+      
+      // Add sat rarity if enabled
+      if (config.useSatRarity && config.selectedSatoshi) {
+        commands[2] += ` --sat ${config.selectedSatoshi}`;
+      }
       
       // Update batch item with commands
-      setBatchProcessingState(prev => ({
-        ...prev,
-        items: prev.items.map(i => 
-          i.fileId === item.fileId ? { ...i, commands: data.commands } : i
-        )
-      }));
+      const newItem = {
+        ...item,
+        commands,
+        fileName: file.file.name,
+        steps: [
+          { status: StepStatus.READY, output: "" },
+          { status: StepStatus.DEFAULT, output: "" },
+          { status: StepStatus.DEFAULT, output: "" }
+        ]
+      };
       
-      return data;
+      // Update batch processing state with the commands
+      setBatchProcessingState(prev => {
+        const newItems = prev.items.map(i => 
+          i.fileId === file.id ? newItem : i
+        );
+        
+        return {
+          ...prev,
+          items: newItems
+        };
+      });
+      
+      return true;
     } catch (error) {
       console.error('Error generating commands for batch item:', error);
-      throw error;
+      
+      // Update batch item status to failed
+      updateBatchItemStatus(
+        { fileId: file.id } as BatchProcessingItem, 
+        'failed'
+      );
+      
+      return false;
     }
   };
   
   // Execute commands for a batch item
-  const executeCommandsForBatchItem = async (item: BatchProcessingItem): Promise<InscriptionResult> => {
-    if (!item.commands) {
-      throw new Error('No commands available for this item');
-    }
-    
+  const executeCommandsForBatchItem = async (batchItem: BatchProcessingItem, config: ConfigOptions): Promise<{
+    success: boolean;
+    inscriptionId?: string;
+    transactionId?: string;
+    feePaid?: string;
+    errorMessage?: string;
+  }> => {
     try {
-      // Get the file from the batch files
-      const file = batchFiles.find(f => f.id === item.fileId);
-      if (!file) {
-        throw new Error(`File with ID ${item.fileId} not found`);
+      console.log(`Processing batch item: ${batchItem.fileName}`);
+      updateBatchItemStatus(batchItem, 'progress');
+      updateBatchItemStep(batchItem, 0, 'progress');
+
+      // Get the actual file from the batchFiles array
+      const batchFile = batchFiles.find(file => file.id === batchItem.fileId);
+      if (!batchFile) {
+        throw new Error(`File not found for batch item: ${batchItem.fileName}`);
       }
-      
-      // Check if we're in Umbrel environment for direct API approach
-      if (isUmbrelEnvironment) {
-        console.log(`Using direct inscribe method for batch item: ${file.file.name}`);
-        
-        // Update all steps to in-progress
-        updateBatchItemStep(item.fileId, 0, StepStatus.PROGRESS);
-        updateBatchItemStep(item.fileId, 1, StepStatus.PROGRESS);
-        updateBatchItemStep(item.fileId, 2, StepStatus.PROGRESS);
-        
-        // Create form data with the file
-        const formData = new FormData();
-        formData.append('file', file.file);
-        
-        // Add all configuration options (similar to what's in the single-file mode)
-        const metadataValues = metadataForm.getValues();
-        const config = {
-          optimizeImage: !!file.optimizationAvailable,
-          feeRate: configForm.getValues().feeRate || 4,
-          destination: metadataValues.destination || undefined,
-          includeMetadata: metadataValues.includeMetadata,
-          metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
-          parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
-          noLimitCheck: configForm.getValues().noLimitCheck,
-          useSatRarity: configForm.getValues().useSatRarity,
-          selectedSatoshi: configForm.getValues().selectedSatoshi,
-          autoInscribe: 'true', // Always auto-inscribe in batch mode
-          batchMode: true
-        };
-        
-        formData.append('config', JSON.stringify(config));
-        
-        // Call the direct docker-inscribe endpoint
-        const directInscribeRes = await apiRequest('POST', '/api/docker-inscribe', formData, true, 120000);
-        const directInscribeData = await directInscribeRes.json();
-        
-        if (directInscribeData.error) {
-          // If error, mark all steps as failed
-          updateBatchItemStep(item.fileId, 0, StepStatus.ERROR, directInscribeData.output);
-          updateBatchItemStep(item.fileId, 1, StepStatus.ERROR);
-          updateBatchItemStep(item.fileId, 2, StepStatus.ERROR);
-          
-          return {
-            success: false,
-            errorMessage: directInscribeData.output
-          };
+
+      // Create FormData for the file upload
+      const formData = new FormData();
+      formData.append('file', batchFile.file);
+
+      // Add all configuration options
+      const uploadConfig = {
+        feeRate: config.feeRate,
+        destination: config.destination,
+        parentId: config.parentId,
+        optimizeImage: config.optimizeImage,
+        noLimitCheck: config.noLimitCheck,
+        dryRun: config.dryRun,
+        mimeType: config.mimeType || undefined,
+        useSatRarity: config.useSatRarity,
+        selectedSatoshi: config.selectedSatoshi,
+        includeMetadata: config.includeMetadata,
+      };
+
+      // Add metadata if needed
+      if (config.includeMetadata && config.metadataJson) {
+        uploadConfig.metadataJson = config.metadataJson;
+      }
+
+      // Add configuration to the form data
+      Object.entries(uploadConfig).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          formData.append(key, value.toString());
         }
-        
-        // Mark steps as success
-        updateBatchItemStep(item.fileId, 0, StepStatus.SUCCESS, "File successfully copied to container");
-        updateBatchItemStep(item.fileId, 1, StepStatus.SUCCESS, "File prepared for inscription");
-        
-        // Process auto-inscription result or manual command
-        if (directInscribeData.auto_inscribed) {
-          updateBatchItemStep(item.fileId, 2, StepStatus.SUCCESS, directInscribeData.output);
-          
-          return {
-            success: true,
-            inscriptionId: directInscribeData.inscriptionId,
-            transactionId: directInscribeData.transactionId,
-            feePaid: directInscribeData.feePaid || 'Unknown',
-            message: 'Inscription successful using direct method'
-          };
-        } else {
-          // If we didn't auto-inscribe, provide the command for manual execution
-          updateBatchItemStep(item.fileId, 2, StepStatus.SUCCESS, 
-            `File ready for inscription. Execute this command manually:\n${directInscribeData.inscribeCommand}`
-          );
-          
-          return {
-            success: true,
-            manualCommand: directInscribeData.inscribeCommand,
-            containerFilePath: directInscribeData.containerFilePath,
-            message: 'File successfully copied to container. Run the command to complete inscription.'
-          };
-        }
-      } else {
-        // Original implementation for non-Umbrel environments
-        // Update step 1 (Start server)
-        updateBatchItemStep(item.fileId, 0, StepStatus.PROGRESS);
-        
-        // Get the port from the commands
-        const portMatch = item.commands[0].match(/http\.server\s+(\d+)/);
-        const port = portMatch ? portMatch[1] : '8000';
-        
-        const formData = new FormData();
-        formData.append('file', file.file);
-        formData.append('port', port);
-        formData.append('config', JSON.stringify({ 
-          optimizeImage: !!file.optimizationAvailable,
-          batchMode: true
-        }));
-        
-        // Execute server step
-        const serverRes = await apiRequest('POST', '/api/execute/serve', formData, true, 120000);
-        const serverData = await serverRes.json();
-        
-        if (serverData.error) {
-          updateBatchItemStep(item.fileId, 0, StepStatus.ERROR, serverData.output);
-          return {
-            success: false,
-            errorMessage: serverData.output
-          };
-        }
-        
-        updateBatchItemStep(item.fileId, 0, StepStatus.SUCCESS, serverData.output);
-        
-        // Update step 2 (Download file)
-        updateBatchItemStep(item.fileId, 1, StepStatus.PROGRESS);
-        
-        // Execute download step
-        const downloadRes = await apiRequest('POST', '/api/execute/download', {
-          fileName: file.file.name,
-          command: item.commands[1]
+      });
+
+      // Set up AbortController for timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 240000); // 4 minute client-side timeout
+
+      try {
+        // Use docker-inscribe endpoint directly
+        const response = await fetch('/api/docker-inscribe', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal
         });
-        const downloadData = await downloadRes.json();
-        
-        if (downloadData.error) {
-          updateBatchItemStep(item.fileId, 1, StepStatus.ERROR, downloadData.output);
-          return {
-            success: false,
-            errorMessage: downloadData.output
-          };
+
+        // Clear the timeout since we got a response
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to upload file');
         }
+
+        const result = await response.json();
+
+        // Mark all steps as successful
+        updateBatchItemStep(batchItem, 0, 'success', 'File uploaded successfully');
+        updateBatchItemStep(batchItem, 1, 'success', 'File prepared successfully');
+        updateBatchItemStep(batchItem, 2, 'success', result.output || 'Inscription successful');
         
-        updateBatchItemStep(item.fileId, 1, StepStatus.SUCCESS, downloadData.output);
-        
-        // Update step 3 (Inscribe)
-        updateBatchItemStep(item.fileId, 2, StepStatus.PROGRESS);
-        
-        // Execute inscribe step
-        const inscribeCommand = {
-          command: item.commands[2],
-          containerPath,
-          fileName: file.file.name,
-          fileType: file.file.type,
-          feeRate: configForm.getValues().feeRate || 4,
-          destination: metadataValues.destination,
-          includeMetadata: metadataValues.includeMetadata,
-          metadataJson: metadataValues.includeMetadata ? metadataValues.metadataJson : undefined,
-          parentId: showParentInscription ? metadataValues.parentInscriptionId : undefined,
-          satoshiType: configForm.getValues().useSatRarity ? configForm.getValues().selectedSatoshi : undefined
-        };
-        
-        const inscribeRes = await apiRequest('POST', '/api/execute/inscribe', inscribeCommand);
-        const inscribeData = await inscribeRes.json();
-        
-        if (inscribeData.error) {
-          updateBatchItemStep(item.fileId, 2, StepStatus.ERROR, inscribeData.output);
-          return {
-            success: false,
-            errorMessage: inscribeData.output
-          };
-        }
-        
-        updateBatchItemStep(item.fileId, 2, StepStatus.SUCCESS, inscribeData.output);
-        
-        // Check if we have an inscription status ID
-        if (inscribeData.inscriptionStatusId) {
-          console.log('Batch inscription status created with ID:', inscribeData.inscriptionStatusId);
-          // Status tracking will happen automatically via polling
-        }
-        
-        // Return successful result
+        // Update the batch item status
+        updateBatchItemStatus(batchItem, 'completed', result.inscriptionId, result.transactionId, result.errorMessage);
+
         return {
           success: true,
-          inscriptionId: inscribeData.inscriptionId,
-          transactionId: inscribeData.transactionId,
-          feePaid: inscribeData.feePaid
+          inscriptionId: result.inscriptionId,
+          transactionId: result.transactionId,
+          feePaid: result.feePaid
         };
+      } catch (fetchError) {
+        // Check if this was an abort error (timeout)
+        if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
+          throw new Error(`Request timed out after 4 minutes. File might be too large or server is busy.`);
+        }
+        throw fetchError; // Re-throw other errors
+      } finally {
+        clearTimeout(timeoutId); // Ensure timeout is cleared in all cases
       }
     } catch (error) {
-      console.error('Error executing commands for batch item:', error);
+      console.error(`Error processing batch item: ${batchItem.fileName}`, error);
       
-      // Find the current step in progress and update it as error
-      const stepIndex = item.steps.findIndex(s => s.status === StepStatus.PROGRESS);
-      if (stepIndex !== -1) {
-        updateBatchItemStep(item.fileId, stepIndex, StepStatus.ERROR, String(error));
+      // Mark current step as error
+      const currentStep = batchItem.steps ? 
+        batchItem.steps.findIndex(step => step.status === 'progress') : 
+        -1;
+      
+      if (currentStep !== -1) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        updateBatchItemStep(batchItem, currentStep, 'error', errorMessage);
       }
+      
+      // Update the batch item status
+      updateBatchItemStatus(batchItem, 'failed', undefined, undefined, errorMessage);
       
       return {
         success: false,
-        errorMessage: String(error)
+        errorMessage: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   };
   
   // Helper functions for updating batch processing state
-  const updateBatchItemStatus = (fileId: string, status: 'pending' | 'processing' | 'completed' | 'failed') => {
-    setBatchProcessingState(prev => ({
-      ...prev,
-      items: prev.items.map(item => 
-        item.fileId === fileId ? { ...item, status } : item
-      )
-    }));
-  };
-  
-  const updateBatchItemStep = (fileId: string, stepIndex: number, status: StepStatus, output: string = '') => {
-    setBatchProcessingState(prev => ({
-      ...prev,
-      items: prev.items.map(item => {
-        if (item.fileId === fileId) {
-          const newSteps = [...item.steps];
-          newSteps[stepIndex] = { status, output };
-          return { ...item, steps: newSteps };
+  const updateBatchItemStatus = (
+    batchItem: BatchProcessingItem, 
+    status: 'pending' | 'progress' | 'completed' | 'failed',
+    inscriptionId?: string,
+    transactionId?: string,
+    errorMessage?: string
+  ) => {
+    setBatchProcessingState(prev => {
+      if (!prev) return prev;
+      
+      const updatedItems = prev.items.map(item => {
+        if (item.fileId === batchItem.fileId) {
+          return {
+            ...item,
+            status,
+            inscriptionId: inscriptionId || item.inscriptionId,
+            transactionId: transactionId || item.transactionId,
+            error: errorMessage || item.error
+          };
         }
         return item;
-      })
-    }));
+      });
+      
+      return {
+        ...prev,
+        items: updatedItems
+      };
+    });
+  };
+  
+  const updateBatchItemStep = (
+    batchItem: BatchProcessingItem, 
+    stepIndex: number, 
+    status: 'pending' | 'progress' | 'success' | 'error',
+    output?: string
+  ) => {
+    setBatchProcessingState(prev => {
+      if (!prev) return prev;
+      
+      const updatedItems = prev.items.map(item => {
+        if (item.fileId === batchItem.fileId && item.steps && stepIndex < item.steps.length) {
+          const updatedSteps = [...item.steps];
+          updatedSteps[stepIndex] = {
+            ...updatedSteps[stepIndex],
+            status,
+            output: output || updatedSteps[stepIndex].output
+          };
+          
+          return {
+            ...item,
+            steps: updatedSteps
+          };
+        }
+        return item;
+      });
+      
+      return {
+        ...prev,
+        items: updatedItems
+      };
+    });
   };
   
   const updateBatchItemResult = (fileId: string, result: InscriptionResult) => {
@@ -1227,6 +1092,29 @@ export default function Home() {
   };
   
   // Batch processing is now triggered by the form submit in the transaction fee section
+  
+  // Add a function to display the timeout help dialog when specific error messages are detected
+  const renderErrorWithHelp = (errorMessage: string) => {
+    const isTimeoutError = errorMessage.toLowerCase().includes('timeout') || 
+                         errorMessage.toLowerCase().includes('too large') ||
+                         errorMessage.toLowerCase().includes('busy');
+    
+    return (
+      <div>
+        <p className="text-red-600 dark:text-red-400">{errorMessage}</p>
+        {isTimeoutError && (
+          <div className="mt-3">
+            <TimeoutHelpDialog trigger={
+              <Button variant="outline" size="sm" className="flex items-center gap-1">
+                <Info className="h-4 w-4" />
+                Get Help with Timeouts
+              </Button>
+            } />
+          </div>
+        )}
+      </div>
+    );
+  };
   
   return (
     <div className="bg-orange-50 dark:bg-navy-950 min-h-screen font-sans text-gray-800 dark:text-gray-100">
@@ -1377,15 +1265,13 @@ export default function Home() {
                 <div className="bg-orange-50 dark:bg-navy-800 p-4 rounded-lg mb-4">
                   <div className="mb-4 text-gray-700 dark:text-gray-300">
                     <label htmlFor="destination-address" className="block text-sm font-medium mb-1 text-orange-800 dark:text-orange-400">Bitcoin Address</label>
-                    <input 
-                      id="destination-address" 
-                      type="text" 
-                      placeholder="Enter Bitcoin address to receive the inscription"
-                      className="w-full p-2 border border-orange-200 dark:border-navy-600 rounded-md 
-                                bg-white dark:bg-navy-900 text-gray-800 dark:text-gray-200"
-                      value={metadataForm.watch('destination') || ''} 
-                      onChange={(e) => metadataForm.setValue('destination', e.target.value, { shouldValidate: true, shouldDirty: true })}
-                    />
+                    <FormControl>
+                      <Input
+                        placeholder="Destination Address"
+                        value={metadataForm.watch('destination')}
+                        onChange={(e) => metadataForm.setValue('destination', e.target.value)}
+                      />
+                    </FormControl>
                     <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
                       If left empty, the {batchMode ? "inscriptions" : "inscription"} will be sent to the wallet's default address.
                     </p>
@@ -1409,15 +1295,13 @@ export default function Home() {
                     {showParentInscription && (
                       <div className="ml-7 mt-2">
                         <label htmlFor="parent-inscription-id" className="block text-sm font-medium mb-1 text-orange-800 dark:text-orange-400">Parent Inscription ID</label>
-                        <input 
-                          id="parent-inscription-id" 
-                          type="text" 
-                          placeholder="Enter parent inscription ID"
-                          className="w-full p-2 border border-orange-200 dark:border-navy-600 rounded-md 
-                                    bg-white dark:bg-navy-900 text-gray-800 dark:text-gray-200"
-                          value={metadataForm.watch('parentInscriptionId') || ''}
-                          onChange={(e) => metadataForm.setValue('parentInscriptionId', e.target.value, { shouldValidate: true, shouldDirty: true })}
-                        />
+                        <FormControl>
+                          <Input
+                            placeholder="Parent Inscription ID"
+                            value={metadataForm.watch('parentInscriptionId')}
+                            onChange={(e) => metadataForm.setValue('parentInscriptionId', e.target.value)}
+                          />
+                        </FormControl>
                         <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">
                           Create {batchMode ? "child inscriptions" : "a child inscription"} under this parent inscription
                         </p>
@@ -1456,7 +1340,11 @@ export default function Home() {
               <section className="p-6 border-b border-orange-100 dark:border-navy-700 bg-orange-50 dark:bg-navy-800">
                 <SectionTitle title="Transaction Fee" />
                 <ConfigForm 
-                  onGenerateCommands={!batchMode ? handleGenerateCommands : prepareBatchProcessing}
+                  onGenerateCommands={(config: ConfigOptions) => 
+                    !batchMode 
+                      ? handleGenerateCommands(config) 
+                      : prepareBatchProcessing(config, metadataForm.getValues())
+                  }
                   uploadedFile={!batchMode ? uploadedFile : batchFiles.length > 0 ? batchFiles[0] : null}
                   isBatchMode={batchMode}
                   batchFileCount={batchFiles.length}
@@ -1678,6 +1566,7 @@ export default function Home() {
                   result={result} 
                   onReset={resetApplication}
                   onTryAgain={tryAgain}
+                  renderError={renderErrorWithHelp}
                 />
               </section>
             )}

@@ -219,25 +219,56 @@ function isUmbrelEnvironment(): boolean {
 
 // Get the container name based on environment
 function getOrdContainerName(): string {
-  // First check if ORD_RPC_HOST is set, which takes precedence for container name
-  if (process.env.ORD_RPC_HOST) {
-    return process.env.ORD_RPC_HOST; // Use the hostname as container name
-  }
-  
-  // Umbrel environment detection
-  if (isUmbrelEnvironment()) {
-    // Check for ordinals_app_proxy_1 container, which may be used instead
-    if (process.env.USE_APP_PROXY === 'true') {
-      console.log('Using app_proxy for Ord access (from environment variable)');
-      return 'ordinals_app_proxy_1';
+  // Check for Umbrel environment
+  try {
+    // First try with the exact container name from docker ps
+    const umbrelOrdContainers = [
+      'ordinals_ord_1',    // Standard Umbrel Ordinals container name
+      'ord-server',        // Default fallback
+      'ord_1',             // Alternative naming
+      'ord'                // Simple name
+    ];
+    
+    for (const containerName of umbrelOrdContainers) {
+      try {
+        // Check if container exists and is running
+        const output = execSync(`docker ps -q -f name=${containerName}`, { encoding: 'utf8' });
+        if (output.trim()) {
+          console.log(`Found Ordinals container: ${containerName}`);
+          return containerName;
+        }
+      } catch (error) {
+        // Ignore errors checking this container name and continue to next
+        console.log(`Container ${containerName} not found, trying next...`);
+      }
     }
     
-    // Default to ordinals_ord_1 for Umbrel v2+
-    return 'ordinals_ord_1';
+    // If no specific container found, try to find any container with 'ord' in the name
+    const output = execSync("docker ps --format '{{.Names}}' | grep -i ord", { encoding: 'utf8' });
+    const containers = output.trim().split('\n');
+    
+    // Prioritize containers that are likely to be the ord server
+    const ordServerContainers = containers.filter(name => 
+      name.includes('ord_1') || 
+      name.includes('ordinals_ord') || 
+      name.includes('ord-server')
+    );
+    
+    if (ordServerContainers.length > 0) {
+      console.log(`Found Ordinals container via search: ${ordServerContainers[0]}`);
+      return ordServerContainers[0];
+    } else if (containers.length > 0) {
+      console.log(`Using first available ord-related container: ${containers[0]}`);
+      return containers[0];
+    }
+  } catch (error) {
+    console.error('Error detecting Ordinals container:', error);
   }
   
-  // Default fallback
-  return 'bitcoin-ordinals';
+  // Return environment variable if set or default
+  const defaultName = process.env.ORD_CONTAINER_NAME || 'ordinals_ord_1';
+  console.log(`Using default container name: ${defaultName}`);
+  return defaultName;
 }
 
 /**
@@ -1867,230 +1898,515 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Direct file copy and inscribe in one step
+  // Find the docker-inscribe endpoint and update it with better error handling
   app.post('/api/docker-inscribe', upload.single('file'), async (req, res) => {
-    try {
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+    // Add a timeout handler to send an error response if the operation takes too long
+    const timeoutId = setTimeout(() => {
+      console.error('Timeout in /api/docker-inscribe endpoint');
+      // Only send response if it hasn't been sent already
+      if (!res.headersSent) {
+        res.status(504).json({ 
+          success: false,
+          message: "Operation timed out. This may happen with large files. Try optimizing the image or reducing file size."
+        });
       }
+    }, 180000); // 3 minute timeout for the entire operation
+    
+    try {
+      // Check if a file was uploaded
+      if (!req.file) {
+        clearTimeout(timeoutId);
+        return res.status(400).json({ success: false, message: 'No file uploaded' });
+      }
+
+      // Log file information
+      console.log(`File upload received: ${req.file.originalname}, size: ${formatByteSize(req.file.size)}`);
       
-      console.log(`===== DIRECT DOCKER INSCRIBE =====`);
-      const file = req.file;
-      let filePath = file.path;
-      const originalFileName = path.basename(file.path);
+      // Parse configuration from request body
+      const config = req.body || {};
       
-      console.log(`File: ${originalFileName} (${file.size} bytes)`);
+      // Set up file paths
+      let filePath = req.file.path;
+      let fileName = req.file.originalname;
       
-      // Parse config
-      const config = req.body.config ? JSON.parse(req.body.config) : {};
-      
-      // Optimize image if needed
-      if (config.optimizeImage && 
-          file.mimetype.match(/^image\/(jpeg|jpg|png)$/) && 
-          file.size > (46 * 1024)) {
+      // Handle image optimization if requested
+      if (
+        config.optimizeImage === 'true' && 
+        req.file.size > 46 * 1024 && // Only optimize if larger than 46KB
+        (req.file.mimetype === 'image/jpeg' || req.file.mimetype === 'image/png')
+      ) {
         try {
-          const newFileName = path.basename(file.path, path.extname(file.path)) + '.webp';
-          const newFilePath = path.join(path.dirname(file.path), newFileName);
+          console.log(`Attempting to optimize image: ${fileName}`);
           
-          console.log(`Optimizing image to WebP: ${newFilePath}`);
-          await sharp(file.path)
-            .resize(1000)
-            .webp({ 
-              quality: 80,
-              lossless: false,
-              nearLossless: false,
-              effort: 6
-            })
-            .toFile(newFilePath);
+          // Create optimized file path
+          const optimizedFilePath = `${filePath}.webp`;
           
-          const optimizedStats = await fsPromises.stat(newFilePath);
+          // Use sharp to convert to WebP with quality settings
+          await sharp(filePath)
+            .webp({ quality: 80 })
+            .toFile(optimizedFilePath);
           
-          if (optimizedStats.size < file.size) {
-            filePath = newFilePath;
-            console.log(`Optimized ${originalFileName} from ${formatByteSize(file.size)} to ${formatByteSize(optimizedStats.size)}`);
+          // Check if the optimized file is actually smaller
+          const stats = await fs.promises.stat(optimizedFilePath);
+          if (stats.size < req.file.size) {
+            console.log(`Optimization successful: ${formatByteSize(req.file.size)} -> ${formatByteSize(stats.size)}`);
+            filePath = optimizedFilePath;
+            fileName = `${path.parse(fileName).name}.webp`;
           } else {
-            await fsPromises.unlink(newFilePath).catch(() => {});
-            console.log(`Optimization did not reduce file size, using original`);
+            console.log('Optimized file is not smaller, using original file');
+            await fs.promises.unlink(optimizedFilePath).catch(() => {});
           }
-        } catch (err) {
-          console.error('Error optimizing image:', err);
+        } catch (error) {
+          console.error('Error optimizing image:', error);
+          // Continue with the original file if optimization fails
         }
       }
       
-      const fileName = path.basename(filePath);
+      // Get container name
       const containerName = getOrdContainerName();
       const containerPath = '/ord/data/';
       
-      console.log(`Container: ${containerName}`);
+      console.log(`Container: ${containerName}, Path: ${containerPath}`);
       
-      // Step 1: Copy file to container
-      console.log(`Copying file to container: ${containerName}:${containerPath}${fileName}`);
-      const copyResult = await execCommand(`docker cp "${filePath}" ${containerName}:${containerPath}${fileName}`);
+      // First verify the container exists with a short timeout
+      const containerCheck = await execCommand(`docker ps -q -f name=${containerName}`, 5000);
+      if (containerCheck.error || containerCheck.output.trim() === '') {
+        clearTimeout(timeoutId);
+        return res.status(500).json({
+          success: false,
+          message: `Container "${containerName}" does not exist or is not running.`,
+          details: containerCheck.output
+        });
+      }
+      
+      // Copy the file to the container using our safe copy function
+      const destinationPath = `${containerPath}${fileName}`;
+      const copyResult = await safeContainerCopy(filePath, containerName, destinationPath);
       
       if (copyResult.error) {
-        console.error(`Error copying file to container: ${copyResult.output}`);
-        
-        // Check if container exists
-        const containerCheck = await execCommand(`docker ps -q -f name=${containerName}`);
-        const containerExists = !containerCheck.error && containerCheck.output.trim() !== '';
-        
-        // Return detailed error
-        return res.status(500).json({
-          error: true,
-          stage: 'file_copy',
-          containerExists,
-          output: copyResult.output,
-          message: `Failed to copy file to container. Please verify the container "${containerName}" is running.`
+        clearTimeout(timeoutId);
+        return res.status(500).json({ 
+          success: false,
+          message: `Failed to copy file to container. ${copyResult.output}`,
+          details: "This may be due to a connection issue with the Ordinals container. Please check Umbrel logs for details."
         });
       }
       
-      console.log(`File successfully copied to container`);
-      
-      // Step 2: Handle metadata if provided
-      let metadataPath = null;
-      if (config.includeMetadata && config.metadataJson) {
+      // Handle metadata if provided
+      let metadataPath = '';
+      if (config.metadataJson) {
         try {
-          const metadataFileName = `metadata_${Date.now()}.json`;
-          const metadataFilePath = path.join(os.tmpdir(), metadataFileName);
+          const metadataFileName = `${path.parse(fileName).name}_metadata_${Date.now()}.json`;
+          const localMetadataPath = path.join(path.dirname(filePath), metadataFileName);
           
-          // Write the metadata JSON to a temporary file
-          await fsPromises.writeFile(metadataFilePath, config.metadataJson, 'utf8');
+          // Write metadata to a temporary file
+          await fs.promises.writeFile(localMetadataPath, config.metadataJson);
           
-          // Copy metadata file to container
-          console.log(`Copying metadata to container: ${containerName}:${containerPath}${metadataFileName}`);
-          const metadataCopyResult = await execCommand(`docker cp "${metadataFilePath}" ${containerName}:${containerPath}${metadataFileName}`);
+          // Copy the metadata file to the container using our safe copy function
+          const metadataDestPath = `${containerPath}${metadataFileName}`;
+          const metadataCopyResult = await safeContainerCopy(localMetadataPath, containerName, metadataDestPath);
           
-          metadataPath = `${containerPath}${metadataFileName}`;
-          console.log(`Metadata file copied to: ${metadataPath}`);
-        } catch (err) {
-          console.error('Error handling metadata:', err);
+          if (metadataCopyResult.error) {
+            console.error('Error copying metadata to container:', metadataCopyResult.output);
+            // Continue without metadata if there's an error
+          } else {
+            metadataPath = `${containerPath}${metadataFileName}`;
+            console.log(`Metadata file copied to container: ${metadataPath}`);
+          }
+        } catch (error) {
+          console.error('Error handling metadata:', error);
+          // Continue without metadata if there's an error
         }
       }
       
-      // Build inscription command
-      let inscribeCommand = `docker exec -it ${containerName} ord wallet inscribe --fee-rate ${config.feeRate || 10} --file ${containerPath}${fileName}`;
+      // Construct the inscription command
+      const filePathInContainer = `${containerPath}${fileName}`;
+      let command = `docker exec ${containerName} ord wallet inscribe --file="${filePathInContainer}"`;
       
-      // Add options
-      if (config.destination) inscribeCommand += ` --destination ${config.destination}`;
-      if (config.parentId) inscribeCommand += ` --parent ${config.parentId}`;
-      if (metadataPath) inscribeCommand += ` --metadata ${metadataPath}`;
-      if (config.useSatRarity && config.selectedSatoshi) inscribeCommand += ` --sat ${config.selectedSatoshi}`;
+      // Add fee rate if provided
+      if (config.feeRate) {
+        command += ` --fee-rate=${config.feeRate}`;
+      }
       
-      // Check if we should auto-inscribe
-      const shouldAutoInscribe = config.autoInscribe === 'true' || config.autoInscribe === true;
+      // Add destination if provided
+      if (config.destination) {
+        command += ` --destination="${config.destination}"`;
+      }
       
-      if (shouldAutoInscribe) {
-        console.log('Auto-inscription requested, executing command...');
-        
-        // Create a version of the command without -it to avoid TTY errors
-        const execInscribeCommand = inscribeCommand.replace('-it', '');
-        
-        // Execute the inscription command
-        const inscribeResult = await execCommand(execInscribeCommand);
-        
-        if (inscribeResult.error) {
-          console.error('Error executing inscription command:', inscribeResult.output);
+      // Add parent ID if provided
+      if (config.parentId) {
+        command += ` --parent="${config.parentId}"`;
+      }
+      
+      // Add metadata if provided
+      if (metadataPath) {
+        command += ` --metadata="${metadataPath}"`;
+      }
+      
+      // Add sat control if requested
+      if (config.useSatRarity === 'true' && config.selectedSatoshi) {
+        command += ` --sat="${config.selectedSatoshi}"`;
+      }
+      
+      // Add no-limit check if requested
+      if (config.noLimitCheck === 'true') {
+        command += ` --no-limit-check`;
+      }
+      
+      // Add dry-run if requested
+      if (config.dryRun === 'true') {
+        command += ` --dry-run`;
+      }
+      
+      // If auto-execute is requested, run the command and parse the output
+      if (config.autoExecute === 'true') {
+        try {
+          console.log(`Auto-executing inscription command: ${command}`);
+          
+          // Use execCommand with a timeout instead of execSync
+          const inscribeResult = await execCommand(command, 180000); // 3 minute timeout for inscription
+          
+          if (inscribeResult.error) {
+            clearTimeout(timeoutId);
+            return res.status(500).json({
+              success: false,
+              message: `Error executing inscription command: ${inscribeResult.output}`,
+              command
+            });
+          }
+          
+          const output = inscribeResult.output;
+          
+          // Parse the output to extract inscriptionId and transactionId
+          const inscriptionIdMatch = output.match(/inscription: ([a-zA-Z0-9]+)i/);
+          const transactionIdMatch = output.match(/transaction: ([a-zA-Z0-9]+)/);
+          const feePaidMatch = output.match(/fee: ([0-9.]+) sats/);
+          
+          // Clear the timeout as we're about to send the response
+          clearTimeout(timeoutId);
+          
+          const result = {
+            success: true,
+            output,
+            command,
+            filePath: filePathInContainer,
+            metadataPath: metadataPath || undefined,
+            inscriptionId: inscriptionIdMatch ? inscriptionIdMatch[1] : undefined,
+            transactionId: transactionIdMatch ? transactionIdMatch[1] : undefined,
+            feePaid: feePaidMatch ? feePaidMatch[1] : undefined
+          };
+          
+          return res.json(result);
+        } catch (error) {
+          clearTimeout(timeoutId);
           return res.status(500).json({
-            error: true,
-            stage: 'inscription',
-            output: inscribeResult.output,
-            message: 'Failed to execute inscription command.'
+            success: false,
+            message: `Error executing inscription command: ${error instanceof Error ? error.message : String(error)}`,
+            command
           });
         }
-        
-        console.log('Inscription output:', inscribeResult.output);
-        
-        // Parse inscription output to extract important information
-        let inscriptionId = null;
-        let transactionId = null;
-        let feePaid = null;
-        
-        // Extract inscription ID (format: "inscription_id: <id>")
-        const inscriptionMatch = inscribeResult.output.match(/inscription[_\s]+id:?\s+([a-f0-9]+i\d+)/i);
-        if (inscriptionMatch) {
-          inscriptionId = inscriptionMatch[1];
-        }
-        
-        // Extract transaction ID (format: "transaction_id: <id>")
-        const txidMatch = inscribeResult.output.match(/transaction[_\s]+id:?\s+([a-f0-9]+)/i);
-        if (txidMatch) {
-          transactionId = txidMatch[1];
-        }
-        
-        // Extract fee paid (format: "fee: <amount> sats")
-        const feeMatch = inscribeResult.output.match(/fee:?\s+([0-9,]+)\s*sats/i);
-        if (feeMatch) {
-          feePaid = feeMatch[1].replace(/,/g, '');
-        }
-        
-        // Return success with auto-inscription details
+      }
+      
+      // Clear the timeout as we're about to send the response
+      clearTimeout(timeoutId);
+      
+      // If not auto-executing, just return the command
+      return res.json({
+        success: true,
+        message: 'File copied to container successfully. Please run the following command in your terminal:',
+        command,
+        filePath: filePathInContainer,
+        metadataPath: metadataPath || undefined
+      });
+    } catch (error) {
+      // Clear the timeout
+      clearTimeout(timeoutId);
+      
+      console.error('Error in docker-inscribe endpoint:', error);
+      return res.status(500).json({
+        success: false,
+        message: `Server error: ${error instanceof Error ? error.message : String(error)}`
+      });
+    }
+  });
+
+  // Helper function to check if a container exists
+  function checkContainerExists(containerName: string): boolean {
+    try {
+      const output = execSync(`docker ps -q -f name=${containerName}`, { encoding: 'utf8' });
+      return output.trim() !== '';
+    } catch (error) {
+      console.error(`Error checking if container exists: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+  }
+
+  // Add a container status check endpoint for diagnostics
+  app.get('/api/container/status', async (req, res) => {
+    try {
+      const containerName = getOrdContainerName();
+      console.log(`Checking status of container: ${containerName}`);
+      
+      // First check if the container exists
+      const containerCheck = await execCommand(`docker ps -q -f name=${containerName}`, 5000);
+      const containerExists = !containerCheck.error && containerCheck.output.trim() !== '';
+      
+      if (!containerExists) {
         return res.json({
-          error: false,
-          output: inscribeResult.output,
-          auto_inscribed: true,
-          inscriptionId,
-          transactionId,
-          feePaid,
-          containerFilePath: `${containerPath}${fileName}`,
-          metadataPath
+          status: 'error',
+          containerName,
+          exists: false,
+          message: `Container "${containerName}" does not exist or is not running.`,
+          details: containerCheck.output
         });
       }
       
-      // If not auto-inscribing, return the command for manual execution
-      res.json({
-        error: false,
-        output: `File successfully copied to container at ${containerPath}${fileName}`,
-        auto_inscribed: false,
-        inscribeCommand,
-        containerFilePath: `${containerPath}${fileName}`,
-        metadataPath,
-        nextStep: "Execute the inscription command in your terminal"
-      });
+      // Get basic container info
+      const containerInfo = await execCommand(`docker inspect ${containerName} --format '{{.State.Status}}'`, 5000);
+      const containerStatus = containerInfo.error ? 'unknown' : containerInfo.output.trim();
+      
+      // Check if we can execute commands inside the container
+      const containerTest = await execCommand(`docker exec ${containerName} echo "Container is responsive"`, 10000);
+      const containerResponsive = !containerTest.error && containerTest.output.includes('responsive');
+      
+      // Check if ord is available
+      const ordTest = await execCommand(`docker exec ${containerName} ord --version`, 10000);
+      const ordAvailable = !ordTest.error && ordTest.output.includes('ord');
+      
+      // Check if the data directory exists and is writable
+      const dataDirTest = await execCommand(`docker exec ${containerName} mkdir -p /ord/data/ && touch /ord/data/.test && echo success`, 10000);
+      const dataDirWritable = !dataDirTest.error && dataDirTest.output.includes('success');
+      
+      // Check container stats for memory/CPU usage
+      const containerStats = await execCommand(`docker stats ${containerName} --no-stream --format "{{.MemUsage}},{{.CPUPerc}}"`, 10000);
+      let memoryUsage = 'unknown';
+      let cpuUsage = 'unknown';
+      
+      if (!containerStats.error) {
+        const parts = containerStats.output.split(',');
+        if (parts.length >= 2) {
+          memoryUsage = parts[0].trim();
+          cpuUsage = parts[1].trim();
+        }
+      }
+      
+      // Get system resource information
+      const systemMemory = await execCommand('free -h', 5000);
+      const systemLoad = await execCommand('uptime', 5000);
+      
+      // Construct the response
+      const response = {
+        status: containerResponsive ? 'ok' : 'unresponsive',
+        containerName,
+        exists: true,
+        containerStatus,
+        containerResponsive,
+        ordAvailable,
+        dataDirWritable,
+        resources: {
+          memoryUsage,
+          cpuUsage,
+          systemMemory: systemMemory.error ? 'unavailable' : systemMemory.output,
+          systemLoad: systemLoad.error ? 'unavailable' : systemLoad.output
+        },
+        timestamp: new Date().toISOString()
+      };
+      
+      return res.json(response);
     } catch (error) {
-      console.error('Error in direct inscription:', error);
-      res.status(500).json({ 
-        error: true,
-        output: String(error)
+      console.error('Error checking container status:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: `Error checking container status: ${error instanceof Error ? error.message : String(error)}`
       });
     }
   });
 
-  // Add error logs endpoint
-  app.get('/api/logs/errors', (req, res) => {
+  // Check if curl is available in the container and provide fallback if needed
+  async function checkCurlAvailability(containerName: string): Promise<boolean> {
     try {
-      const logs = errorLogger.getRecentLogs();
-      const logFilePath = errorLogger.getLogFilePath();
+      console.log(`Checking if curl is available in container ${containerName}...`);
+      const result = await execCommand(`docker exec ${containerName} which curl`, 5000);
+      const hasCurl = !result.error && result.output.includes('curl');
+      console.log(`Curl availability in ${containerName}: ${hasCurl ? 'Available' : 'Not available'}`);
+      return hasCurl;
+    } catch (error) {
+      console.error('Error checking curl availability:', error);
+      return false;
+    }
+  }
+
+  // Safe file copy to container that works in Umbrel environment
+  async function safeContainerCopy(sourceFilePath: string, containerName: string, destinationPath: string): Promise<CommandResult> {
+    console.log(`Copying file from ${sourceFilePath} to ${containerName}:${destinationPath}`);
+    
+    // Check if container exists
+    const containerExists = checkContainerExists(containerName);
+    if (!containerExists) {
+      return {
+        error: true,
+        output: `Container ${containerName} does not exist or is not running.`
+      };
+    }
+    
+    // Check if curl is available
+    const hasCurl = await checkCurlAvailability(containerName);
+    
+    if (!hasCurl) {
+      // Use docker cp as fallback
+      console.log('Curl not available, using docker cp instead');
+      return await execCommand(`docker cp "${sourceFilePath}" ${containerName}:${destinationPath}`, 120000);
+    } else {
+      // Curl is available, but we'll use docker cp anyway for consistency
+      console.log('Using docker cp for file transfer (safer option)');
+      return await execCommand(`docker cp "${sourceFilePath}" ${containerName}:${destinationPath}`, 120000);
+    }
+  }
+
+  // Add a diagnostic endpoint for Umbrel connectivity issues
+  app.get('/api/umbrel/diagnostics', async (req, res) => {
+    try {
+      const results = {
+        timestamp: new Date().toISOString(),
+        umbrelEnvironment: true,
+        checks: [] as Array<{name: string, status: 'success' | 'warning' | 'error', details: string}>
+      };
       
-      res.json({
-        success: true,
-        logs,
-        logFilePath,
-        count: logs.length
+      // Check 1: Container detection
+      const containerName = getOrdContainerName();
+      results.checks.push({
+        name: 'Container Detection',
+        status: containerName ? 'success' : 'error',
+        details: containerName ? `Detected container: ${containerName}` : 'Failed to detect Ordinals container'
+      });
+      
+      // Check 2: Container existence
+      const containerExists = checkContainerExists(containerName);
+      results.checks.push({
+        name: 'Container Existence',
+        status: containerExists ? 'success' : 'error',
+        details: containerExists ? `Container ${containerName} exists and is running` : `Container ${containerName} does not exist or is not running`
+      });
+      
+      // If container doesn't exist, no need to continue with other checks
+      if (!containerExists) {
+        return res.json({
+          ...results,
+          recommendations: [
+            'Check if the Ordinals app is properly installed in your Umbrel',
+            'Restart the Ordinals app from the Umbrel dashboard',
+            'Check Umbrel logs for any errors related to the Ordinals app'
+          ]
+        });
+      }
+      
+      // Check 3: Container responsiveness
+      const testCommand = await execCommand(`docker exec ${containerName} echo "test"`, 5000);
+      results.checks.push({
+        name: 'Container Responsiveness',
+        status: !testCommand.error ? 'success' : 'error',
+        details: !testCommand.error ? 'Container is responsive' : `Container is not responding: ${testCommand.output}`
+      });
+      
+      // Check 4: Ord command availability
+      const ordCommand = await execCommand(`docker exec ${containerName} which ord`, 5000);
+      results.checks.push({
+        name: 'Ord Command',
+        status: !ordCommand.error && ordCommand.output.includes('ord') ? 'success' : 'error',
+        details: !ordCommand.error && ordCommand.output.includes('ord') 
+          ? `Ord command found at: ${ordCommand.output.trim()}` 
+          : 'Ord command not found in container'
+      });
+      
+      // Check 5: Curl availability (for reference)
+      const curlAvailable = await checkCurlAvailability(containerName);
+      results.checks.push({
+        name: 'Curl Availability',
+        status: curlAvailable ? 'success' : 'warning',
+        details: curlAvailable 
+          ? 'Curl is available in the container' 
+          : 'Curl is not available in the container (using docker cp instead)'
+      });
+      
+      // Check 6: Data directory access
+      const dataDirCheck = await execCommand(`docker exec ${containerName} ls -la /ord/data 2>&1 || echo "Directory access failed"`, 5000);
+      results.checks.push({
+        name: 'Data Directory Access',
+        status: !dataDirCheck.error && !dataDirCheck.output.includes('failed') ? 'success' : 'error',
+        details: !dataDirCheck.error && !dataDirCheck.output.includes('failed')
+          ? 'Data directory is accessible'
+          : `Data directory access failed: ${dataDirCheck.output}`
+      });
+      
+      // Check 7: File write permission test
+      const writeTestResult = await execCommand(
+        `docker exec ${containerName} touch /ord/data/.test_${Date.now()} && echo "Write successful" || echo "Write failed"`, 
+        5000
+      );
+      results.checks.push({
+        name: 'Write Permission Test',
+        status: writeTestResult.output.includes('successful') ? 'success' : 'error',
+        details: writeTestResult.output.includes('successful')
+          ? 'Write permission test successful'
+          : `Write permission test failed: ${writeTestResult.output}`
+      });
+      
+      // Check 8: Container resources
+      const resourceCheck = await execCommand(`docker stats ${containerName} --no-stream --format "{{.CPUPerc}},{{.MemUsage}}"`, 5000);
+      if (!resourceCheck.error) {
+        const [cpu, memory] = resourceCheck.output.split(',');
+        const cpuPerc = parseFloat(cpu.replace('%', ''));
+        results.checks.push({
+          name: 'Resource Usage',
+          status: cpuPerc > 80 ? 'warning' : 'success',
+          details: `CPU: ${cpu.trim()}, Memory: ${memory.trim()}`
+        });
+      } else {
+        results.checks.push({
+          name: 'Resource Usage',
+          status: 'warning',
+          details: `Could not check resource usage: ${resourceCheck.output}`
+        });
+      }
+      
+      // Generate recommendations based on results
+      const recommendations: string[] = [];
+      const errors = results.checks.filter(check => check.status === 'error');
+      
+      if (errors.length > 0) {
+        recommendations.push('Restart the Ordinals app from the Umbrel dashboard');
+        
+        if (errors.some(e => e.name === 'Data Directory Access' || e.name === 'Write Permission Test')) {
+          recommendations.push('Check file permissions in the Ordinals container');
+          recommendations.push('You may need to run: docker exec -it ordinals_ord_1 chmod -R 777 /ord/data');
+        }
+        
+        if (errors.some(e => e.name === 'Ord Command')) {
+          recommendations.push('Verify the Ordinals app is correctly installed and configured');
+        }
+      }
+      
+      // Add fallback recommendations
+      if (recommendations.length === 0) {
+        if (results.checks.some(c => c.name === 'Curl Availability' && c.status === 'warning')) {
+          recommendations.push('Your setup is working correctly with docker cp instead of curl');
+          recommendations.push('This is expected behavior and should not cause any issues');
+        } else {
+          recommendations.push('Your setup appears to be working correctly');
+        }
+      }
+      
+      return res.json({
+        ...results,
+        recommendations
       });
     } catch (error) {
-      errorLogger.log(error, 'logs_api_error');
-      res.status(500).json({
-        success: false,
-        error: 'Failed to retrieve error logs',
-        message: error instanceof Error ? error.message : String(error)
+      console.error('Error in Umbrel diagnostics:', error);
+      return res.status(500).json({
+        error: true,
+        message: 'Error running Umbrel diagnostics',
+        details: error instanceof Error ? error.message : String(error)
       });
-    }
-  });
-
-  // Add global error handling middleware
-  app.use((err, req, res, next) => {
-    if (err) {
-      // Log the error
-      errorLogger.logApiError(err, req, res);
-      
-      // Send error response
-      res.status(err.status || 500).json({
-        success: false,
-        error: err.message || 'Internal Server Error',
-        errorId: new Date().getTime()
-      });
-    } else {
-      next();
     }
   });
 }
